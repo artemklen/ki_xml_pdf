@@ -8,3 +8,4 @@
 - Публичный вызов `ki_convert_file` с квотами, отменой и сменным mapping.
 - Лицензия исходников — MIT (`LICENSE`). Профиль `report-v1`: `--profile report-v1`, выборка `--record-offset`/`--record-limit`. `KiOptions` инициализируется `ki_options_init`; несовпадение `size` — ошибка вызова.
 - Символ вне репертуара шрифта — `KI_CAUSE_FONT` и `U+` код и в `records-v1`, и в `report-v1`. Ошибка профиля называет правило и смещение в байтах (`KiEvent.byte_offset`, включая конец самозакрывающегося элемента). Отмена во время `fsync` не публикует PDF. Смена `PREFIX` пересобирает путь шрифта.
+- GitHub CI явно устанавливает Poppler/Python для sanitizer tests и сохраняет проверенный source archive с SHA-256 и commit. Добавлены инструкции установки и публичного API; измерения привязаны к публичной Git-ревизии.

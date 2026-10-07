@@ -4,7 +4,8 @@
 
 /* Build from another directory:
      cc -I$PREFIX/include examples/consume.c -L$PREFIX/lib -lki_xml_pdf -o consume
-   The font is found next to the installed binary, not via the current directory. */
+   The default font uses the library's build PREFIX. A relocated installation
+   can supply KiOptions.font_path explicitly. */
 
 int main(int argc, char **argv) {
     const char *in = argc > 1 ? argv[1] : "examples/hello.xml";

@@ -1,14 +1,19 @@
 # Чеклист исходного архива 0.1.0
 
-07.10.2026 владелец выбрал MIT и report-v1. Реализация профиля и `LICENSE` есть в дереве. Live GitHub Actions на этой машине не запускался: у репозитория нет remote. Выпуск не объявлен опубликованным.
+Владелец выбрал MIT и report-v1; оба реализованы. Исходники доступны в [GitHub](https://github.com/artemklen/ki_xml_pdf). Приёмка дистрибутива относится к конкретному commit и artifact, а не ко всем будущим изменениям.
 
-| Ворота | Состояние |
+| Ворота | Проверка |
 | --- | --- |
-| Лицензия исходников | `LICENSE` — MIT, copyright Artem Klen, 2026; шрифт отдельно в `fonts/DejaVuSans.copyright` |
-| Полезный XML-профиль | `report-v1` реализован; oracle `examples/report-v1.expected.txt` |
-| Установка и внешний consumer | `make install PREFIX=/tmp/ki-root`: static и shared клиент из `/` находят шрифт |
-| Отмена и ограничения | отмена на `/Type /Pages` даёт код 4; `--max-pages 2147483648` даёт код 2; длинный temp-dir проходит |
-| CI и исходный архив | локально GCC и Clang 19.1.7: `make test`, `make test-san` (RSS-gate выключен и у Clang ASan), `tests/fuzz_smoke.py`; live GitHub Actions не запускался — remote нет |
-| Память одного CLI | `tests/verify.sh` на `5d67b9d`: 16 777 313 байт, 41 944 страницы, PDF 173 535 332 байт, RSS 2396 КиБ. `report-v1` 1 ГиБ, первые 1000 записей: RSS 2284 КиБ, 41 страница, PDF 1 009 241 байт, spool 720 байт; чтение страниц 1/21/41 под `ulimit -v 1048576` |
+| Лицензия и assets | `LICENSE` — MIT; DejaVu notice отдельно. Оба файла присутствуют в archive и installed data dir |
+| Полезный профиль | CLI/API report-v1 совпадают с `examples/report-v1.expected.txt`; schema negatives, selection/fullness и late failure проверены |
+| Внешнее использование | `make distcheck`, `tests/install_smoke.sh`: installed static/shared C/C++ clients запускаются из чужого cwd; `tests/prefix_switch.sh` проверяет смену PREFIX |
+| Ошибки, квоты, отмена | `make test`: causes, code points, byte offsets, page/output/spool ceilings, fsync cancellation и сохранение previous PDF |
+| Memory safety | Clean GCC/Clang `make test-san`; ASan/UBSan не используют RSS-assertions instrumented runtime. Нужны Poppler и Python, как и functional tests |
+| CI | [Workflow ci](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml): GCC, Clang, ASan, ordinary resource gate, fuzz smoke и negative controls distcheck/proof |
+| Большой вход | `python3 tests/large_proof.py 1073741824`: converter RSS≤64 МиБ, PDF≤10000 pages/256 МиБ, metadata spool≤64 МиБ, все выбранные значения/counters и reader под RLIMIT_AS1 ГиБ |
 
-`make dist` собирает архив текущего `HEAD` и печатает SHA-256. Незакоммиченные изменения не входят в него. `make distcheck` распаковывает архив в свой каталог `mktemp`, ставит библиотеку и собирает внешних клиентов: статические и разделяемые C и C++, плюс статический `report-v1`. Итоговую готовность по реальным артефактам проверяет KW-1025; выбранная лицензия и статус Done отдельных карточек не заменяют эту проверку.
+`make dist` создаёт archive текущего Git HEAD и SHA-256. Незакоммиченные изменения не входят в него. `make distcheck` распаковывает этот archive в own mktemp directory и выполняет installation/consumer/oracle checks; обязательная ошибка возвращает failure.
+
+Job `source` запускается после успешных четырёх jobs. Artifact содержит `ki_xml_pdf-0.1.0.tar.gz`, `SHA256SUMS` и `SOURCE_COMMIT`. Эти файлы позволяют проверить и воспроизвести принятый source snapshot; загрузка CI artifact требует GitHub login. Ручной `workflow_dispatch` с `large=true` также проверяет 128 МиБ на GitHub runner. Замер около 1 ГиБ и команды описаны в [контракте core](contract.md) и [report-v1](report-v1.md).
+
+Полная приёмка (KW-1023/KW-1025) сопоставляет результаты с точным source commit/archive checksum. Формальный version tag или GitHub Release не создаётся автоматически от успешного CI или закрытия задач.

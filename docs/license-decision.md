@@ -10,4 +10,4 @@
 
 Сторонний шрифт в `fonts/` распространяется только вместе со своим copyright-файлом. Синтетический `tests/corpus/truncated-hmtx.ttf` написан для проверки границ и не является шрифтом DejaVu.
 
-Корневой `LICENSE` и `fonts/DejaVuSans.copyright` входят в исходный архив. KW-1025 остаётся открытой, пока нет live CI и независимой приёмки выпуска. [Согласованное решение](https://linear.app/klenwriter/document/ki-xml-pdf-01-predlozhenie-licenzii-i-xml-profilya-report-v1-9656627df2c9) не является публикацией.
+Корневой `LICENSE` и `fonts/DejaVuSans.copyright` входят в исходный архив и установку. [CI](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) проверяет source distribution; готовность конкретного commit принимается по [чеклисту](release-checklist.md). [Согласованное решение](https://linear.app/klenwriter/document/ki-xml-pdf-01-predlozhenie-licenzii-i-xml-profilya-report-v1-9656627df2c9) сохраняется как история выбора.
