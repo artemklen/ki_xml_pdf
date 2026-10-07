@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      large:
+        description: Run the 128 MiB resource proof
+        type: boolean
+        default: false
+
+jobs:
+  gcc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make poppler-utils python3 time
+      - name: summary
+        run: |
+          git rev-parse HEAD
+          gcc --version | head -1
+          g++ --version | head -1
+      - name: functional
+        run: make test
+      - name: fuzz smoke
+        run: make xml2pdf && python3 tests/fuzz_smoke.py
+      - name: header dependency
+        run: |
+          make xml2pdf
+          sleep 1
+          touch src/layout.h
+          make xml2pdf
+          test xml2pdf -nt src/layout.h
+      - name: distcheck
+        run: make distcheck
+      - name: distcheck rejects a failed stage
+        run: |
+          if make distcheck CC=false; then echo "failing compiler was accepted"; exit 1; fi
+          if make distcheck PDFTOTEXT=/bin/false; then echo "failing reader was accepted"; exit 1; fi
+          printf 'not the oracle\n' > /tmp/ki-bad-oracle.txt
+          if make distcheck DISTCHECK_ORACLE=/tmp/ki-bad-oracle.txt; then echo "bad oracle was accepted"; exit 1; fi
+          if make distcheck DISTCHECK_BREAK=license; then echo "missing license was accepted"; exit 1; fi
+      - name: prefix switch without clean
+        run: tests/prefix_switch.sh
+
+  clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools
+        run: sudo apt-get update && sudo apt-get install -y clang make poppler-utils python3
+      - name: summary
+        run: |
+          git rev-parse HEAD
+          clang --version | head -1
+          clang++ --version | head -1
+      - name: functional
+        run: make clean && make CC=clang test
+      - name: installed static and shared consumers
+        run: CC=clang CXX=clang++ tests/install_smoke.sh "${RUNNER_TEMP}/ki-prefix"
+      - name: sanitizers without RSS gate
+        run: make clean && make CC=clang test-san
+
+  asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools
+        run: sudo apt-get update && sudo apt-get install -y gcc make
+      - name: summary
+        run: |
+          git rev-parse HEAD
+          gcc --version | head -1
+      - name: sanitizers without RSS gate
+        run: make test-san
+
+  resources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tools
+        run: sudo apt-get update && sudo apt-get install -y gcc make poppler-utils python3 time
+      - name: summary
+        run: |
+          git rev-parse HEAD
+          gcc --version | head -1
+      - name: uninstrumented resource gate
+        run: make check
+      - name: large proof gates
+        run: python3 tests/large_proof.py --self-test && python3 tests/large_proof.py 262144
+      - name: 128 MiB report-v1 proof
+        if: github.event_name == 'workflow_dispatch' && inputs.large
+        run: python3 tests/large_proof.py 134217728

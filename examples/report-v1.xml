@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report version="1" title="Сводка">
+  <record id="1">
+    <field name="Название">Запись 1</field>
+    <field name="Статус">Готово</field>
+  </record>
+  <record id="2">
+    <field name="Название"><![CDATA[Запись 2]]></field>
+    <field name="Примечание"></field>
+  </record>
+</report>

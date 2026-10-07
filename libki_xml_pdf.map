@@ -1,0 +1,13 @@
+KI_0_1 {
+  global:
+    ki_convert;
+    ki_convert_file;
+    ki_doc_text;
+    ki_doc_break;
+    ki_doc_fail;
+    ki_options_init;
+    xml2pdf_convert;
+    xml2pdf_convert_cap;
+  local:
+    *;
+};

@@ -1,0 +1,15 @@
+xml2pdf
+test_stream
+test_stream_san
+*.o
+src/.font_prefix
+*.d
+*.a
+*.so
+*.pdf
+*.log
+*.tar.gz
+fuzz-crash/
+examples/consume
+examples/consume_cpp
+examples/report

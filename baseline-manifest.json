@@ -1,0 +1,97 @@
+{
+  "review_source_revision": "c73176ec3575fa684ee8bdc8b15b6976b6690f78e1e4b8201989566550726ec1",
+  "review_date": "2026-10-07",
+  "note": "Hashes below are the working tree versus the 07.10.2026 review. baseline-manifest.json itself is not hashed.",
+  "files": [
+    {
+      "path": "Makefile",
+      "sha256": "7b9a4a38a686f13090af7ebb382755c9db0d5be0555eb36c60b810fa4d9ab4cf",
+      "review_sha256": "cbf05de3c8585ddf9cff6338ae2b5e019337117dd3cff749c41961692d941fe5",
+      "matches_review": false
+    },
+    {
+      "path": "src/convert.c",
+      "sha256": "a7bde677ef6755f41f5141ed01bf472318e05dff349e6a8ff31755d14269fb33",
+      "review_sha256": "0c80a5ef16e9b1e2a977fbea1a426478e9db527a8908cd4fa9ba4b0850ef0143",
+      "matches_review": false
+    },
+    {
+      "path": "src/convert.h",
+      "sha256": "d69f638f98113627a25d7c00d2f232ba0c8bf9a880e05baf41f390f602a57ecc",
+      "review_sha256": "f3a21ee9b4ca8c0ab8622dfbe0849aabbb21a2767edea739571eae1156f22ccb",
+      "matches_review": false
+    },
+    {
+      "path": "src/main.c",
+      "sha256": "720bef8d68bd3ba701d9cff5dc62207a6dcfa6487f9f386be58bdbea62e46928",
+      "review_sha256": "720bef8d68bd3ba701d9cff5dc62207a6dcfa6487f9f386be58bdbea62e46928",
+      "matches_review": true
+    },
+    {
+      "path": "src/page_sink.c",
+      "sha256": "551708401154ac9ccd14f2cf2eac22d5615a4023d1c8269788ccbf22c23033b3",
+      "review_sha256": "551708401154ac9ccd14f2cf2eac22d5615a4023d1c8269788ccbf22c23033b3",
+      "matches_review": true
+    },
+    {
+      "path": "src/page_sink.h",
+      "sha256": "65158fd72dde6ea6e0cb2a03bb6ba876606bfeefdd31efa321fa5c1aca4e16c5",
+      "review_sha256": "65158fd72dde6ea6e0cb2a03bb6ba876606bfeefdd31efa321fa5c1aca4e16c5",
+      "matches_review": true
+    },
+    {
+      "path": "src/pdf_write.c",
+      "sha256": "7bd33cda9a0a9ce69b54a1b36cf674e62d56a215d86441201780522b4e2d3f96",
+      "review_sha256": "3532b9400f86e7ff3c48b5abfc240c00d3858c66127345817cce62fe64a0b377",
+      "matches_review": false
+    },
+    {
+      "path": "src/pdf_write.h",
+      "sha256": "127f6e57a164d90fda31722f0cea5f9f3948b8fd3d9618b96c3904fff15dd05a",
+      "review_sha256": "af1bb2feb3c80b04b49f532b67ba9123e9869003899cae5229c62af93b658d76",
+      "matches_review": false
+    },
+    {
+      "path": "src/xml_parse.c",
+      "sha256": "817ab121e1cb8e3b4dd1d0413fef635b3cb3724678d501fc6a22fa668ab34ce7",
+      "review_sha256": "817ab121e1cb8e3b4dd1d0413fef635b3cb3724678d501fc6a22fa668ab34ce7",
+      "matches_review": true
+    },
+    {
+      "path": "src/xml_parse.h",
+      "sha256": "26e03cce0fbe0cb67b49488e7ca0e5a8d94835743606b5d7ea2a35a34ef31a92",
+      "review_sha256": "26e03cce0fbe0cb67b49488e7ca0e5a8d94835743606b5d7ea2a35a34ef31a92",
+      "matches_review": true
+    },
+    {
+      "path": "tests/fixture.xml",
+      "sha256": "e71f336e9b9e3b431494172a1d05e55978a80b5c44ec6d96f85e7c3167184743",
+      "review_sha256": "e71f336e9b9e3b431494172a1d05e55978a80b5c44ec6d96f85e7c3167184743",
+      "matches_review": true
+    },
+    {
+      "path": "tests/test_stream.c",
+      "sha256": "9c4f6feff42c57b0f80e4452022f2d732270ad1a9c820cd7e8a84120428d6d84",
+      "review_sha256": "936df8cdef8cfacdc81e2bb055c3898ff08c6c0ec5c3952ac621d319587b67e3",
+      "matches_review": false
+    },
+    {
+      "path": "tests/verify.sh",
+      "sha256": "da3729a94667258a7892537a131694913d397aa5d756f3175b95b7e58c797cb2",
+      "review_sha256": "0ed5fb7af75faf24e2643faa4a4de17fe1c1fc5373f07aa1e3cce73d061d8307",
+      "matches_review": false
+    }
+  ],
+  "added": [
+    ".gitignore",
+    "README.md",
+    "baseline-manifest.json",
+    "docs/contract.md",
+    "fonts/DejaVuSans.ttf",
+    "fonts/DejaVuSans.copyright",
+    "src/font.c",
+    "src/font.h",
+    "src/layout.c",
+    "src/layout.h"
+  ]
+}
