@@ -96,10 +96,13 @@ typedef struct KiOptions {
     void *map_user;
     void (*log)(void *user, const char *msg);
     void *log_user;
-    /* Callback I/O for ki_convert. A positive short read is not EOF.
-       write_bytes must accept the whole count or return <0. Bytes already
-       accepted are not rolled back. ki_convert_file ignores these and
-       publishes by rename. */
+    /* Callback I/O for ki_convert and ki_convert_to_file. read_bytes returns
+       0 only at EOF, 1..max for data (a short read is not EOF), or <0 for an
+       error. write_bytes must return n after accepting the entire count or
+       <0 for an error; a short write also fails. Accepted bytes are not
+       rolled back. Callback state/resources belong to the caller and are
+       never closed/freed by the library. ki_convert_file ignores both
+       callbacks; ki_convert_to_file ignores write_bytes. */
     int (*read_bytes)(void *user, char *dst, int max);
     int (*write_bytes)(void *user, const char *src, int n);
     void *io_user;
@@ -126,6 +129,13 @@ KI_API int ki_doc_fail(KiDoc *doc, const char *rule);
 KI_API int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions *opt,
                            KiResult *result);
 KI_API int ki_convert(const KiOptions *opt, KiResult *result);
+/* Callback input to an atomic file destination. opt and read_bytes are
+   required; write_bytes is ignored. Uses the same temporary-file, full input
+   validation, flush/fsync/close and rename lifecycle as ki_convert_file.
+   Every call initializes a non-NULL result, including early usage errors.
+   The previous destination is preserved on failure and the temp is removed.
+   The caller retains ownership of input/callback resources. */
+KI_API int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *result);
 
 #ifdef __cplusplus
 }

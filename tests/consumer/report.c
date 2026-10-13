@@ -7,8 +7,22 @@
 #define KI_EXPECTED_VERSION KI_XML_PDF_VERSION
 #endif
 
+static int read_input(void *user, char *dst, int max) {
+    FILE *input = (FILE *)user;
+    size_t n = fread(dst, 1, (size_t)max, input);
+    return ferror(input) ? -1 : (int)n;
+}
+
+static int unused_output(void *user, const char *src, int n) {
+    (void)user;
+    (void)src;
+    (void)n;
+    fprintf(stderr, "consumer: atomic file API called write_bytes\n");
+    return -1;
+}
+
 int main(int argc, char **argv) {
-    if (argc != 3 || strcmp(KI_XML_PDF_VERSION, KI_EXPECTED_VERSION) != 0) {
+    if ((argc != 3 && argc != 4) || strcmp(KI_XML_PDF_VERSION, KI_EXPECTED_VERSION) != 0) {
         fprintf(stderr, "consumer: arguments or installed version mismatch\n");
         return 2;
     }
@@ -16,7 +30,19 @@ int main(int argc, char **argv) {
     KiResult result;
     ki_options_init(&options);
     options.profile = KI_PROFILE_REPORT;
-    int rc = ki_convert_file(argv[1], argv[2], &options, &result);
+    int rc;
+    if (argc == 4) {
+        if (strcmp(argv[3], "callback") != 0) return 2;
+        FILE *input = fopen(argv[1], "rb");
+        if (input == NULL) return 3;
+        options.read_bytes = read_input;
+        options.write_bytes = unused_output;
+        options.io_user = input;
+        rc = ki_convert_to_file(argv[2], &options, &result);
+        fclose(input);
+    } else {
+        rc = ki_convert_file(argv[1], argv[2], &options, &result);
+    }
     if (rc != 0) {
         fprintf(stderr, "consumer: %s\n", result.message);
         return rc;

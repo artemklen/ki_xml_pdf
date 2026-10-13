@@ -24,29 +24,46 @@ static void cli_log(void *user, const char *msg) {
     fprintf(stderr, "%s\n", msg);
 }
 
+typedef struct {
+    FILE *input;
+} CliIo;
+
+static int cli_read(void *user, char *dst, int max) {
+    CliIo *io = user;
+    errno = 0;
+    size_t n = fread(dst, 1, (size_t)max, io->input);
+    if (ferror(io->input) || (n == 0 && errno == EINTR)) {
+        return -1;
+    }
+    return (int)n;
+}
+
+static int cli_write(void *user, const char *src, int n) {
+    (void)user;
+    return fwrite(src, 1, (size_t)n, stdout) == (size_t)n ? n : -1;
+}
+
 static void usage(FILE *fp) {
     fprintf(fp,
-            "xml2pdf %s — профили %s, %s\n"
-            "использование: xml2pdf [опции] input.xml output.pdf\n"
-            "               xml2pdf --help\n"
-            "               xml2pdf --version\n"
+            "xml2pdf %s — profiles %s, %s\n"
+            "usage: xml2pdf [options] [--] input.xml output.pdf\n"
+            "       xml2pdf -h | --help | --version\n"
+            "Use '-' for stdin or stdout. Conversion diagnostics go to stderr.\n"
             "\n"
-            "Опции:\n"
-            "  --profile NAME           records-v1 (по умолчанию) или report-v1\n"
-            "  --record-offset N        пропустить N записей report-v1\n"
-            "  --record-limit N         взять N записей после offset (0 — остальные)\n"
-            "  --font PATH              только этот шрифт, без подмены\n"
-            "  --max-pages N            потолок страниц (0 — без отдельного потолка)\n"
-            "  --max-output-bytes N     потолок байт PDF\n"
-            "  --max-spool-bytes N      потолок файла смещений (0 — 64 МиБ)\n"
-            "  --temp-dir DIR           каталог файла смещений\n"
+            "Options:\n"
+            "  --profile NAME           records-v1 (default) or report-v1\n"
+            "  --record-offset N        skip N report-v1 records\n"
+            "  --record-limit N         select N records after offset (0: all)\n"
+            "  --font PATH              use only this font, with no fallback\n"
+            "  --max-pages N            page quota (0: no separate quota)\n"
+            "  --max-output-bytes N     PDF byte quota\n"
+            "  --max-spool-bytes N      offset-file quota (0: 64 MiB)\n"
+            "  --temp-dir DIR           offset-file directory\n"
             "\n"
-            "Кодировка входа: UTF-8. Сеть не используется.\n"
-            "Документ records-v1: имя элемента, строки «атрибут: значение», текст.\n"
-            "Лимиты: глубина 64, атрибутов 8, имя 63 байта, значение 255 байт,\n"
-            "окно ввода 4096 байт, не больше 8000000 объектов PDF.\n"
-            "Коды: 0 успех, 1 XML или шрифт, 2 вызов, 3 ввод-вывод, 4 ресурс или отмена.\n"
-            "Причина отмены и шрифта видна в тексте ошибки, не только в коде.\n",
+            "Input: UTF-8; no network access. XML bounds: depth 64, 8 attributes,\n"
+            "names 63 bytes, attribute values 255 bytes, input window 4096 bytes.\n"
+            "Exit codes: 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel.\n"
+            "Files are replaced atomically; stdout may contain a partial PDF on failure.\n",
             KI_XML_PDF_VERSION, KI_XML_PDF_PROFILE_RECORDS, KI_XML_PDF_PROFILE_REPORT);
 }
 
@@ -71,7 +88,11 @@ int main(int argc, char **argv) {
     long record_offset = 0;
     long record_limit = 0;
     int i = 1;
-    while (i < argc && strncmp(argv[i], "--", 2) == 0) {
+    while (i < argc && argv[i][0] == '-' && strcmp(argv[i], "-") != 0) {
+        if (strcmp(argv[i], "--") == 0) {
+            i++;
+            break;
+        }
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage(stdout);
             return 0;
@@ -126,15 +147,6 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    struct sigaction sa;
-    struct sigaction old_int;
-    struct sigaction old_term;
-    memset(&sa, 0, sizeof sa);
-    sa.sa_handler = on_stop;
-    sigemptyset(&sa.sa_mask);
-    sigaction(SIGINT, &sa, &old_int);
-    sigaction(SIGTERM, &sa, &old_term);
-
     if (max_pages > INT_MAX) {
         usage(stderr);
         return 2;
@@ -156,9 +168,53 @@ int main(int argc, char **argv) {
     opt.max_spool_bytes = max_spool;
     opt.cancelled = cli_cancelled;
     opt.log = cli_log;
+    const char *input_path = argv[i];
+    const char *output_path = argv[i + 1];
+    int input_stream = strcmp(input_path, "-") == 0;
+    int output_stream = strcmp(output_path, "-") == 0;
+    CliIo io;
+    io.input = NULL;
+    if (input_stream || output_stream) {
+        io.input = input_stream ? stdin : fopen(input_path, "rb");
+        if (io.input == NULL) {
+            fprintf(stderr, "cannot open input %s\n", input_path);
+            return 3;
+        }
+        opt.read_bytes = cli_read;
+        opt.write_bytes = cli_write;
+        opt.io_user = &io;
+    }
+    if (output_stream) {
+        /* Surface errors during the conversion, before reporting success. */
+        setvbuf(stdout, NULL, _IONBF, 0);
+    }
+    struct sigaction sa, old_int, old_term, old_pipe;
+    memset(&sa, 0, sizeof sa);
+    sa.sa_handler = on_stop;
+    sigemptyset(&sa.sa_mask);
+    int installed_int = sigaction(SIGINT, &sa, &old_int) == 0;
+    int installed_term = sigaction(SIGTERM, &sa, &old_term) == 0;
+    sa.sa_handler = SIG_IGN;
+    int installed_pipe = output_stream && sigaction(SIGPIPE, &sa, &old_pipe) == 0;
+
     KiResult result;
-    int rc = ki_convert_file(argv[i], argv[i + 1], &opt, &result);
-    sigaction(SIGINT, &old_int, NULL);
-    sigaction(SIGTERM, &old_term, NULL);
+    int rc;
+    if (output_stream) {
+        rc = ki_convert(&opt, &result);
+        if (rc == 0 && fflush(stdout) != 0) {
+            fprintf(stderr, "stdout write failed\n");
+            rc = 3;
+        }
+    } else if (input_stream) {
+        rc = ki_convert_to_file(output_path, &opt, &result);
+    } else {
+        rc = ki_convert_file(input_path, output_path, &opt, &result);
+    }
+    if (io.input != NULL && io.input != stdin) {
+        fclose(io.input);
+    }
+    if (installed_int) sigaction(SIGINT, &old_int, NULL);
+    if (installed_term) sigaction(SIGTERM, &old_term, NULL);
+    if (installed_pipe) sigaction(SIGPIPE, &old_pipe, NULL);
     return rc;
 }

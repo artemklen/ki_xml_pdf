@@ -142,6 +142,9 @@ for method in make cmake; do
                 ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
                     "$foreign/report-v1.xml" "$foreign/$name.pdf" )
                 oracle "$foreign/$name.pdf"
+                ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
+                    "$foreign/report-v1.xml" "$foreign/$name-callback.pdf" callback )
+                oracle "$foreign/$name-callback.pdf"
                 echo "matrix PASS $name"
                 rows=$((rows + 1))
             done

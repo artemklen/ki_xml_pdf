@@ -349,54 +349,13 @@ static int reject_options(const KiOptions *opt, KiResult *result) {
     return 0;
 }
 
-int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions *opt, KiResult *result) {
-    int rc = XML2PDF_ERR_XML;
-    int cause = KI_CAUSE_XML;
-    FILE *in = NULL;
+static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *opt,
+                               KiResult *result) {
+    int rc = XML2PDF_ERR_IO;
+    int cause = KI_CAUSE_IO;
     FILE *out = NULL;
     char *tmp_path = NULL;
     char msg[160];
-    if (result != NULL) {
-        memset(result, 0, sizeof *result);
-    }
-    msg[0] = '\0';
-    if (reject_options(opt, result) != 0) {
-        return XML2PDF_ERR_USAGE;
-    }
-
-    if (xml_path == NULL || pdf_path == NULL) {
-        rc = XML2PDF_ERR_USAGE;
-        cause = KI_CAUSE_USAGE;
-        snprintf(msg, sizeof msg, "missing path");
-        say(opt, msg);
-        set_result(result, rc, cause, msg);
-        return rc;
-    }
-    if (same_file(xml_path, pdf_path)) {
-        rc = XML2PDF_ERR_IO;
-        cause = KI_CAUSE_IO;
-        snprintf(msg, sizeof msg, "input and output are the same file");
-        say(opt, msg);
-        set_result(result, rc, cause, msg);
-        return rc;
-    }
-    in = fopen(xml_path, "rb");
-    if (in == NULL) {
-        rc = XML2PDF_ERR_IO;
-        cause = KI_CAUSE_IO;
-        snprintf(msg, sizeof msg, "cannot open input %s", xml_path);
-        say(opt, msg);
-        set_result(result, rc, cause, msg);
-        return rc;
-    }
-    struct stat input_st;
-    if (fstat(fileno(in), &input_st) == 0 && S_ISDIR(input_st.st_mode)) {
-        rc = XML2PDF_ERR_IO;
-        cause = KI_CAUSE_IO;
-        snprintf(msg, sizeof msg, "cannot read input %s", xml_path);
-        say(opt, msg);
-        goto open_fail;
-    }
     int tmp_fd = -1;
     errno = 0;
     tmp_path = make_temp(pdf_path, &tmp_fd);
@@ -437,6 +396,57 @@ open_fail:
     }
     free(tmp_path);
     return rc;
+}
+
+int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions *opt, KiResult *result) {
+    if (result != NULL) {
+        memset(result, 0, sizeof *result);
+    }
+    if (reject_options(opt, result) != 0) {
+        return XML2PDF_ERR_USAGE;
+    }
+    if (xml_path == NULL || pdf_path == NULL) {
+        set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, "missing path");
+        say(opt, "missing path");
+        return XML2PDF_ERR_USAGE;
+    }
+    if (same_file(xml_path, pdf_path)) {
+        set_result(result, XML2PDF_ERR_IO, KI_CAUSE_IO, "input and output are the same file");
+        say(opt, "input and output are the same file");
+        return XML2PDF_ERR_IO;
+    }
+    FILE *in = fopen(xml_path, "rb");
+    char msg[160];
+    if (in == NULL) {
+        snprintf(msg, sizeof msg, "cannot open input %s", xml_path);
+        set_result(result, XML2PDF_ERR_IO, KI_CAUSE_IO, msg);
+        say(opt, msg);
+        return XML2PDF_ERR_IO;
+    }
+    struct stat input_st;
+    if (fstat(fileno(in), &input_st) == 0 && S_ISDIR(input_st.st_mode)) {
+        snprintf(msg, sizeof msg, "cannot read input %s", xml_path);
+        set_result(result, XML2PDF_ERR_IO, KI_CAUSE_IO, msg);
+        say(opt, msg);
+        fclose(in);
+        return XML2PDF_ERR_IO;
+    }
+    return convert_file_stream(in, pdf_path, opt, result);
+}
+
+int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *result) {
+    if (result != NULL) {
+        memset(result, 0, sizeof *result);
+    }
+    if (reject_options(opt, result) != 0) {
+        return XML2PDF_ERR_USAGE;
+    }
+    if (pdf_path == NULL || opt == NULL || opt->read_bytes == NULL) {
+        const char *msg = pdf_path == NULL ? "missing path" : "read callback is required";
+        set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, msg);
+        return XML2PDF_ERR_USAGE;
+    }
+    return convert_file_stream(NULL, pdf_path, opt, result);
 }
 
 static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_path, const KiOptions *opt,
