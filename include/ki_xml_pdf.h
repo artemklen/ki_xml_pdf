@@ -15,7 +15,7 @@ extern "C" {
    A context is not safe for concurrent use. Two contexts may run at once.
    Call ki_options_init before filling KiOptions. size must stay equal to
    sizeof(KiOptions); a mismatch is a usage error.
-   Version 0.1 is unstable until 1.0: a 0.y bump may change this struct.
+   The 0.x API is unstable until 1.0: a 0.y bump may change this struct.
    Default font after install is PREFIX/share/ki_xml_pdf/DejaVuSans.ttf,
    compiled into the library. DESTDIR only stages files; it does not change
    that runtime path. An explicit font_path or KI_XML_PDF_FONT is not replaced
@@ -27,7 +27,7 @@ extern "C" {
    and the input byte offset. ki_convert leaves bytes already accepted by
    write_bytes in place when it fails. */
 
-#define KI_XML_PDF_VERSION "0.1.0"
+#define KI_XML_PDF_VERSION "0.2.0"
 #define KI_XML_PDF_PROFILE_RECORDS "records-v1"
 #define KI_XML_PDF_PROFILE_REPORT "report-v1"
 #define KI_XML_PDF_PROFILE KI_XML_PDF_PROFILE_RECORDS

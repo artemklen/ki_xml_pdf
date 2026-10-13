@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+             "${CMAKE_CURRENT_SOURCE_DIR}/include/ki_xml_pdf.h")
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/ki_xml_pdf.h" KI_VERSION_LINE
      REGEX "^#define KI_XML_PDF_VERSION \"")
@@ -82,6 +84,11 @@ if(BUILD_TESTING)
         --binary "$<TARGET_FILE:catalog_example>"
         --fixture "${CMAKE_CURRENT_SOURCE_DIR}/examples/catalog.xml"
         --oracle "${CMAKE_CURRENT_SOURCE_DIR}/examples/catalog.expected.txt")
+    add_test(NAME cli_pipeline COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_pipeline.py"
+        --binary "$<TARGET_FILE:xml2pdf>"
+        --fixture "${CMAKE_CURRENT_SOURCE_DIR}/examples/report-v1.xml"
+        --oracle "${CMAKE_CURRENT_SOURCE_DIR}/examples/report-v1.expected.txt")
 endif()
 
 set(KI_DEFAULT_SHARED "${BUILD_SHARED_LIBS}")
