@@ -1,8 +1,8 @@
-# report-v1: согласованный XML-профиль первого релиза
+# report-v1: XML profile contract
 
-Решение владельца от 07.10.2026: **MIT + report-v1**. Этот документ задаёт контракт профиля. Встроенный mapper выбирается `--profile report-v1` и `KiOptions.profile = KI_PROFILE_REPORT`.
+The owner's decision of 7 October 2026 was **MIT + report-v1** for the first release. This document defines the profile contract. Select the built-in mapper with `--profile report-v1` or `KiOptions.profile = KI_PROFILE_REPORT`.
 
-Формат принадлежит проекту и предназначен для последовательного отчёта из больших XML. Собственный разрешённый пример — [report-v1.xml](../examples/report-v1.xml), oracle небольшого полного отчёта — [report-v1.expected.txt](../examples/report-v1.expected.txt). Пример создан для проекта, не содержит клиентских данных и входит в выбранную MIT. Для внешних схем нужен адаптер через публичный mapping API.
+The project owns this format for sequential reports from large XML inputs. The permitted original example is [report-v1.xml](../examples/report-v1.xml); the expected text for its complete small report is [report-v1.expected.txt](../examples/report-v1.expected.txt). The example was created for this project, contains no customer data, and is covered by MIT. Other schemas need a public mapping API adapter; see the [mapper guide](mapper-guide.md).
 
 ## Grammar
 
@@ -20,43 +20,62 @@
 </report>
 ```
 
-| Элемент | Атрибуты | Содержимое |
+| Element | Attributes | Content |
 | --- | --- | --- |
-| `report` | обязательные `version="1"`, непустой `title` | ноль или больше `record` |
-| `record` | необязательный `id` | один или больше `field` |
-| `field` | обязательный непустой `name`; необязательный `xml:space` | текст, CDATA и поддерживаемые character references; вложенных элементов нет |
+| `report` | Required `version="1"` and nonempty `title` | Zero or more `record` elements |
+| `record` | Optional `id` | One or more `field` elements |
+| `field` | Required nonempty `name`; optional `xml:space` | Text, CDATA, and supported character references; no nested elements |
 
-UTF-8, один корневой `report`, без namespaces. Префиксы и объявления `xmlns` отклоняются, кроме заранее определённого `xml:space` на `field`. Неизвестные элементы/атрибуты, иная версия, неверная вложенность, отсутствие обязательного атрибута, пустой `record` и непустой структурный текст дают ошибку профиля. Сообщение называет правило и смещение в байтах; для неизвестного атрибута — его имя и элемент. Символ вне репертуара шрифта — ошибка шрифта с кодом `U+`, а не ошибка XML. Между структурными элементами разрешены пробельные отступы. Комментарии и processing instructions не выводятся; поддержка деклараций и сущностей соответствует [контракту core](contract.md), внешние ресурсы не загружаются.
+Input is UTF-8 with one root `report` and no namespaces. Prefixes and `xmlns` declarations are rejected, except for the predefined `xml:space` attribute on `field`. Unknown elements/attributes, another version, invalid nesting, missing required attributes, an empty `record`, and non-whitespace structural text cause a profile error. Its message names the rule and input byte offset; an unknown-attribute error also names the attribute and element. A character outside the font repertoire causes a font error with its `U+` code point rather than an XML error.
 
-Непустые `title` и `name` содержат хотя бы один непробельный символ; их значимые пробелы сохраняются. Указанный `id` также непустой; отсутствие `id` даёт исходный номер записи, начиная с 1. Уникальность `id` не требуется: растущий набор всех идентификаторов запрещён. Дубликаты имён полей разрешены, порядок исходника сохраняется.
+Whitespace indentation is allowed between structural elements. Comments and processing instructions are not rendered. Declaration and entity support follows the [core contract](contract.md); external resources are never loaded. The English [README](../README.md#xml-font-and-resource-limits) lists the parser and font limits.
 
-`title`, `id` и `name` ограничены текущим parser contract: до 255 UTF-8 байт декодированного значения атрибута, а не 255 символов. Переполнение даёт ошибку. Текст поля передаётся потоковыми фрагментами; весь field/record/document не буферизуется. Длина значения ограничивается квотами вывода, а не фиксированным буфером поля.
+Nonempty `title` and `name` contain at least one non-whitespace character; their significant spaces are preserved. A supplied `id` must also be nonempty. Without `id`, the original record number is used, starting at 1. IDs need not be unique: retaining a growing set of every ID is outside the streaming contract. Duplicate field names are allowed, and source order is preserved.
 
-## Отображение и пробелы
+`title`, `id`, and `name` follow the parser's decoded-attribute limit of 255 UTF-8 bytes, not 255 characters. Overflow is an error. Field text is delivered in streaming fragments; a complete field, record, or document is never buffered. Output quotas, rather than a fixed field buffer, limit the value length.
 
-Заголовок отчёта выводится один раз. Каждая выбранная запись образует последовательный блок с заголовком `Запись <id или исходный номер>`; поля — строки `name: value`. Пустое значение отображается как `name:`. Имена XML-элементов и атрибут `version` не становятся содержимым отчёта.
+## Rendering and whitespace
 
-Все пробелы внутри значения поля значимы: нельзя обрезать начало/конец или терять пробел при разбиении TEXT/CDATA. `xml:space="default"` и `xml:space="preserve"` разрешены; оба сохраняют значение полностью, поскольку профиль не удаляет отступы внутри field. Иные значения `xml:space` — ошибка. XML-нормализация CR/CRLF и references соответствует core; изменение размера фрагмента чтения не меняет результат.
+The report title is printed once. Each selected record is a sequential block headed by the literal Russian label `Запись ` followed by its ID or original record number. Fields appear as `name: value`; an empty value appears as `name:`. XML element names and the `version` attribute do not become report content. The Russian labels are part of this existing profile and remain unchanged.
 
-Физические переносы строк и страниц допускаются по правилам текущего layout: Letter, поля 40 пт, DejaVu Sans 10 пт, интерлиньяж 14 пт. Полнота проверяется логическим текстом и порядком значений; tests для значимых пробелов не должны нормализовать их потерю. Отдельные пустые строки между блоками допускаются. Символы, которые выбранный шрифт/core не может вывести, дают явную ошибку вместо пропуска выбранных данных.
+All spaces within a field value are significant: leading/trailing spaces must not be trimmed, and a space must not be lost at a TEXT/CDATA boundary. Both `xml:space="default"` and `xml:space="preserve"` are allowed and preserve the full field value because this profile does not remove indentation inside a field. Other `xml:space` values are errors. Core XML normalization applies to literal CR/CRLF and character references; changing the read-fragment size does not change the result.
 
-В конце выводятся `Всего записей: N`, `Выбрано записей: S`, `Пропущено записей: N-S`. Счётчики доступны и приложению через документированный интерфейс профиля. Переполнение счётчика даёт ошибку ресурса. Пустой `report` формирует заголовок и три нулевых счётчика.
+Physical line and page breaks follow the layout rules: Letter paper, 40 pt margins, DejaVu Sans at 10 pt, and 14 pt line spacing. Completeness is checked by logical text and value order; significant-whitespace tests must not normalize away a loss of spaces. Extra blank lines between blocks are allowed. Characters that the selected font/core cannot render cause an explicit error instead of silently dropping selected data.
 
-## Явная выборка большого входа
+The report ends with the exact labels `Всего записей: N`, `Выбрано записей: S`, and `Пропущено записей: N-S`. The application receives the same counters through `KiResult.report_total`, `KiResult.report_selected`, and `KiResult.report_skipped`. Counter overflow is a resource error. An empty `report` renders its title and three zero counters.
 
-`record_offset` — неотрицательное число начальных записей, которые следует пропустить (0 означает начало); `record_limit` — неотрицательное максимальное число выбранных записей после offset (0 означает все оставшиеся). Выборка идёт по исходному порядку, а не по `id`. Offset за концом даёт ноль выбранных записей.
+## Explicit selection from a large input
 
-Без заданной выборки отображаются все записи. Никакого неявного пропуска длинных значений или остановки после N страниц. Даже после достижения limit весь XML дочитывается и проверяется, включая grammar пропущенных записей: поздняя ошибка не должна публиковать успешный файловый результат. Состояние зависит от глубины/текущего фрагмента и страницы, а не от числа записей или длины поля.
+`record_offset` is the nonnegative number of initial records to skip (0 starts at the beginning). `record_limit` is the nonnegative maximum number of records to select after that offset (0 selects all remaining records). Selection follows source order, not IDs. An offset beyond the end selects no records.
 
-CLI выбирает профиль явно через `--profile report-v1`. Выборка: `--record-offset` и `--record-limit`, те же поля в `KiOptions`. `records-v1` остаётся профилем по умолчанию. Пример API: `examples/report.c`.
+Without explicit selection, all records are rendered. Long values are not silently skipped, and conversion does not stop at an arbitrary page count. Even after reaching the selection limit, the entire XML is read and validated, including the grammar of skipped records. A late failure must not publish a successful file result. State depends on current depth, fragment, and page rather than the number of records or field length.
 
-## Приёмка KW-1022
+Select the profile explicitly in the CLI with `--profile report-v1`, and selection with `--record-offset`/`--record-limit`; the corresponding fields are in `KiOptions`. `records-v1` remains the default profile. The API example is [examples/report.c](../examples/report.c).
 
-1. Небольшой полный пример совпадает с oracle; проверить пустой отчёт, отсутствующий id, пустое/повторяющееся поле, значимые пробелы и фрагменты TEXT/CDATA/references.
-2. Негативные schema cases возвращают диагностированную ошибку: unknown attrs/elements/version, namespaces, отсутствие title/name, пустой record, nested field content, неправильный xml:space и поздняя ошибка после выбранной части. Ошибки XML/core, шрифта, квоты и mapping не маскируются успехом.
-3. Проверить полную конвертацию без выборки, offset/limit, offset за концом, середину/конец; total/selected/skipped и значения сверяются с независимым input oracle.
-4. Генератор собственного синтетического XML размером 1 ГиБ, выборка первых 1 000 записей: peak RSS одного конвертера ≤64 МиБ; PDF ≤10 000 страниц и ≤256 МиБ; metadata spool ≤64 МиБ. Короткие выбранные записи и большие пропущенные данные задаются генератором явно; эти бюджеты не обещаются для любых 1 000 записей произвольной длины.
-5. Первая/средняя/последняя страницы читаются независимым PDF reader под отдельным лимитом адресного пространства 1 ГиБ. RSS reader и RLIMIT_AS не смешиваются. Отчёт содержит commit, команды, размеры XML/PDF/spool, страницы, RSS конвертера и результат reader.
-6. Ошибка или отмена сохраняет прежний файл назначения; callbacks имеют явный partial-output contract. Есть внешний C/C++ пример подключения профиля без изменения parser/writer и интеграционная проверка CLI/API.
+`ki_convert_file` and `ki_convert_to_file` preserve the previous destination on a failed conversion. `ki_convert` and CLI stdout can leave already accepted PDF bytes on failure. Short positive reads are not EOF, and choosing stdout does not relax validation of skipped records.
 
-Замер `python3 tests/large_proof.py 1073741824` на первой публичной ревизии [`7c62fe4`](https://github.com/artemklen/ki_xml_pdf/commit/7c62fe4af72b097885d76a7f9f897492f5c4c2d5), обычная сборка, только процесс `xml2pdf`: XML 1 073 741 815 байт, всего 19 522 650 записей, выбрано 1000, RSS 2372 КиБ, 41 страница, PDF 1 009 241 байт, spool 720 байт, 7,61 с. Полный выбранный текст совпал с oracle; `pdftotext` страниц 1/21/41 под отдельным `ulimit -v 1048576` прошёл. Сравнение с неизвестным прежним конвертером и Apache FOP не заявляется. [CI и source artifacts](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) привязаны к конкретному commit; [чеклист дистрибутива](release-checklist.md).
+## Acceptance evidence for KW-1022
+
+1. The complete small example matches its expected text. Cover an empty report, missing ID, empty/repeated fields, significant whitespace, and TEXT/CDATA/reference fragments.
+2. Negative schema cases produce diagnosed errors: unknown attributes/elements/version, namespaces, missing title/name, empty records, nested field content, invalid `xml:space`, and a late failure after the selected portion. XML/core, font, quota, and mapping errors must not be reported as success.
+3. Cover full conversion without selection, offset/limit, offset beyond EOF, and selection from the middle/end. Validate total/selected/skipped counters and values against an independent input oracle.
+4. On the project's synthetic 1 GiB XML, selecting the first 1000 records: peak converter RSS ≤64 MiB, PDF ≤10,000 pages and ≤256 MiB, and metadata spool ≤64 MiB. The generator explicitly uses short selected records and large skipped data; these budgets are not promised for arbitrary sets of 1000 records of any length.
+5. First/middle/last pages are read by an independent PDF reader under a separate 1 GiB address-space limit. Reader RSS and RLIMIT_AS are distinct measurements. Evidence records the commit, commands, XML/PDF/spool sizes, pages, converter RSS, and reader result.
+6. Errors and cancellation preserve an existing file destination; callbacks have an explicit partial-output contract. External C/C++ clients select the profile without changing the parser/writer, and integration checks exercise both CLI and API.
+
+## Historical resource measurement
+
+`python3 tests/large_proof.py 1073741824` on the first public revision [`7c62fe4`](https://github.com/artemklen/ki_xml_pdf/commit/7c62fe4af72b097885d76a7f9f897492f5c4c2d5), using an ordinary build and measuring only the `xml2pdf` process, produced:
+
+| Measure | Value |
+| --- | --- |
+| XML input | 1,073,741,815 bytes |
+| Total records | 19,522,650 |
+| Selected records | 1000 |
+| Converter peak RSS | 2372 KiB |
+| PDF pages | 41 |
+| PDF output | 1,009,241 bytes |
+| Metadata spool | 720 bytes |
+| Conversion time | 7.61 seconds |
+
+The full selected text matched the independent oracle. `pdftotext` read pages 1/21/41 under the separate `ulimit -v 1048576` limit. These measurements belong to that source revision and synthetic workload; the time is not an SLA. No comparison with an unknown former converter or Apache FOP is claimed. [CI and source artifacts](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) are tied to a specific commit; see the [distribution checklist](release-checklist.md).
