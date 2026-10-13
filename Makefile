@@ -51,6 +51,7 @@ test-san:
 example: libki_xml_pdf.a
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/consume examples/consume.c libki_xml_pdf.a
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/report examples/report.c libki_xml_pdf.a
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/catalog examples/catalog_driver.c examples/catalog_map.c libki_xml_pdf.a
 	$(CXX) $(CXXFLAGS) -Wall -Wextra $(CPPFLAGS) -o examples/consume_cpp examples/consume.cpp libki_xml_pdf.a
 
 install: xml2pdf libki_xml_pdf.a libki_xml_pdf.so
@@ -82,7 +83,7 @@ distcheck: dist
 		bash tests/distcheck.sh ki_xml_pdf-0.1.0.tar.gz
 
 clean:
-	rm -f xml2pdf test_stream test_stream_san libki_xml_pdf.a libki_xml_pdf.so examples/consume examples/consume_cpp
+	rm -f xml2pdf test_stream test_stream_san libki_xml_pdf.a libki_xml_pdf.so examples/consume examples/consume_cpp examples/report examples/catalog
 	rm -f $(LIB_OBJS) $(LIB_OBJS:.o=.d) src/.font_prefix src/.font_prefix.new
 
 -include $(LIB_OBJS:.o=.d)

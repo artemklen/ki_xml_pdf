@@ -21,6 +21,7 @@ cp "$root/tests/consumer/CMakeLists.txt" "$consumer/"
 cp "$root/tests/consumer/report.c" "$consumer/report.c"
 cp "$root/tests/consumer/report.c" "$consumer/report.cpp"
 cp "$root/examples/report-v1.xml" "$root/examples/report-v1.expected.txt" "$foreign/"
+cp "$root/examples/catalog.xml" "$root/examples/catalog.expected.txt" "$foreign/"
 version=$(sed -n 's/^#define KI_XML_PDF_VERSION "\([^"]*\)"/\1/p' "$source/include/ki_xml_pdf.h")
 test -n "$version"
 
@@ -153,6 +154,25 @@ for method in make cmake; do
     ( cd / && env -u KI_XML_PDF_FONT "$prefix/bin/xml2pdf" --profile report-v1 \
         "$foreign/report-v1.xml" "$foreign/$method-cli.pdf" )
     oracle "$foreign/$method-cli.pdf"
+    for linkage in static shared; do
+        binary="$foreign/$method-catalog-$linkage"
+        read -r -a cflags <<< "$(pkg-config --cflags ki_xml_pdf)"
+        if [ "$linkage" = static ]; then
+            read -r -a libs <<< "$(pkg-config --static --libs ki_xml_pdf)"
+            linkflags=(-Wl,-Bstatic "${libs[@]}" -Wl,-Bdynamic)
+        else
+            read -r -a libs <<< "$(pkg-config --libs ki_xml_pdf)"
+            linkflags=("${libs[@]}" "-Wl,-rpath,$libdir")
+        fi
+        "$cc" -std=c99 -Wall -Wextra "${cflags[@]}" \
+            "$work/source-hidden/examples/catalog_driver.c" \
+            "$work/source-hidden/examples/catalog_map.c" -o "$binary" "${linkflags[@]}"
+        ( cd "$foreign" && env -u KI_XML_PDF_FONT python3 \
+            "$work/source-hidden/tests/catalog_verify.py" --binary "$binary" \
+            --fixture "$foreign/catalog.xml" --oracle "$foreign/catalog.expected.txt" \
+            --pdftotext "$pdftext" )
+        echo "catalog installed PASS $method-$linkage"
+    done
     # Installed API font failures must not be masked by a checkout fallback.
     binary="$foreign/$method-c-static-pkg-config"
     mv "$prefix/share/ki_xml_pdf/DejaVuSans.ttf" "$prefix/share/ki_xml_pdf/font-hidden.ttf"

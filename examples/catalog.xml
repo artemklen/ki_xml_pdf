@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog>
+  <item id="pen-1">
+    <name>Blue<![CDATA[ & white]]> pen &#x2014; caf&#233;</name>
+    <price>12&#46;50</price>
+  </item>
+  <item>
+    <name><![CDATA[Notebook]]></name>
+    <price/>
+  </item>
+</catalog>
+

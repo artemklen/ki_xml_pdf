@@ -60,6 +60,13 @@ target_link_libraries(xml2pdf PRIVATE ki_xml_pdf::ki_xml_pdf)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/fonts")
 configure_file(fonts/DejaVuSans.ttf fonts/DejaVuSans.ttf COPYONLY)
 
+add_executable(catalog_example examples/catalog_driver.c examples/catalog_map.c)
+set_target_properties(catalog_example PROPERTIES OUTPUT_NAME catalog C_STANDARD 99
+                      C_STANDARD_REQUIRED YES
+                      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/examples")
+target_compile_options(catalog_example PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(catalog_example PRIVATE ki_xml_pdf::ki_xml_pdf)
+
 if(BUILD_TESTING)
     find_package(Threads REQUIRED)
     # Internal parser tests need symbols deliberately hidden from the shared ABI.
@@ -69,6 +76,12 @@ if(BUILD_TESTING)
     target_link_options(test_stream PRIVATE "LINKER:--wrap=fsync")
     add_test(NAME stream COMMAND test_stream)
     set_tests_properties(stream PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME catalog COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/catalog_verify.py"
+        --binary "$<TARGET_FILE:catalog_example>"
+        --fixture "${CMAKE_CURRENT_SOURCE_DIR}/examples/catalog.xml"
+        --oracle "${CMAKE_CURRENT_SOURCE_DIR}/examples/catalog.expected.txt")
 endif()
 
 set(KI_DEFAULT_SHARED "${BUILD_SHARED_LIBS}")
