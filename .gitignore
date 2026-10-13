@@ -16,3 +16,4 @@ examples/report
 examples/catalog
 /build*/
 *.so.*
+.factory/
