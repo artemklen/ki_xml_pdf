@@ -42,12 +42,17 @@ if [[ "$help_rc" -ne 0 || "$ver_rc" -ne 0 || "$use_rc" -ne 2 ]]; then
 fi
 grep -q records-v1 "$SCRATCH/help.txt"
 grep -q UTF-8 "$SCRATCH/help.txt"
-grep -q 'xml2pdf 0.1.0 records-v1' "$SCRATCH/version.txt"
+version=$(sed -n 's/^#define KI_XML_PDF_VERSION "\([^"]*\)"/\1/p' include/ki_xml_pdf.h)
+if [[ -z "$version" ]]; then
+    echo "could not read CLI version from include/ki_xml_pdf.h" >&2
+    exit 1
+fi
+grep -Fxq "xml2pdf $version records-v1" "$SCRATCH/version.txt"
 
 ./test_stream >"$SCRATCH/unit.log" 2>&1
 groups=$(grep -c '^ok ' "$SCRATCH/unit.log" || true)
-if [[ "$groups" -ne 14 ]]; then
-    echo "expected 14 unit groups, got $groups" >&2
+if [[ "$groups" -ne 16 ]]; then
+    echo "expected 16 unit groups, got $groups" >&2
     exit 1
 fi
 

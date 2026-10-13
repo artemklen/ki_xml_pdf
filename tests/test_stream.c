@@ -2316,6 +2316,76 @@ static int test_library_contract(void) {
     return 0;
 }
 
+static int unused_read(void *user, char *dst, int max) {
+    (void)dst;
+    (void)max;
+    (*(int *)user)++;
+    return -1;
+}
+
+static int unused_write(void *user, const char *src, int n) {
+    (void)src;
+    (void)n;
+    (*(int *)user)++;
+    return -1;
+}
+
+static int test_callback_usage_result(void) {
+    MemIo io;
+    memset(&io, 0, sizeof io);
+    io.s = "<doc>reused result</doc>";
+    io.n = strlen(io.s);
+    KiOptions opt;
+    ki_options_init(&opt);
+    opt.read_bytes = mem_read;
+    opt.write_bytes = mem_write;
+    opt.io_user = &io;
+    KiResult result;
+    CHECK(ki_convert(&opt, &result) == 0);
+    CHECK(result.pages > 0 && result.output_bytes > 0);
+    free(io.buf);
+    KiResult successful = result;
+    for (int reused = 0; reused < 2; reused++) {
+        for (int invalid = 0; invalid < 10; invalid++) {
+            int calls = 0;
+            ki_options_init(&opt);
+            opt.read_bytes = unused_read;
+            opt.write_bytes = unused_write;
+            opt.io_user = &calls;
+            switch (invalid) {
+                case 0: opt.size = 1; break;
+                case 1: opt.max_pages = -1; break;
+                case 2: opt.max_output_bytes = -1; break;
+                case 3: opt.max_spool_bytes = -1; break;
+                case 4: opt.record_offset = -1; break;
+                case 5: opt.record_limit = -1; break;
+                case 6: opt.profile = 99; break;
+                case 7: opt.read_bytes = NULL; break;
+                case 8: opt.write_bytes = NULL; break;
+                case 9: break; /* NULL options */
+            }
+            if (reused) {
+                result = successful;
+            } else {
+                memset(&result, 0x5a, sizeof result);
+            }
+            const KiOptions *options = invalid == 9 ? NULL : &opt;
+            CHECK(ki_convert(options, &result) == XML2PDF_ERR_USAGE);
+            CHECK(result.status == XML2PDF_ERR_USAGE && result.cause == KI_CAUSE_USAGE);
+            const char *message = invalid == 0 ? "options size mismatch" :
+                invalid < 7 ? "invalid option" : "read and write callbacks are required";
+            CHECK(strcmp(result.message, message) == 0);
+            CHECK(result.pages == 0 && result.objects == 0 && result.offset_bytes == 0);
+            CHECK(result.output_bytes == 0 && result.spool_bytes == 0);
+            CHECK(result.report_total == 0 && result.report_selected == 0 && result.report_skipped == 0);
+            CHECK(calls == 0);
+            CHECK(ki_convert(options, NULL) == XML2PDF_ERR_USAGE);
+            CHECK(calls == 0);
+        }
+    }
+    return 0;
+}
+
 static int logical_lines(const char *text, char lines[][128], int max) {
     int n = 0;
     const char *p = text;
@@ -2343,6 +2413,500 @@ static int logical_lines(const char *text, char lines[][128], int max) {
     }
     return n;
 }
+
+typedef struct {
+    MemIo memory;
+    FILE *owner_input;
+    FILE *owner_output;
+    size_t read_total;
+    size_t read_fail_after;
+    int read_calls;
+    int eof_seen;
+    int write_calls;
+    int write_fail_at;
+    /* 0: normal; 1: fail; 2: accept n-1; 3: accept zero; 4: return n+1. */
+    int write_mode;
+} CallbackFileIo;
+
+static void callback_file_io_init(CallbackFileIo *io, const char *xml, int chunk) {
+    memset(io, 0, sizeof *io);
+    io->memory.s = xml;
+    io->memory.n = strlen(xml);
+    io->memory.chunk = chunk;
+}
+
+static int callback_file_read(void *user, char *dst, int max) {
+    CallbackFileIo *io = user;
+    io->read_calls++;
+    if (io->read_fail_after > 0 && io->read_total >= io->read_fail_after) {
+        return -1;
+    }
+    if (io->memory.chunk > 0 && max > io->memory.chunk) {
+        max = io->memory.chunk;
+    }
+    if (io->read_fail_after > 0 &&
+        (size_t)max > io->read_fail_after - io->read_total) {
+        max = (int)(io->read_fail_after - io->read_total);
+    }
+    int n;
+    if (io->owner_input != NULL) {
+        n = (int)fread(dst, 1, (size_t)max, io->owner_input);
+        if (n == 0 && ferror(io->owner_input)) {
+            return -1;
+        }
+    } else {
+        n = mem_read(&io->memory, dst, max);
+    }
+    if (n == 0) {
+        io->eof_seen = 1;
+    } else if (n > 0) {
+        io->read_total += (size_t)n;
+    }
+    return n;
+}
+
+static int callback_file_write(void *user, const char *src, int n) {
+    CallbackFileIo *io = user;
+    io->write_calls++;
+    int mode = io->write_fail_at > 0 && io->write_calls >= io->write_fail_at ?
+        io->write_mode : 0;
+    if (mode == 1) {
+        return -1;
+    }
+    if (mode == 3) {
+        return 0;
+    }
+    if (mode == 4) {
+        return n + 1;
+    }
+    int accepted = mode == 2 ? n - 1 : n;
+    if (accepted < 0) {
+        return -1;
+    }
+    if (io->owner_output != NULL) {
+        size_t got = fwrite(src, 1, (size_t)accepted, io->owner_output);
+        return got == (size_t)accepted ? accepted : -1;
+    }
+    return mem_write(&io->memory, src, accepted);
+}
+
+static int callback_cancel_at_eof(void *user) {
+    return ((CallbackFileIo *)user)->eof_seen != 0;
+}
+
+static void callback_report_options(KiOptions *opt, CallbackFileIo *io, const char *dir) {
+    ki_options_init(opt);
+    opt->font_path = "fonts/DejaVuSans.ttf";
+    opt->temp_dir = dir;
+    opt->profile = KI_PROFILE_REPORT;
+    opt->read_bytes = callback_file_read;
+    opt->write_bytes = callback_file_write;
+    opt->io_user = io;
+}
+
+static int callback_directory_entries(const char *path) {
+    DIR *d = opendir(path);
+    if (d == NULL) {
+        return -1;
+    }
+    int count = 0;
+    struct dirent *entry;
+    while ((entry = readdir(d)) != NULL) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            count++;
+        }
+    }
+    closedir(d);
+    return count;
+}
+
+static int callback_pdf_lines(const char *path, const char *const *expected, int count) {
+    char command[600];
+    snprintf(command, sizeof command, "pdftotext -layout -nopgbrk -q %s -", path);
+    FILE *reader = popen(command, "r");
+    CHECK(reader != NULL);
+    char text[4096];
+    size_t n = fread(text, 1, sizeof text - 1, reader);
+    text[n] = '\0';
+    int read_failed = ferror(reader);
+    int close_status = pclose(reader);
+    CHECK(!read_failed && close_status == 0);
+    CHECK(n < sizeof text - 1);
+    char lines[24][128];
+    int actual = logical_lines(text, lines, 24);
+    CHECK(actual == count);
+    for (int i = 0; i < count; i++) {
+        CHECK(strcmp(lines[i], expected[i]) == 0);
+    }
+    return 0;
+}
+
+static int callback_result_matches(const KiResult *a, const KiResult *b) {
+    return a->status == b->status && a->cause == b->cause &&
+        a->pages == b->pages && a->objects == b->objects &&
+        a->offset_bytes == b->offset_bytes && a->output_bytes == b->output_bytes &&
+        a->spool_bytes == b->spool_bytes &&
+        a->report_total == b->report_total && a->report_selected == b->report_selected &&
+        a->report_skipped == b->report_skipped;
+}
+
+static int callback_result_is_empty(const KiResult *result) {
+    return result->pages == 0 && result->objects == 0 && result->offset_bytes == 0 &&
+        result->output_bytes == 0 && result->spool_bytes == 0 &&
+        result->report_total == 0 && result->report_selected == 0 &&
+        result->report_skipped == 0;
+}
+
+typedef struct {
+    CallbackFileIo io;
+    KiOptions options;
+    KiResult result;
+    const char *path;
+    int status;
+} CallbackFileJob;
+
+static void *callback_file_thread(void *user) {
+    CallbackFileJob *job = user;
+    job->status = ki_convert_to_file(job->path, &job->options, &job->result);
+    return NULL;
+}
+
+static int test_callback_to_file(void) {
+    const char *xml =
+        "<report version=\"1\" title=\"Pipeline\">"
+        "<record id=\"first\"><field name=\"Value\">SKIPPED_VALUE</field></record>"
+        "<record id=\"second\"><field name=\"Value\">B<![CDATA[ & caf]]>&#233;</field></record>"
+        "</report>";
+    const char *expected[] = {
+        "Pipeline",
+        "Запись second",
+        "Value: B & café",
+        "Всего записей: 2",
+        "Выбрано записей: 1",
+        "Пропущено записей: 1",
+    };
+    const char *old = "OLD_DESTINATION_BYTES";
+    char dir[] = "/tmp/ki-callback-file-XXXXXX";
+    CHECK(mkdtemp(dir) != NULL);
+    char source[256], reference[256], output[256];
+    snprintf(source, sizeof source, "%s/source.xml", dir);
+    snprintf(reference, sizeof reference, "%s/reference.pdf", dir);
+    snprintf(output, sizeof output, "%s/out.pdf", dir);
+    CHECK(write_all(source, xml, strlen(xml)) == 0);
+    CHECK(write_all(output, old, strlen(old)) == 0);
+
+    CallbackFileIo io;
+    callback_file_io_init(&io, xml, 1);
+    io.write_fail_at = 1;
+    io.write_mode = 1;
+    KiOptions options;
+    callback_report_options(&options, &io, dir);
+    options.record_offset = 1;
+    options.record_limit = 1;
+    KiResult baseline;
+    CHECK(ki_convert_file(source, reference, &options, &baseline) == XML2PDF_OK);
+    /* Existing file API still ignores BOTH I/O callbacks. */
+    CHECK(io.read_calls == 0 && io.write_calls == 0);
+    CHECK(baseline.status == XML2PDF_OK && baseline.cause == KI_CAUSE_NONE);
+    CHECK(callback_pdf_lines(reference, expected, 6) == 0);
+    int directory_baseline = callback_directory_entries(dir);
+    CHECK(directory_baseline == 3);
+
+    /* One-byte reads are not EOF; selection still consumes the complete input.
+       A missing or failing write callback must be ignored for file publication. */
+    const int chunks[] = {1, 3, 4096};
+    for (size_t i = 0; i < sizeof chunks / sizeof chunks[0]; i++) {
+        CHECK(write_all(output, old, strlen(old)) == 0);
+        callback_file_io_init(&io, xml, chunks[i]);
+        io.write_fail_at = 1;
+        io.write_mode = 1;
+        callback_report_options(&options, &io, dir);
+        options.record_offset = 1;
+        options.record_limit = 1;
+        if (i == 1) {
+            options.write_bytes = NULL;
+        }
+        KiResult result;
+        memset(&result, 0x5a, sizeof result);
+        CHECK(ki_convert_to_file(output, &options, &result) == XML2PDF_OK);
+        CHECK(io.read_total == strlen(xml) && io.memory.i == io.memory.n && io.eof_seen);
+        CHECK(io.write_calls == 0);
+        CHECK(callback_result_matches(&result, &baseline));
+        struct stat published;
+        CHECK(stat(output, &published) == 0);
+        CHECK((long)published.st_size == result.output_bytes);
+        CHECK(!same_bytes(output, old, strlen(old)));
+        CHECK(callback_pdf_lines(output, expected, 6) == 0);
+        CHECK(count_temps(dir, "out.pdf") == 0);
+        CHECK(callback_directory_entries(dir) == directory_baseline);
+    }
+
+    /* Invalid setup cannot consume input or retain successful/sentinel metrics. */
+    for (int reused = 0; reused < 2; reused++) {
+        for (int invalid = 0; invalid < 10; invalid++) {
+            CHECK(write_all(output, old, strlen(old)) == 0);
+            callback_file_io_init(&io, xml, 1);
+            callback_report_options(&options, &io, dir);
+            const KiOptions *opt = &options;
+            const char *path = output;
+            switch (invalid) {
+                case 0: opt = NULL; break;
+                case 1: options.read_bytes = NULL; break;
+                case 2: path = NULL; break;
+                case 3: options.size = 1; break;
+                case 4: options.max_pages = -1; break;
+                case 5: options.max_output_bytes = -1; break;
+                case 6: options.max_spool_bytes = -1; break;
+                case 7: options.record_offset = -1; break;
+                case 8: options.record_limit = -1; break;
+                case 9: options.profile = 99; break;
+            }
+            KiResult result;
+            if (reused) {
+                result = baseline;
+            } else {
+                memset(&result, 0x5a, sizeof result);
+            }
+            CHECK(ki_convert_to_file(path, opt, &result) == XML2PDF_ERR_USAGE);
+            CHECK(result.status == XML2PDF_ERR_USAGE && result.cause == KI_CAUSE_USAGE);
+            CHECK(result.message[0] != '\0' && callback_result_is_empty(&result));
+            CHECK(io.read_calls == 0 && io.write_calls == 0);
+            CHECK(ki_convert_to_file(path, opt, NULL) == XML2PDF_ERR_USAGE);
+            CHECK(io.read_calls == 0 && io.write_calls == 0);
+            CHECK(same_bytes(output, old, strlen(old)));
+            CHECK(count_temps(dir, "out.pdf") == 0);
+            CHECK(callback_directory_entries(dir) == directory_baseline);
+        }
+    }
+
+    char missing[300];
+    snprintf(missing, sizeof missing, "%s/missing/out.pdf", dir);
+    callback_file_io_init(&io, xml, 1);
+    callback_report_options(&options, &io, dir);
+    KiResult result = baseline;
+    CHECK(ki_convert_to_file(missing, &options, &result) == XML2PDF_ERR_IO);
+    CHECK(result.status == XML2PDF_ERR_IO && result.cause == KI_CAUSE_IO);
+    CHECK(callback_result_is_empty(&result));
+    CHECK(io.read_calls == 0 && io.write_calls == 0);
+    CHECK(callback_directory_entries(dir) == directory_baseline);
+
+    /* More than one physical page before a late input or mapper failure. */
+    char large[8192];
+    size_t used = (size_t)snprintf(large, sizeof large,
+        "<report version=\"1\" title=\"Large\"><record id=\"1\">"
+        "<field name=\"Value\"><![CDATA[");
+    for (int i = 0; i < 160; i++) {
+        used += (size_t)snprintf(large + used, sizeof large - used, "line %03d\n", i);
+    }
+    used += (size_t)snprintf(large + used, sizeof large - used,
+        "]]></field></record></report>");
+    CHECK(used < sizeof large);
+    size_t before_end = used - strlen("</report>");
+    char malformed[8192];
+    memcpy(malformed, large, before_end);
+    strcpy(malformed + before_end, "</wrong>");
+
+    for (int failure = 0; failure < 5; failure++) {
+        CHECK(write_all(output, old, strlen(old)) == 0);
+        callback_file_io_init(&io, failure == 0 ? malformed : large, 13);
+        callback_report_options(&options, &io, dir);
+        int wanted_status = XML2PDF_ERR_RESOURCE;
+        int wanted_cause = KI_CAUSE_RESOURCE;
+        switch (failure) {
+            case 0: wanted_status = XML2PDF_ERR_XML; wanted_cause = KI_CAUSE_XML; break;
+            case 1:
+                io.read_fail_after = before_end;
+                wanted_status = XML2PDF_ERR_IO;
+                wanted_cause = KI_CAUSE_IO;
+                break;
+            case 2: options.max_pages = 1; break;
+            case 3: options.max_output_bytes = 1024; break;
+            case 4: options.max_spool_bytes = 16; break;
+        }
+        result = baseline;
+        CHECK(ki_convert_to_file(output, &options, &result) == wanted_status);
+        CHECK(result.status == wanted_status && result.cause == wanted_cause);
+        CHECK(result.message[0] != '\0' && io.write_calls == 0);
+        if (failure < 2) {
+            CHECK(result.pages > 0 && io.read_total >= before_end);
+        }
+        CHECK(same_bytes(output, old, strlen(old)));
+        CHECK(count_temps(dir, "out.pdf") == 0);
+        CHECK(callback_directory_entries(dir) == directory_baseline);
+    }
+
+    CHECK(write_all(output, old, strlen(old)) == 0);
+    callback_file_io_init(&io, large, 13);
+    callback_report_options(&options, &io, dir);
+    int seen_text = 0;
+    options.profile = KI_PROFILE_RECORDS;
+    options.map = fail_late_map;
+    options.map_user = &seen_text;
+    CHECK(ki_convert_to_file(output, &options, &result) == XML2PDF_ERR_XML);
+    CHECK(result.cause == KI_CAUSE_PROFILE && strcmp(result.message, "mapping failed") == 0);
+    CHECK(seen_text > 1 && same_bytes(output, old, strlen(old)));
+    CHECK(count_temps(dir, "out.pdf") == 0);
+    CHECK(callback_directory_entries(dir) == directory_baseline);
+
+    /* Cancellation once the read callback has returned EOF. */
+    CHECK(write_all(output, old, strlen(old)) == 0);
+    callback_file_io_init(&io, xml, 1);
+    callback_report_options(&options, &io, dir);
+    options.cancelled = callback_cancel_at_eof;
+    options.cancel_user = &io;
+    CHECK(ki_convert_to_file(output, &options, &result) == XML2PDF_ERR_RESOURCE);
+    CHECK(result.status == XML2PDF_ERR_RESOURCE && result.cause == KI_CAUSE_CANCEL);
+    CHECK(io.eof_seen && io.read_total == strlen(xml));
+    CHECK(same_bytes(output, old, strlen(old)));
+    CHECK(count_temps(dir, "out.pdf") == 0);
+    CHECK(callback_directory_entries(dir) == directory_baseline);
+
+    /* The existing fsync wrapper arms cancellation only after real fsync.
+       Reset the global before CHECK so a failure cannot affect later groups. */
+    CHECK(write_all(output, old, strlen(old)) == 0);
+    callback_file_io_init(&io, xml, 3);
+    callback_report_options(&options, &io, dir);
+    options.cancelled = cancel_after_fsync;
+    arm_fsync_cancel = 1;
+    int fsync_status = ki_convert_to_file(output, &options, &result);
+    int fsync_phase = arm_fsync_cancel;
+    arm_fsync_cancel = 0;
+    CHECK(fsync_phase == 2);
+    CHECK(fsync_status == XML2PDF_ERR_RESOURCE && result.cause == KI_CAUSE_CANCEL);
+    CHECK(same_bytes(output, old, strlen(old)));
+    CHECK(count_temps(dir, "out.pdf") == 0);
+    CHECK(callback_directory_entries(dir) == directory_baseline);
+    callback_file_io_init(&io, xml, 3);
+    callback_report_options(&options, &io, dir);
+    CHECK(ki_convert_to_file(output, &options, &result) == XML2PDF_OK);
+
+    /* ki_convert accepts only a complete write. Accepted bytes are retained on
+       negative, short, zero or over-count callback returns. */
+    for (int mode = 1; mode <= 4; mode++) {
+        callback_file_io_init(&io, xml, 3);
+        callback_report_options(&options, &io, dir);
+        io.write_fail_at = 2;
+        io.write_mode = mode;
+        CHECK(ki_convert(&options, &result) == XML2PDF_ERR_IO);
+        CHECK(result.status == XML2PDF_ERR_IO && result.cause == KI_CAUSE_IO);
+        CHECK(io.write_calls >= 2 && io.memory.len >= 5);
+        CHECK(memcmp(io.memory.buf, "%PDF-", 5) == 0);
+        free(io.memory.buf);
+    }
+
+    /* Caller-owned input FILE remains open on both success and late error. */
+    for (int bad = 0; bad < 2; bad++) {
+        const char *input = bad ? malformed : xml;
+        CHECK(write_all(source, input, strlen(input)) == 0);
+        callback_file_io_init(&io, input, 3);
+        io.owner_input = fopen(source, "rb");
+        CHECK(io.owner_input != NULL);
+        int input_fd = fileno(io.owner_input);
+        CHECK(input_fd >= 0);
+        callback_report_options(&options, &io, dir);
+        int status = ki_convert_to_file(output, &options, &result);
+        CHECK(status == (bad ? XML2PDF_ERR_XML : XML2PDF_OK));
+        CHECK(fcntl(input_fd, F_GETFD) != -1);
+        CHECK(fseek(io.owner_input, 0, SEEK_SET) == 0);
+        CHECK(fgetc(io.owner_input) == '<');
+        CHECK(fclose(io.owner_input) == 0);
+        CHECK(io.write_calls == 0);
+        CHECK(count_temps(dir, "out.pdf") == 0);
+    }
+
+    /* Caller-owned read/write FILEs stay open on success and late failure. */
+    for (int bad = 0; bad < 2; bad++) {
+        const char *input = bad ? malformed : xml;
+        CHECK(write_all(source, input, strlen(input)) == 0);
+        callback_file_io_init(&io, input, 3);
+        io.owner_input = fopen(source, "rb");
+        io.owner_output = tmpfile();
+        CHECK(io.owner_input != NULL && io.owner_output != NULL);
+        int input_fd = fileno(io.owner_input);
+        int output_fd = fileno(io.owner_output);
+        callback_report_options(&options, &io, dir);
+        int status = ki_convert(&options, &result);
+        CHECK(status == (bad ? XML2PDF_ERR_XML : XML2PDF_OK));
+        CHECK(fcntl(input_fd, F_GETFD) != -1 && fcntl(output_fd, F_GETFD) != -1);
+        CHECK(fseek(io.owner_input, 0, SEEK_SET) == 0 && fgetc(io.owner_input) == '<');
+        CHECK(fflush(io.owner_output) == 0 && fseek(io.owner_output, 0, SEEK_SET) == 0);
+        char magic[5];
+        CHECK(fread(magic, 1, sizeof magic, io.owner_output) == sizeof magic);
+        CHECK(memcmp(magic, "%PDF-", sizeof magic) == 0);
+        CHECK(fclose(io.owner_input) == 0 && fclose(io.owner_output) == 0);
+    }
+
+    /* Restore host dispositions before any CHECK that may return. */
+    struct sigaction host, previous_pipe, previous_usr, after_pipe, after_usr;
+    memset(&host, 0, sizeof host);
+    host.sa_handler = test_on_term;
+    host.sa_flags = SA_RESTART;
+    sigemptyset(&host.sa_mask);
+    sigaddset(&host.sa_mask, SIGUSR2);
+    CHECK(sigaction(SIGPIPE, &host, &previous_pipe) == 0);
+    int install_usr = sigaction(SIGUSR1, &host, &previous_usr);
+    if (install_usr != 0) {
+        sigaction(SIGPIPE, &previous_pipe, NULL);
+    }
+    CHECK(install_usr == 0);
+    callback_file_io_init(&io, xml, 3);
+    callback_report_options(&options, &io, dir);
+    int signal_status = ki_convert_to_file(output, &options, &result);
+    callback_file_io_init(&io, malformed, 3);
+    int signal_failure = ki_convert_to_file(output, &options, &result);
+    int query_pipe = sigaction(SIGPIPE, NULL, &after_pipe);
+    int query_usr = sigaction(SIGUSR1, NULL, &after_usr);
+    int restore_pipe = sigaction(SIGPIPE, &previous_pipe, NULL);
+    int restore_usr = sigaction(SIGUSR1, &previous_usr, NULL);
+    CHECK(signal_status == XML2PDF_OK && signal_failure == XML2PDF_ERR_XML);
+    CHECK(query_pipe == 0 && query_usr == 0 && restore_pipe == 0 && restore_usr == 0);
+    CHECK(after_pipe.sa_handler == test_on_term && after_usr.sa_handler == test_on_term);
+    CHECK((after_pipe.sa_flags & SA_RESTART) && (after_usr.sa_flags & SA_RESTART));
+    CHECK(sigismember(&after_pipe.sa_mask, SIGUSR2) == 1);
+    CHECK(sigismember(&after_usr.sa_mask, SIGUSR2) == 1);
+
+    /* Two independent callback contexts publish independently. */
+    const char *thread_xml[] = {
+        "<report version=\"1\" title=\"One\"><record id=\"a\">"
+        "<field name=\"Value\">FIRST_CONTEXT</field></record></report>",
+        "<report version=\"1\" title=\"Two\"><record id=\"b\">"
+        "<field name=\"Value\">SECOND_CONTEXT</field></record></report>",
+    };
+    const char *thread_expected[][6] = {
+        {"One", "Запись a", "Value: FIRST_CONTEXT", "Всего записей: 1",
+         "Выбрано записей: 1", "Пропущено записей: 0"},
+        {"Two", "Запись b", "Value: SECOND_CONTEXT", "Всего записей: 1",
+         "Выбрано записей: 1", "Пропущено записей: 0"},
+    };
+    char thread_paths[2][256];
+    CallbackFileJob jobs[2];
+    pthread_t threads[2];
+    for (int i = 0; i < 2; i++) {
+        memset(&jobs[i], 0, sizeof jobs[i]);
+        snprintf(thread_paths[i], sizeof thread_paths[i], "%s/thread-%d.pdf", dir, i);
+        jobs[i].path = thread_paths[i];
+        callback_file_io_init(&jobs[i].io, thread_xml[i], i + 1);
+        callback_report_options(&jobs[i].options, &jobs[i].io, dir);
+        CHECK(pthread_create(&threads[i], NULL, callback_file_thread, &jobs[i]) == 0);
+    }
+    for (int i = 0; i < 2; i++) {
+        CHECK(pthread_join(threads[i], NULL) == 0);
+        CHECK(jobs[i].status == XML2PDF_OK && jobs[i].result.cause == KI_CAUSE_NONE);
+        CHECK(jobs[i].result.report_total == 1 && jobs[i].result.report_selected == 1);
+        CHECK(jobs[i].io.read_total == strlen(thread_xml[i]) && jobs[i].io.write_calls == 0);
+        CHECK(callback_pdf_lines(thread_paths[i], thread_expected[i], 6) == 0);
+        unlink(thread_paths[i]);
+    }
+    CHECK(count_temps(dir, "out.pdf") == 0);
+    CHECK(callback_directory_entries(dir) == directory_baseline);
+
+    unlink(source);
+    unlink(reference);
+    unlink(output);
+    CHECK(rmdir(dir) == 0);
+    return 0;
+}
+
 
 static int test_report_v1(void) {
     char out[] = "/tmp/ki-report-XXXXXX";
@@ -2672,6 +3236,8 @@ int main(void) {
         {"wellformed_profile", test_wellformed_profile},
         {"review_regressions", test_review_regressions},
         {"library_contract", test_library_contract},
+        {"callback_usage_result", test_callback_usage_result},
+        {"callback_to_file", test_callback_to_file},
         {"report_v1", test_report_v1},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);

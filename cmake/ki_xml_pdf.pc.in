@@ -1,0 +1,9 @@
+prefix=@KI_PREFIX@
+libdir=@KI_LIBDIR@
+includedir=@KI_INCLUDEDIR@
+
+Name: ki_xml_pdf
+Description: Bounded-memory streaming XML to PDF converter
+Version: @KI_VERSION@
+Libs: -L${libdir} -lki_xml_pdf
+Cflags: -I${includedir}

@@ -9,42 +9,47 @@ concurrency:
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
-    inputs:
-      large:
-        description: Run the 128 MiB resource proof
-        type: boolean
-        default: false
 
 jobs:
   gcc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc g++ make poppler-utils python3 time
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make cmake pkg-config binutils poppler-utils python3 time
       - name: summary
         run: |
           git rev-parse HEAD
           gcc --version | head -1
           g++ --version | head -1
-      - name: functional
-        run: make test
-      - name: fuzz smoke
-        run: make xml2pdf && python3 tests/fuzz_smoke.py
+      - name: functional API, CLI and catalog
+        run: |
+          make test xml2pdf example
+          python3 tests/cli_pipeline.py
+          python3 tests/catalog_verify.py
+      - name: installed CMake and pkg-config consumers
+        run: tests/build_integration.sh
+      - name: documented commands and clients
+        run: tests/docs_smoke.sh
+      - name: bounded fuzz smoke and independent reader
+        run: python3 tests/fuzz_smoke.py
       - name: header dependency
         run: |
-          make xml2pdf
           sleep 1
           touch src/layout.h
           make xml2pdf
           test xml2pdf -nt src/layout.h
-      - name: distcheck
+      - name: clean source distcheck
         run: make distcheck
       - name: distcheck rejects a failed stage
         run: |
           if make distcheck CC=false; then echo "failing compiler was accepted"; exit 1; fi
+          if make distcheck CXX=false; then echo "failing C++ compiler was accepted"; exit 1; fi
           if make distcheck PDFTOTEXT=/bin/false; then echo "failing reader was accepted"; exit 1; fi
           printf 'not the oracle\n' > /tmp/ki-bad-oracle.txt
           if make distcheck DISTCHECK_ORACLE=/tmp/ki-bad-oracle.txt; then echo "bad oracle was accepted"; exit 1; fi
@@ -56,24 +61,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y clang make poppler-utils python3
+        run: sudo apt-get update && sudo apt-get install -y clang g++ make cmake pkg-config binutils poppler-utils python3 time
       - name: summary
         run: |
           git rev-parse HEAD
           clang --version | head -1
           clang++ --version | head -1
       - name: functional
-        run: make clean && make CC=clang test
+        run: make clean && make CC=clang test xml2pdf example
       - name: installed static and shared consumers
-        run: CC=clang CXX=clang++ tests/install_smoke.sh "${RUNNER_TEMP}/ki-prefix"
+        run: CC=clang CXX=clang++ tests/build_integration.sh
       - name: sanitizers without RSS gate
-        run: make clean && make CC=clang test-san
+        run: make CC=clang test-san
 
   asan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
         run: sudo apt-get update && sudo apt-get install -y gcc make poppler-utils python3
       - name: summary
@@ -87,35 +96,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc make poppler-utils python3 time
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make poppler-utils python3 time
       - name: summary
         run: |
           git rev-parse HEAD
           gcc --version | head -1
       - name: uninstrumented resource gate
         run: make check
-      - name: large proof gates
-        run: python3 tests/large_proof.py --self-test && python3 tests/large_proof.py 262144
-      - name: 128 MiB report-v1 proof
-        if: github.event_name == 'workflow_dispatch' && inputs.large
-        run: python3 tests/large_proof.py 134217728
+      - name: large report proof and negative metric controls
+        run: python3 tests/large_proof.py --self-test && python3 tests/large_proof.py 1073741824
 
   source:
     needs: [gcc, clang, asan, resources]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: source archive and provenance
+        id: source
         run: |
           make dist
-          sha256sum ki_xml_pdf-0.1.0.tar.gz > SHA256SUMS
+          archive_name=$(make -s print-dist-name)
+          sha256sum "$archive_name" > SHA256SUMS
           git rev-parse HEAD > SOURCE_COMMIT
+          printf 'archive=%s\n' "$archive_name" >> "$GITHUB_OUTPUT"
+          printf 'version=%s\n' "$(make -s print-version)" >> "$GITHUB_OUTPUT"
+          printf 'sha=%s\n' "$(cat SOURCE_COMMIT)" >> "$GITHUB_OUTPUT"
+          gzip -dc "$archive_name" | git get-tar-commit-id | cmp - SOURCE_COMMIT
       - uses: actions/upload-artifact@v7.0.2
         with:
-          name: ki_xml_pdf-0.1.0-source-${{ github.sha }}
+          name: ki_xml_pdf-${{ steps.source.outputs.version }}-source-${{ steps.source.outputs.sha }}
           path: |
-            ki_xml_pdf-0.1.0.tar.gz
+            ${{ steps.source.outputs.archive }}
             SHA256SUMS
             SOURCE_COMMIT
           if-no-files-found: error

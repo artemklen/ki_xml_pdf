@@ -1,21 +1,42 @@
 # ki_xml_pdf
 
-Библиотека на C и CLI для преобразования больших XML в PDF с ограниченной памятью, версия 0.1.0. Профиль [report-v1](docs/report-v1.md) выводит последовательный отчёт с полями и явной выборкой записей. Другие XML-схемы подключаются через callback mapping. Диагностический `records-v1` печатает имена элементов, атрибуты и текст; он используется по умолчанию.
+[Русский README](README.ru.md)
 
-Исходники и собственные примеры распространяются по [MIT](LICENSE). Шрифт DejaVu имеет [отдельное уведомление](fonts/DejaVuSans.copyright). Репозиторий: [artemklen/ki_xml_pdf](https://github.com/artemklen/ki_xml_pdf); результаты проверок: [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml).
+A C library and command-line tool for converting large XML inputs to PDF with bounded converter memory. Version **0.2.0** adds installed CMake and pkg-config integration, stdin/stdout pipelines, and an example adapter for a project-owned XML schema.
 
-На собственной синтетике около 1 ГиБ с выборкой первых 1000 записей RSS конвертера составила 2372 КиБ, PDF — 41 страницу / 1 009 241 байт. Без выборки сохраняются все записи; размер PDF и время зависят от содержимого. Ревизия, команды, бюджеты и границы этих измерений описаны в [контрактах](docs/contract.md).
+The built-in [report-v1](docs/report-v1.md) profile renders a sequential report with named fields and explicit record selection. The default `records-v1` profile prints element names, attributes, and text for diagnostic use. Other schemas require a mapper; start with the [mapper guide](docs/mapper-guide.md).
 
-## Сборка и запуск
+Project source and original examples use [MIT](LICENSE). DejaVu Sans has a [separate license notice](fonts/DejaVuSans.copyright). See the [repository](https://github.com/artemklen/ki_xml_pdf) and [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) for source and checks tied to a specific commit.
 
-Поддерживаемый стенд: Linux 64-bit с glibc, GCC или Clang, GNU Make. Сборка использует GNU/POSIX API и GNU-compatible linker. Работа на других ОС не проверена.
+## Build and convert
+
+The supported environment is **64-bit Linux with glibc**, GCC or Clang, GNU Make, and a GNU-compatible linker. The implementation uses GNU/POSIX APIs. Other operating systems have not been validated. CMake and pkg-config are needed for their respective integration workflows.
+
+Run these commands from the source directory:
 
 ```sh
 make
 ./xml2pdf --profile report-v1 examples/report-v1.xml report.pdf
 ```
 
-Выборка большого входа и ограничения результата:
+The same profile works with all combinations of files and streams:
+
+```sh
+cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - from-stdin.pdf
+./xml2pdf --profile report-v1 examples/report-v1.xml - > from-file.pdf
+cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - - > pipeline.pdf
+```
+
+`-` means stdin for the input argument and stdout for the output argument. During conversion, stdout contains only PDF bytes; diagnostics go to stderr. `-h` and `--help` print help and return 0; `--version` prints the version. `--` ends option parsing and allows paths beginning with a hyphen:
+
+```sh
+cp examples/report-v1.xml ./--input.xml
+./xml2pdf --profile report-v1 -- --input.xml --output.pdf
+```
+
+A file destination is published atomically after the entire input has been validated and the PDF completed. A failure preserves an existing destination. Output sent to stdout or a write callback cannot be rolled back: a late error can leave an incomplete PDF. Check the exit status before using streamed output.
+
+For large inputs, selection and quotas are explicit:
 
 ```sh
 ./xml2pdf --profile report-v1 --record-offset 0 --record-limit 1000 \
@@ -23,18 +44,97 @@ make
   --max-spool-bytes 67108864 input.xml report.pdf
 ```
 
-Даже при выборке весь XML дочитывается и валидируется. Без `--record-limit` данные не пропускаются. Файловый API сохраняет прежний PDF при ошибке.
+Without a record limit, all records after the offset are selected. Selection still reads and validates the entire XML, including skipped records; reaching the limit does not hide a later error.
 
-## Установка и API
+An out-of-tree CMake build is also supported. CMake enables tests by default and requires Python 3 during configuration. Use `-DBUILD_TESTING=OFF` for a library/CLI build without test targets:
 
 ```sh
-make install PREFIX="$HOME/.local"
-cc -I"$HOME/.local/include" examples/report.c \
-  "$HOME/.local/lib/libki_xml_pdf.a" -o report-example
-./report-example examples/report-v1.xml report.pdf
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+cmake --build build
+./build/xml2pdf --profile report-v1 examples/report-v1.xml cmake-report.pdf
 ```
 
-Для shared library линковка использует `-L<prefix>/lib -lki_xml_pdf`; каталог должен быть доступен runtime linker. Устанавливаются публичный заголовок, `.a`, `.so`, font и notices. `PREFIX` задаёт runtime-путь шрифта; `DESTDIR` только стадирует файлы. При переносе данных можно явно задать `KiOptions.font_path` или `KI_XML_PDF_FONT`.
+## Install
+
+Make installs the CLI, public header, static and shared libraries, CMake package, pkg-config metadata, font, and license notices:
+
+```sh
+make PREFIX="$HOME/.local"
+make install PREFIX="$HOME/.local"
+```
+
+Use the same prefix when building and installing because it sets the installed runtime font path. CMake installation uses its own configured prefix:
+
+```sh
+cmake -S . -B build-install -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DBUILD_SHARED_LIBS=ON
+cmake --build build-install
+cmake --install build-install
+```
+
+Both libraries are installed. `BUILD_SHARED_LIBS` selects the default CMake target variant. `DESTDIR` stages files without changing the compiled runtime font path or the prefix in discovery metadata:
+
+```sh
+make install PREFIX=/usr/local DESTDIR="$PWD/stage"
+DESTDIR="$PWD/stage-cmake" cmake --install build-install
+```
+
+The installed font path is `<prefix>/share/ki_xml_pdf/DejaVuSans.ttf`. For a relocated installation, set `KiOptions.font_path` or `KI_XML_PDF_FONT` explicitly. An invalid explicit font is an error; it is not silently replaced. Shared consumers also need the library directory to be discoverable by the runtime linker.
+
+## Installed C and C++ consumers
+
+From the source directory, copy the examples and input fixtures into a separate working directory. The programs below then build against the installation and run outside the source tree:
+
+```sh
+prefix="$HOME/.local"
+export PKG_CONFIG_PATH="$prefix/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export LD_LIBRARY_PATH="$(pkg-config --variable=libdir ki_xml_pdf)${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+consumer_dir="$(mktemp -d)"
+cp examples/report.c examples/consume.cpp examples/report-v1.xml examples/hello.xml "$consumer_dir/"
+cd "$consumer_dir"
+
+cc report.c $(pkg-config --cflags --libs ki_xml_pdf) -o report-shared
+c++ consume.cpp $(pkg-config --cflags --libs ki_xml_pdf) -o consume-shared
+./report-shared report-v1.xml report-shared.pdf
+./consume-shared hello.xml consume-shared.pdf
+
+cc report.c $(pkg-config --cflags ki_xml_pdf) \
+  -Wl,-Bstatic $(pkg-config --static --libs ki_xml_pdf) -Wl,-Bdynamic -o report-static
+c++ consume.cpp $(pkg-config --cflags ki_xml_pdf) \
+  -Wl,-Bstatic $(pkg-config --static --libs ki_xml_pdf) -Wl,-Bdynamic -o consume-static
+./report-static report-v1.xml report-static.pdf
+./consume-static hello.xml consume-static.pdf
+```
+
+`pkg-config --static` includes private dependency flags; the GNU linker flags above select the static library even when a shared library is installed alongside it.
+
+In that consumer directory, save this as `CMakeLists.txt`:
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(ki_consumer LANGUAGES C CXX)
+find_package(ki_xml_pdf CONFIG REQUIRED)
+add_executable(report-client report.c)
+add_executable(consume-client consume.cpp)
+target_link_libraries(report-client PRIVATE ki_xml_pdf::ki_xml_pdf)
+target_link_libraries(consume-client PRIVATE ki_xml_pdf::ki_xml_pdf)
+```
+
+Build and run both languages with the default shared target, then choose the installed static variant:
+
+```sh
+cmake -S . -B shared -DCMAKE_PREFIX_PATH="$prefix"
+cmake --build shared
+./shared/report-client report-v1.xml cmake-shared.pdf
+./shared/consume-client hello.xml cmake-shared-cpp.pdf
+
+cmake -S . -B static -DCMAKE_PREFIX_PATH="$prefix" -Dki_xml_pdf_USE_STATIC_LIBS=ON
+cmake --build static
+./static/report-client report-v1.xml cmake-static.pdf
+./static/consume-client hello.xml cmake-static-cpp.pdf
+```
+
+## Public API
 
 ```c
 #include "ki_xml_pdf.h"
@@ -56,56 +156,56 @@ int main(void) {
 }
 ```
 
-`ki_convert` принимает read/write callbacks; короткое положительное чтение не означает EOF. Уже принятые output callback байты не откатываются при ошибке. Независимые conversion calls могут работать одновременно; библиотека не меняет signal handlers приложения. Примеры: [C](examples/report.c), [C++](examples/consume.cpp); полный публичный контракт — [ki_xml_pdf.h](include/ki_xml_pdf.h).
+| Function | Input | Output and failure behavior |
+| --- | --- | --- |
+| `ki_convert_file(xml_path, pdf_path, options, result)` | File path; ignores read/write callbacks | Atomic file publication; preserves the previous destination on failure |
+| `ki_convert(options, result)` | `read_bytes` callback | `write_bytes` callback; previously accepted bytes remain on failure |
+| `ki_convert_to_file(pdf_path, options, result)` | `read_bytes` callback; ignores `write_bytes` | Atomic file publication, including input from a pipe or application stream |
 
-## Проверки
+A read callback returns 0 only at EOF, a positive byte count for data, and a negative value for an error. A positive short read is not EOF. A write callback must accept the entire requested count or return an error. The caller owns callback resources and closes them; the library does not close caller streams or free caller state.
 
-Для проверок нужны compiler, `python3`, `/usr/bin/time`, `pdfinfo` и `pdftotext` (Poppler). Примеры и install checks также используют C++ compiler. В Ubuntu/Debian: `gcc g++ clang make python3 time poppler-utils`. Эти зависимости нужны и sanitizer jobs. Если reader отсутствует, проверка завершается ошибкой.
+Call `ki_options_init` before setting options and leave `options.size` equal to `sizeof(KiOptions)`. The 0.x API remains unstable until 1.0; this version preserves the existing `KiOptions` layout and adds `ki_convert_to_file`. A non-null `KiResult` is initialized for the current call, including early argument errors, rather than retaining previous conversion counters.
+
+Use separate per-call options/result and mutable I/O/mapper state for concurrent conversions. Independent conversion calls can run simultaneously. The library does not install signal handlers and does not print to a terminal unless the caller supplies a log callback. `KiEvent` pointers are borrowed for the duration of the mapper callback; do not retain them. Mapping emits text with `ki_doc_text`/`ki_doc_break` and reports schema failures with `ki_doc_fail`. See the [public header](include/ki_xml_pdf.h) and [mapper guide](docs/mapper-guide.md) for the complete callback contract and working catalog adapter.
+
+Return codes are 0 for success, 1 for XML/profile/font errors, 2 for invalid usage, 3 for I/O errors, and 4 for resource limits or cancellation. `KiResult.cause` distinguishes XML, usage, I/O, resource, font, cancellation, and profile failures. Profile errors include the rule and input byte offset; unsupported characters are font errors with a `U+` code point.
+
+## XML, font, and resource limits
+
+Parser state does not grow with document size. Input is read through a 4096-byte window. The limits are 64 simultaneously open elements, 63 bytes per name, 8 attributes per element, 255 UTF-8 bytes per decoded attribute value, and 1023 bytes per text event fragment. A field value can span many fragments; it is not collected into a complete field, record, or document buffer.
+
+The parser supports XML declarations, comments, processing instructions, CDATA inside an element, the five predefined entities, and decimal/hexadecimal character references. It never loads external DTDs or entities. Unknown entities, CDATA outside an element, unsupported declarations such as `<!FOO>`, `]]>` in ordinary text, invalid declarations, prohibited control bytes, NUL, and invalid UTF-8 are rejected. Literal CR and CRLF are normalized to LF. This is a documented XML subset, rather than a full XML 1.0 implementation. `report-v1` requires UTF-8 and rejects namespaces; see its [grammar and whitespace contract](docs/report-v1.md).
+
+Text uses DejaVu Sans. The repertoire is U+0009/U+000A/U+000D, U+0020–U+04FF, and U+2010–U+2027; a character outside it produces a font error. Pages are Letter with 40 pt margins, 10 pt type, 14 pt line spacing, and at most 50 complete lines per page. Text wraps using glyph widths, not a byte-count threshold.
+
+PDF object offsets are spooled to disk rather than retained in a growing array. `--max-pages` and `--max-output-bytes` are optional quotas; 0 disables their additional limit. The metadata spool defaults to 64 MiB when `--max-spool-bytes` is 0. There are at most 8,000,000 PDF objects regardless of those settings. The spool uses `--temp-dir`/`KiOptions.temp_dir` or `/tmp`.
+
+For atomic file output, the temporary PDF is created beside the destination and published by `rename` after successful parsing, PDF completion, `fflush`, `fsync`, and close. Errors and cancellation before publication remove the temporary PDF and preserve the destination. `ki_convert_file` rejects an input and destination referring to the same inode, including hard or symbolic links. A destination symlink to another file is replaced by the new PDF rather than followed for writing. `SIGKILL` can leave an unfinished temporary file beside the destination.
+
+The resource acceptance ceiling is **64 MiB converter RSS on the documented synthetic workload and Linux test environment**. Historical measurements on revision [`7c62fe4`](https://github.com/artemklen/ki_xml_pdf/commit/7c62fe4af72b097885d76a7f9f897492f5c4c2d5) recorded 2372 KiB converter RSS for a 1,073,741,815-byte synthetic report, selecting the first 1000 of 19,522,650 records: 41 PDF pages, 1,009,241 output bytes, and 720 spool bytes. These are measurements of that revision and workload, not a promise for arbitrary inputs. The [report reference](docs/report-v1.md) and [historical core contract](docs/contract.md) retain commands, budgets, and measurement boundaries.
+
+Layout consists of sequential text blocks. Tables, global sorting, XSL-FO, UTF-16, additional operating systems, and automatic support for unknown schemas are outside the current contract. Adoption and comparisons with other converters have not been measured.
+
+## Checks
+
+Checks require C and C++ compilers, GNU Make, `python3`, `/usr/bin/time`, `readelf` (binutils), and Poppler’s `pdfinfo`, `pdftotext`, and `pdftohtml`. Integration checks additionally require CMake and pkg-config. On Debian/Ubuntu, the packages are `gcc g++ clang make cmake pkg-config python3 time poppler-utils`. Sanitizer jobs need these dependencies too; missing PDF readers cause a check failure.
+
+From the source directory:
 
 ```sh
 make check
-```
-
-`make check` удаляет прежние `xml2pdf` и `test_stream`, заново собирает их из исходников, прогоняет группы `tests/test_stream` и `tests/verify.sh`. Готовые бинарники для этого не нужны.
-
-Отдельно:
-
-```sh
-make clean
-make test
-./tests/verify.sh
 make test-san
 make distcheck
 python3 tests/large_proof.py --self-test
 python3 tests/large_proof.py 1073741824
 ```
 
-`tests/verify.sh` пишет отчёты в свой каталог (`mktemp -d`, либо `SCRATCH`, если он задан). Крупные файлы этого прогона — один XML около 16 МиБ и его PDF; после замера RSS они удаляются. В отчёте остаётся `mem.txt`. RSS в нём — это maximum resident set size процесса `./xml2pdf`, не генератора XML и не разбора PDF.
+`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
 
-Запуск конвертера:
+`tests/verify.sh` uses a temporary scratch directory or the directory named by `SCRATCH`. Its large synthetic XML/PDF files are removed after the RSS measurement; `mem.txt` retains the converter's maximum resident set size. See [CONTRIBUTING.md](CONTRIBUTING.md) for regression evidence and private security reporting.
 
-```sh
-./xml2pdf input.xml output.pdf
-```
+## Source distribution
 
-## Пределы парсера
+`make dist` creates `ki_xml_pdf-0.2.0.tar.gz` from the current Git HEAD and prints its SHA-256. `make distcheck` unpacks the same source archive, builds and installs it, runs external C/C++ consumers, and checks the report oracle. New build files, documentation, examples, tests, and licensing are included in the source archive.
 
-Состояние парсера не растёт вместе с документом. Вход читается окном 4096 байт. Одновременно открыто не больше 64 элементов. Имя — до 63 байт, атрибутов не больше 8, значение атрибута — до 255 байт. Текст отдаётся кусками до 1023 байт.
-
-Разбираются разметка, комментарии, объявление XML и секции CDATA внутри элемента, пять предопределённых сущностей и числовые ссылки `&#...;` / `&#x...;`. Внешние DTD и сущности не загружаются. Неизвестная сущность, CDATA вне элемента, `<!FOO>`, `]]>` в тексте, неверное объявление, управляющий байт, NUL и битый UTF-8 отклоняются. Буквальные CR/CRLF становятся LF. Пробел между словами сохраняется; отступ с переводом строки на пустой строке — нет, если нет `xml:space="preserve"` и это не CDATA. Это по-прежнему не весь XML 1.0.
-
-## Подтверждённые ограничения
-
-Смещения объектов PDF пишутся во временный файл, а не в растущий массив. На синтетике около 16 МиБ (десятки тысяч страниц) RSS конвертера остаётся около 2–3 МиБ: в неё входит шрифт, а не список страниц. Это не обещание, что любой вход уложится в ту же цифру. Потолок контракта — 64 МиБ RSS на стенде обзора.
-
-Текст набирается DejaVu Sans (файл `fonts/DejaVuSans.ttf`, лицензия рядом). Кириллица, ё/Ё и тире U+2014 читаются `pdftotext`. Символ вне репертуара контракта — ошибка, а не пропуск. Строка переносится по ширине глифа внутри полей 40 пт, а не по 90 байтам.
-
-Результат пишется во временный файл в том же каталоге и заменяет путь назначения через `rename` только после успешного разбора, сборки PDF, `fflush` и `fsync`. Один и тот же inode — тот же путь, жёсткая ссылка или символическая ссылка на исходник — отклоняется до изменения файлов. Символическая ссылка на другой файл при успехе заменяется новым файлом, а не записью сквозь ссылку. При ошибке прежний файл назначения не меняется, временный файл удаляется. После `SIGKILL` незавершённый временный файл может остаться рядом, но это не путь назначения.
-
-Контракт ограничивает RAM конвертера на заявленном стенде. Вёрстка — последовательные текстовые блоки; таблицы, глобальные сортировки и XSL-FO не поддерживаются. Неизвестный XML требует отдельного адаптера. Параметры, typed errors, XML/font limits и quotas описаны в [контракте core](docs/contract.md) и [report-v1](docs/report-v1.md). Куда сообщать об ошибках, написано в [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Исходный дистрибутив
-
-`make distcheck` создаёт source archive из текущего Git HEAD, распаковывает и устанавливает его, запускает внешние C/C++ clients и проверяет report-v1 по oracle. `make dist` создаёт `ki_xml_pdf-0.1.0.tar.gz` и печатает SHA-256.
-
-После успешных GCC, Clang, sanitizer и resource jobs [CI](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) сохраняет тот же source archive, `SHA256SUMS` и `SOURCE_COMMIT` как artifact. Для его загрузки требуется GitHub login. Формальный GitHub Release и version tag создаются отдельно от проверки исходников. [Чеклист приёмки](docs/release-checklist.md).
+Successful [CI](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) preserves the source archive, `SHA256SUMS`, and `SOURCE_COMMIT` as artifacts tied to the checked revision. Downloading CI artifacts requires GitHub login. A version tag, GitHub Release, or package-registry publication is a separate action. See the [release checklist](docs/release-checklist.md).
