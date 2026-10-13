@@ -2316,6 +2316,76 @@ static int test_library_contract(void) {
     return 0;
 }
 
+static int unused_read(void *user, char *dst, int max) {
+    (void)dst;
+    (void)max;
+    (*(int *)user)++;
+    return -1;
+}
+
+static int unused_write(void *user, const char *src, int n) {
+    (void)src;
+    (void)n;
+    (*(int *)user)++;
+    return -1;
+}
+
+static int test_callback_usage_result(void) {
+    MemIo io;
+    memset(&io, 0, sizeof io);
+    io.s = "<doc>reused result</doc>";
+    io.n = strlen(io.s);
+    KiOptions opt;
+    ki_options_init(&opt);
+    opt.read_bytes = mem_read;
+    opt.write_bytes = mem_write;
+    opt.io_user = &io;
+    KiResult result;
+    CHECK(ki_convert(&opt, &result) == 0);
+    CHECK(result.pages > 0 && result.output_bytes > 0);
+    free(io.buf);
+    KiResult successful = result;
+    for (int reused = 0; reused < 2; reused++) {
+        for (int invalid = 0; invalid < 10; invalid++) {
+            int calls = 0;
+            ki_options_init(&opt);
+            opt.read_bytes = unused_read;
+            opt.write_bytes = unused_write;
+            opt.io_user = &calls;
+            switch (invalid) {
+                case 0: opt.size = 1; break;
+                case 1: opt.max_pages = -1; break;
+                case 2: opt.max_output_bytes = -1; break;
+                case 3: opt.max_spool_bytes = -1; break;
+                case 4: opt.record_offset = -1; break;
+                case 5: opt.record_limit = -1; break;
+                case 6: opt.profile = 99; break;
+                case 7: opt.read_bytes = NULL; break;
+                case 8: opt.write_bytes = NULL; break;
+                case 9: break; /* NULL options */
+            }
+            if (reused) {
+                result = successful;
+            } else {
+                memset(&result, 0x5a, sizeof result);
+            }
+            const KiOptions *options = invalid == 9 ? NULL : &opt;
+            CHECK(ki_convert(options, &result) == XML2PDF_ERR_USAGE);
+            CHECK(result.status == XML2PDF_ERR_USAGE && result.cause == KI_CAUSE_USAGE);
+            const char *message = invalid == 0 ? "options size mismatch" :
+                invalid < 7 ? "invalid option" : "read and write callbacks are required";
+            CHECK(strcmp(result.message, message) == 0);
+            CHECK(result.pages == 0 && result.objects == 0 && result.offset_bytes == 0);
+            CHECK(result.output_bytes == 0 && result.spool_bytes == 0);
+            CHECK(result.report_total == 0 && result.report_selected == 0 && result.report_skipped == 0);
+            CHECK(calls == 0);
+            CHECK(ki_convert(options, NULL) == XML2PDF_ERR_USAGE);
+            CHECK(calls == 0);
+        }
+    }
+    return 0;
+}
+
 static int logical_lines(const char *text, char lines[][128], int max) {
     int n = 0;
     const char *p = text;
@@ -2672,6 +2742,7 @@ int main(void) {
         {"wellformed_profile", test_wellformed_profile},
         {"review_regressions", test_review_regressions},
         {"library_contract", test_library_contract},
+        {"callback_usage_result", test_callback_usage_result},
         {"report_v1", test_report_v1},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);

@@ -781,6 +781,9 @@ static int sink_close(void *cookie) {
 }
 
 int ki_convert(const KiOptions *opt, KiResult *result) {
+    if (result != NULL) {
+        memset(result, 0, sizeof *result);
+    }
     if (reject_options(opt, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
