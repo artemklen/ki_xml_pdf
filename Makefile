@@ -2,6 +2,9 @@ CC ?= cc
 CFLAGS ?= -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L
 CPPFLAGS += -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"$(PREFIX)/share/ki_xml_pdf/DejaVuSans.ttf\"
 PREFIX ?= /usr/local
+VERSION := $(shell sed -n 's/^\#define KI_XML_PDF_VERSION "\([0-9.]*\)"/\1/p' include/ki_xml_pdf.h)
+VERSION_MAJOR := $(word 1,$(subst ., ,$(VERSION)))
+VERSION_MINOR := $(word 2,$(subst ., ,$(VERSION)))
 
 LIB_SRCS = src/xml_parse.c src/font.c src/page_sink.c src/pdf_write.c src/layout.c src/report.c src/convert.c
 LIB_OBJS = $(LIB_SRCS:.c=.o)
@@ -58,6 +61,16 @@ install: xml2pdf libki_xml_pdf.a libki_xml_pdf.so
 	cp include/ki_xml_pdf.h $(DESTDIR)$(PREFIX)/include/
 	cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE $(DESTDIR)$(PREFIX)/share/ki_xml_pdf/
 	ln -sfn libki_xml_pdf.so $(DESTDIR)$(PREFIX)/lib/libki_xml_pdf.so.0
+	mkdir -p "$(DESTDIR)$(PREFIX)/lib/cmake/ki_xml_pdf" "$(DESTDIR)$(PREFIX)/lib/pkgconfig"
+	sed -e 's|@KI_VERSION@|$(VERSION)|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+		cmake/ki_xml_pdfConfig.cmake.in > "$(DESTDIR)$(PREFIX)/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+	sed -e 's|@KI_VERSION@|$(VERSION)|g' -e 's|@KI_VERSION_MAJOR@|$(VERSION_MAJOR)|g' \
+		-e 's|@KI_VERSION_MINOR@|$(VERSION_MINOR)|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+		> "$(DESTDIR)$(PREFIX)/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+	cp cmake/ki_xml_pdfMakeTargets.cmake.in "$(DESTDIR)$(PREFIX)/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+	sed -e 's|@KI_VERSION@|$(VERSION)|g' -e 's|@KI_PREFIX@|$(PREFIX)|g' \
+		-e 's|@KI_LIBDIR@|$(PREFIX)/lib|g' -e 's|@KI_INCLUDEDIR@|$(PREFIX)/include|g' \
+		cmake/ki_xml_pdf.pc.in > "$(DESTDIR)$(PREFIX)/lib/pkgconfig/ki_xml_pdf.pc"
 
 dist:
 	git archive --format=tar.gz --prefix=ki_xml_pdf-0.1.0/ -o ki_xml_pdf-0.1.0.tar.gz HEAD

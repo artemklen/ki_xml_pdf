@@ -13,3 +13,5 @@ fuzz-crash/
 examples/consume
 examples/consume_cpp
 examples/report
+/build*/
+*.so.*

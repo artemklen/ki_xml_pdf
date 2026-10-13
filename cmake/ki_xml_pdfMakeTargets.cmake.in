@@ -1,0 +1,13 @@
+if(NOT TARGET ki_xml_pdf::static)
+    get_filename_component(_ki_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+    add_library(ki_xml_pdf::static STATIC IMPORTED)
+    set_target_properties(ki_xml_pdf::static PROPERTIES
+        IMPORTED_LOCATION "${_ki_prefix}/lib/libki_xml_pdf.a"
+        INTERFACE_INCLUDE_DIRECTORIES "${_ki_prefix}/include")
+    add_library(ki_xml_pdf::shared SHARED IMPORTED)
+    set_target_properties(ki_xml_pdf::shared PROPERTIES
+        IMPORTED_LOCATION "${_ki_prefix}/lib/libki_xml_pdf.so"
+        IMPORTED_SONAME "libki_xml_pdf.so.0"
+        INTERFACE_INCLUDE_DIRECTORIES "${_ki_prefix}/include")
+    unset(_ki_prefix)
+endif()
