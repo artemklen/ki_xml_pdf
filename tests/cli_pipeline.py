@@ -179,6 +179,11 @@ def main():
              b"xml: illegal character at line 1, column 14, byte 13\n"),
             ("utf8-text-coordinates", [], b"<r>a\x80b</r>",
              b"xml: illegal character at line 1, column 6, byte 5\n"),
+            # A text reference is checked whole, after its ';'.
+            ("utf8-named-reference-coordinates", [], b"<r>\xc3&amp;</r>",
+             b"xml: illegal character at line 1, column 10, byte 9\n"),
+            ("utf8-numeric-reference-coordinates", [], b"<r>\xc3&#38;</r>",
+             b"xml: illegal character at line 1, column 10, byte 9\n"),
         ]
         for label, options, data, message in coordinates:
             directory, spool, destination = case_dir(label)

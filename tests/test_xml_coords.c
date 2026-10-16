@@ -72,6 +72,16 @@ static const XcCase xc_cases[] = {
     /* Detection is context-dependent: tags and names are checked only after
        the enclosing construct, so these positions lie past the bad byte. */
     XC("utf8 truncated before lt", "<r>\xC3</r>", 4, 1, 5, "illegal character", 1),
+    /* A text reference is consumed whole: its '&' ends the open sequence,
+       but the mark is checked only after ';', or the reference error wins. */
+    XC("utf8 truncated before named reference", "<r>\xC3&amp;</r>", 9, 1, 10, "illegal character", 1),
+    XC("utf8 truncated before decimal reference", "<r>\xC3&#38;</r>", 9, 1, 10, "illegal character", 1),
+    XC("utf8 truncated before hex reference", "<r>\xC3&#x26;</r>", 10, 1, 11, "illegal character", 1),
+    XC("utf8 truncated before two references", "<r>\xE2\x82&lt;&gt;</r>", 9, 1, 9, "illegal character", 1),
+    XC("utf8 stray continuation before reference", "<r>\x80&amp;</r>", 4, 1, 5, "illegal character", 1),
+    XC("utf8 truncated before unknown entity", "<r>\xC3&bogus;</r>", 4, 1, 5, "unknown entity", 1),
+    XC("utf8 truncated before bad reference", "<r>\xC3&#0;</r>", 8, 1, 9, "bad character reference", 1),
+    XC("utf8 truncated before reference in attribute", "<r a='\xC3&amp;'/>", 15, 1, 16, "illegal character", 1),
     XC("utf8 attribute value empty tag", "<r a='\x80" "abc'/>", 13, 1, 14, "illegal character", 1),
     XC("utf8 attribute value start tag", "<r a='\x80" "abc'>x</r>", 12, 1, 13, "illegal character", 1),
     XC("utf8 attribute value then missing eq", "<r a='\x80" "abc' b/>", 14, 1, 15, "attribute without value", 1),
@@ -347,6 +357,11 @@ static int test_profile_coordinates(void) {
     ki_options_init(&opt);
     const char *bad = "<r>\n  <a>\xC3\x28</a></r>";
     CHECK(xc_public(bad, strlen(bad), &opt, KI_CAUSE_XML, "xml: illegal character at line 2, column 8, byte 11") == 0);
+    const char *named = "<r>\xC3&amp;</r>";
+    CHECK(xc_public(named, strlen(named), &opt, KI_CAUSE_XML, "xml: illegal character at line 1, column 10, byte 9") == 0);
+    const char *numeric = "<r>\xC3&#38;</r>";
+    CHECK(xc_public(numeric, strlen(numeric), &opt, KI_CAUSE_XML, "xml: illegal character at line 1, column 10, byte 9") ==
+          0);
     const char *eof = "<r>\r\n<a>";
     CHECK(xc_public(eof, strlen(eof), &opt, KI_CAUSE_XML, "xml: unclosed element at line 2, column 4, byte 8") == 0);
     /* Font failures are not relabelled and carry no XML coordinates. */

@@ -30,9 +30,15 @@
    CRLF each end one line; a tab is one column; references and CDATA count
    their source spelling. A leading UTF-8 BOM adds bytes but no column. A
    continuation byte inside an open multibyte sequence adds no column; any
-   other byte, including an invalid one, starts a column. A malformed
-   sequence is reported right after the first byte that makes it invalid, or
-   at EOF when the input ends inside it. A counter that would wrap stops the
+   other byte, including an invalid one, starts a column. Consuming the byte
+   that makes a sequence malformed only sets utf8_bad; the error is reported
+   at the position consumed when the parser next checks utf8_bad. Bodies of
+   text, CDATA, comments, PIs and the DTD check after every byte, but a text
+   reference is consumed whole and checked after its ';', tags after their
+   '>', a PI target after the target and an XML declaration value after its
+   quote. A reference or syntax error found before that check wins. A
+   sequence cut off by '<' in text is reported before the '<', and one cut
+   off by EOF at EOF. A counter that would wrap stops the
    parse instead (pos_full, "input position limit"). */
 
 #define XML_NAME_MAX 64

@@ -30,11 +30,13 @@ extern "C" {
    with "at line L, column C, byte B": the consumed position, line/column
    1-based in Unicode scalars, byte 0-based in raw input bytes (BOM
    included, CR/LF/CRLF one line break, a long rule shortened at a UTF-8
-   boundary). Malformed UTF-8 is reported where the parser next checks it:
-   right after the bad byte in text, CDATA, comments, PI data and DOCTYPE
-   bodies, after the closing '>' in tags (names, attribute values), before
-   '<' or at end of input for a cut-off sequence; a syntax error found
-   first in the same construct is reported instead. Other causes carry no
+   boundary). Malformed UTF-8 is reported at the position consumed when the
+   parser next checks it, not necessarily right after the bad byte: after
+   each byte in text, CDATA, comments, PI data and DOCTYPE bodies, after a
+   whole text reference (so <r>\xC3&amp;</r> is line 1, column 10, byte 9),
+   after the closing '>' in tags (names, attribute values), before '<' or
+   at end of input for a cut-off sequence; a syntax or reference error
+   found first in the same construct is reported instead. Other causes carry no
    position. ki_convert leaves bytes
    already accepted by write_bytes in place when it fails. */
 
