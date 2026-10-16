@@ -30,7 +30,12 @@ extern "C" {
    with "at line L, column C, byte B": the consumed position, line/column
    1-based in Unicode scalars, byte 0-based in raw input bytes (BOM
    included, CR/LF/CRLF one line break, a long rule shortened at a UTF-8
-   boundary). Other causes carry no position. ki_convert leaves bytes
+   boundary). Malformed UTF-8 is reported where the parser next checks it:
+   right after the bad byte in text, CDATA, comments, PI data and DOCTYPE
+   bodies, after the closing '>' in tags (names, attribute values), before
+   '<' or at end of input for a cut-off sequence; a syntax error found
+   first in the same construct is reported instead. Other causes carry no
+   position. ki_convert leaves bytes
    already accepted by write_bytes in place when it fails. */
 
 #define KI_XML_PDF_VERSION "0.2.0"

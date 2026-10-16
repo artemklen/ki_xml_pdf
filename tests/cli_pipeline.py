@@ -174,6 +174,11 @@ def main():
             ("profile-coordinates", ["--profile", "report-v1"],
              '<report version="1" title="T">\n<record><field name="n">a</field></record>\n<bogus/>'
              '</report>'.encode(), b"profile: unknown element at line 3, column 9, byte 82\n"),
+            # Malformed UTF-8 inside a tag is reported after the tag's '>'.
+            ("utf8-attribute-coordinates", [], b"<r a='\x80abc'/>",
+             b"xml: illegal character at line 1, column 14, byte 13\n"),
+            ("utf8-text-coordinates", [], b"<r>a\x80b</r>",
+             b"xml: illegal character at line 1, column 6, byte 5\n"),
         ]
         for label, options, data, message in coordinates:
             directory, spool, destination = case_dir(label)

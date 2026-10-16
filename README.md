@@ -241,7 +241,14 @@ XML errors, built-in profile errors and every `ki_doc_fail` message end with `at
 - Line and column start at 1. The byte offset starts at 0 and counts raw input bytes; a UTF-8 BOM adds 3 bytes and no column.
 - CR, LF and CRLF each end one line. A tab is one column. The column counts Unicode scalars, and references and CDATA count their source spelling, so `&amp;` is five columns.
 - A byte that the parser has only looked ahead at is not consumed: an unknown entity is reported before its `&`, a missing `>` after the last accepted byte. At the end of input the position is after the last byte.
-- Malformed UTF-8 is reported right after the first byte that makes the sequence invalid, or at the end of input when the input ends inside a sequence. A continuation byte inside an open sequence adds no column; any other byte, including an invalid one, adds one.
+- Malformed UTF-8 (a byte that cannot start or continue a sequence, an overlong form, a surrogate, a value above U+10FFFF or a scalar that is not an XML `Char`) is marked when the byte that makes it invalid is consumed. It is reported at the position the parser has consumed when it next checks for it, which depends on the context:
+  - In character data, CDATA, comments, processing-instruction data, DOCTYPE literals and markup declarations: right after that byte. `<r>a\x80b</r>` is reported at line 1, column 6, byte 5.
+  - In start and end tags (element names, attribute names and attribute values): after the tag's closing `>`. `<r a='\x80abc'/>` is reported at line 1, column 14, byte 13.
+  - In a processing-instruction target: after the target. In an XML declaration value: after its closing quote. In a DOCTYPE name: at the next byte the DOCTYPE checks, at the latest after its closing `>`.
+  - A sequence cut short by `<` in character data is reported before the `<`. A sequence cut short by the end of input is reported at the end of input.
+  - If the same construct has another syntax error that is found first, for example a missing `=` or a declaration keyword that does not match, that error is reported instead, with its own message and position. The cause is still `KI_CAUSE_XML`.
+
+  A continuation byte inside an open sequence adds no column; any other byte, including an invalid one, adds one.
 - Profile and mapper failures use the position after the current event. An empty element's END has the same position as its START.
 
 Positions do not depend on read sizes or buffer boundaries and are counted incrementally, without keeping or rereading input. A counter that would wrap stops the conversion with `KI_CAUSE_RESOURCE` (`resource limit: input position`). A message stays within the 160-byte `KiResult.message`; a long rule is shortened at a UTF-8 boundary so the whole position remains. I/O, font, resource, cancellation and usage messages are unchanged and carry no position. `KiEvent` still offers only `byte_offset`; no public structure changed.
