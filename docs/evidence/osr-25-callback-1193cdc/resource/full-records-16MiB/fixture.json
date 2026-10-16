@@ -1,0 +1,12 @@
+{
+  "recipe": "osr23-v1",
+  "profile": "records-v1",
+  "target_bytes": 16777216,
+  "input_bytes": 16777233,
+  "records": 499983,
+  "omitted_record": 0,
+  "tail": "valid",
+  "sha256": "76eb12d9bdc6bf3602ba4bd602f1da574855148e39bc504ea71fe7fc50de3446",
+  "path": "<final-root>/resource-scratch/full-records-16MiB.xml",
+  "command": "/usr/bin/python3 <final-root>/checkout/tests/resource_recipe.py --profile records-v1 --target-bytes 16777216 --out <final-root>/resource-scratch/full-records-16MiB.xml"
+}

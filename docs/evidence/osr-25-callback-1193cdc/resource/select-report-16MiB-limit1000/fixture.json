@@ -1,0 +1,12 @@
+{
+  "recipe": "osr23-v1",
+  "profile": "report-v1",
+  "target_bytes": 16777216,
+  "input_bytes": 16777245,
+  "records": 246368,
+  "omitted_record": 0,
+  "tail": "valid",
+  "sha256": "2cc851a4f8f1514241e9f3a45acc90eed99a6b9c5b97bae4793b4e9b90186d84",
+  "path": "<final-root>/resource-scratch/select-report-16MiB-limit1000.xml",
+  "command": "/usr/bin/python3 <final-root>/checkout/tests/resource_recipe.py --profile report-v1 --target-bytes 16777216 --out <final-root>/resource-scratch/select-report-16MiB-limit1000.xml"
+}

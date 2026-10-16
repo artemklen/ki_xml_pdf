@@ -1,0 +1,4 @@
+early_probe: OK
+early_probe.c: OK
+<evidence-root>/old-0.2-prefix/include/ki_xml_pdf.h: OK
+<evidence-root>/old-0.2-prefix/lib/libki_xml_pdf.so: OK

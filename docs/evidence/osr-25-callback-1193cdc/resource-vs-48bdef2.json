@@ -1,0 +1,294 @@
+{
+  "base": "<osr25-root>/resource-48bdef2",
+  "other": "<final-root>/resource-1193cdc",
+  "environment_differences": {
+    "measured_source_sha": [
+      "48bdef2fd01dfff8b85e0cdd77af55d4c9593531",
+      "1193cdc847f1dba06e6b345a1c8775f534ce89f8"
+    ],
+    "binary_sha256": [
+      "3ebb6b1703ee6dda2e6d2f970f0ff283815819725ecf9ef4ef1d740de00d606c",
+      "5dac5af354e8ca68168ecfad9589cdbb5e1667e9367eb9982fb83f023f45803c"
+    ],
+    "harness_sha": [
+      "48bdef2fd01dfff8b85e0cdd77af55d4c9593531",
+      "1193cdc847f1dba06e6b345a1c8775f534ce89f8"
+    ]
+  },
+  "runs": {
+    "full-records-1MiB": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2952,
+          2820
+        ],
+        "converter_elapsed_s": [
+          0.22,
+          0.22
+        ],
+        "generator_rss_kib": [
+          23112,
+          23256
+        ],
+        "reader_rss_kib": [
+          21552,
+          21620
+        ],
+        "reader_elapsed_s": [
+          1.53,
+          1.55
+        ],
+        "oracle_rss_kib": [
+          16404,
+          16532
+        ]
+      }
+    },
+    "full-records-16MiB": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2752,
+          2892
+        ],
+        "converter_elapsed_s": [
+          2.91,
+          2.92
+        ],
+        "generator_rss_kib": [
+          23264,
+          23236
+        ],
+        "reader_rss_kib": [
+          71656,
+          71336
+        ],
+        "reader_elapsed_s": [
+          23.01,
+          23.01
+        ],
+        "oracle_rss_kib": [
+          16480,
+          16332
+        ]
+      }
+    },
+    "full-records-64MiB": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2880,
+          2804
+        ],
+        "converter_elapsed_s": [
+          11.54,
+          11.52
+        ],
+        "generator_rss_kib": [
+          23168,
+          23328
+        ],
+        "reader_rss_kib": [
+          223572,
+          223460
+        ],
+        "reader_elapsed_s": [
+          88.51,
+          88.85
+        ],
+        "oracle_rss_kib": [
+          16664,
+          16348
+        ]
+      }
+    },
+    "full-report-1MiB": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2952,
+          2892
+        ],
+        "converter_elapsed_s": [
+          0.14,
+          0.14
+        ],
+        "generator_rss_kib": [
+          20824,
+          20996
+        ],
+        "reader_rss_kib": [
+          19412,
+          19296
+        ],
+        "reader_elapsed_s": [
+          0.52,
+          0.52
+        ],
+        "oracle_rss_kib": [
+          16444,
+          16440
+        ]
+      }
+    },
+    "full-report-16MiB": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2880,
+          2976
+        ],
+        "converter_elapsed_s": [
+          1.63,
+          1.63
+        ],
+        "generator_rss_kib": [
+          21000,
+          21024
+        ],
+        "reader_rss_kib": [
+          34588,
+          34528
+        ],
+        "reader_elapsed_s": [
+          7.94,
+          7.98
+        ],
+        "oracle_rss_kib": [
+          16408,
+          16444
+        ]
+      }
+    },
+    "full-report-64MiB": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2880,
+          2816
+        ],
+        "converter_elapsed_s": [
+          6.38,
+          6.47
+        ],
+        "generator_rss_kib": [
+          21060,
+          21176
+        ],
+        "reader_rss_kib": [
+          86892,
+          86396
+        ],
+        "reader_elapsed_s": [
+          31.36,
+          31.47
+        ],
+        "oracle_rss_kib": [
+          16432,
+          16432
+        ]
+      }
+    },
+    "select-report-16MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2824,
+          2816
+        ],
+        "converter_elapsed_s": [
+          0.17,
+          0.16
+        ],
+        "generator_rss_kib": [
+          20960,
+          21060
+        ],
+        "reader_rss_kib": [
+          18260,
+          18232
+        ],
+        "reader_elapsed_s": [
+          0.04,
+          0.04
+        ],
+        "oracle_rss_kib": [
+          16496,
+          16472
+        ]
+      }
+    },
+    "select-report-256MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2764,
+          2892
+        ],
+        "converter_elapsed_s": [
+          1.93,
+          1.88
+        ],
+        "generator_rss_kib": [
+          21044,
+          21044
+        ],
+        "reader_rss_kib": [
+          18224,
+          18276
+        ],
+        "reader_elapsed_s": [
+          0.04,
+          0.04
+        ],
+        "oracle_rss_kib": [
+          16324,
+          16468
+        ]
+      }
+    },
+    "select-report-1024MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2848,
+          2764
+        ],
+        "converter_elapsed_s": [
+          7.43,
+          7.39
+        ],
+        "generator_rss_kib": [
+          21008,
+          21020
+        ],
+        "reader_rss_kib": [
+          18272,
+          18272
+        ],
+        "reader_elapsed_s": [
+          0.03,
+          0.04
+        ],
+        "oracle_rss_kib": [
+          16600,
+          16440
+        ]
+      }
+    }
+  },
+  "only_in_base": [],
+  "only_in_other": [],
+  "problems": [],
+  "ok": true
+}

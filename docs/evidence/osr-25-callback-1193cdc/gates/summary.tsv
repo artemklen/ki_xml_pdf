@@ -1,0 +1,20 @@
+01-make-test	0	19s	make -j2 xml2pdf test_stream && make test
+02-make-check	0	64s	SCRATCH=<final-root>/scratch/verify make check
+03-san-gcc	0	42s	make CC=gcc test-san
+04-san-clang	0	223s	make CC=clang test-san
+05-clang-functional	0	29s	make clean && make -j2 CC=clang xml2pdf test_stream && make CC=clang test xml2pdf example && python3 tests/integration_check.py && python3 tests/catalog_verify.py --binary examples/catalog
+06-gcc-rebuild	0	23s	make clean && make -j2 xml2pdf test_stream && make test xml2pdf example
+07-fuzz	0	1s	python3 tests/fuzz_smoke.py
+08-font-fixtures	0	0s	python3 tests/font_fixtures.py --check
+09-cli-catalog	0	3s	python3 tests/cli_pipeline.py && python3 tests/catalog_verify.py --binary examples/catalog && python3 tests/integration_check.py && ./xml2pdf --help && ./xml2pdf --version
+10-build-integration-gcc	0	41s	bash tests/build_integration.sh
+11-build-integration-clang	0	48s	CC=clang CXX=clang++ bash tests/build_integration.sh
+12-docs-smoke	0	16s	bash tests/docs_smoke.sh
+13-header-dependency	0	1s	sleep 1 && touch src/layout.h && make xml2pdf && test xml2pdf -nt src/layout.h
+14-distcheck	0	43s	make distcheck
+15-distcheck-negative	0	5s	if make distcheck CC=false; then echo 'failing compiler accepted'; exit 1; fi; if make distcheck CXX=false; then echo 'failing C++ compiler accepted'; exit 1; fi; if make distcheck PDFTOTEXT=/bin/false; then echo 'failing reader accepted'; exit 1; fi; printf 'not the oracle\n' > <final-root>/scratch/bad-oracle.txt; if make distcheck DISTCHECK_ORACLE=<final-root>/scratch/bad-oracle.txt; then echo 'bad oracle accepted'; exit 1; fi; if make distcheck DISTCHECK_BREAK=license; then echo 'missing license accepted'; exit 1; fi; echo 'all five negative controls failed as required'
+16-prefix-switch	0	2s	bash tests/prefix_switch.sh
+17-cmake-ctest	0	28s	rm -rf <final-root>/scratch/cmake-build && cmake -S . -B <final-root>/scratch/cmake-build -DCMAKE_BUILD_TYPE=Release && cmake --build <final-root>/scratch/cmake-build -j2 && ctest --test-dir <final-root>/scratch/cmake-build --output-on-failure
+18-resource-units	0	0s	python3 tests/resource_baseline_test.py && python3 tests/large_proof.py --self-test
+19-large-proof	0	8s	TMPDIR=<final-root>/scratch python3 tests/large_proof.py 1073741824
+20-pkgconfig-static	0	1s	rm -rf <final-root>/scratch/prefix && make -j2 install PREFIX=<final-root>/scratch/prefix && PKG_CONFIG_LIBDIR=<final-root>/scratch/prefix/lib/pkgconfig pkg-config --static --libs ki_xml_pdf && PKG_CONFIG_LIBDIR=<final-root>/scratch/prefix/lib/pkgconfig pkg-config --modversion ki_xml_pdf && sed -n 1,3p <final-root>/scratch/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake && grep -n VERSION <final-root>/scratch/prefix/include/ki_xml_pdf.h | head -3 && <final-root>/scratch/prefix/bin/xml2pdf --version && readelf -d <final-root>/scratch/prefix/lib/libki_xml_pdf.so | grep -E 'SONAME|NEEDED' && readelf --dyn-syms -W <final-root>/scratch/prefix/lib/libki_xml_pdf.so | grep -E 'KI_0_[23]' | awk '{print $8}' | sort && ls -la <final-root>/scratch/prefix/bin <final-root>/scratch/prefix/include <final-root>/scratch/prefix/lib <final-root>/scratch/prefix/share/ki_xml_pdf <final-root>/scratch/prefix/lib/cmake/ki_xml_pdf <final-root>/scratch/prefix/lib/pkgconfig

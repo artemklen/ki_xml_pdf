@@ -1,0 +1,2 @@
+negative-write rejected (expected for historical 7232bcc defect): startxref 416213 does not point at xref 416866 e55f2d1973a4509a30d584702ccc5833cbcface9eb51048cfaff9a79a0cf54b0
+short-write rejected (expected for historical 7232bcc defect): startxref 416213 does not point at xref 420962 14be0554a8a6022b82aca886b813f38495980caace128ee4420f35fa23072f34
