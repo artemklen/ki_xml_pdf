@@ -1,0 +1,116 @@
+{
+  "bundled_sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e",
+  "fonts": [
+    {
+      "path": "DejaVuSans.ttf",
+      "sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e",
+      "intrinsic_ps_name": "DejaVuSans",
+      "pdf_base_fonts": [
+        "DejaVuSans",
+        "DejaVuSans"
+      ],
+      "pdffonts": "DejaVuSans"
+    },
+    {
+      "path": "DejaVuSans-Bold.ttf",
+      "sha256": "a4c5bc453ca281d90ea079e596da7ae0dfeb5777497c29ec254e76d97ff6f890",
+      "intrinsic_ps_name": "DejaVuSans-Bold",
+      "pdf_base_fonts": [
+        "DejaVuSans-Bold",
+        "DejaVuSans-Bold"
+      ],
+      "pdffonts": "DejaVuSans-Bold"
+    }
+  ],
+  "glyph_truth": [
+    {
+      "cp": "U+0020",
+      "gid": 3,
+      "advance": 651,
+      "pdf_width": 317
+    },
+    {
+      "cp": "U+0065",
+      "gid": 72,
+      "advance": 1260,
+      "pdf_width": 615
+    },
+    {
+      "cp": "U+0078",
+      "gid": 91,
+      "advance": 1212,
+      "pdf_width": 591
+    },
+    {
+      "cp": "U+0301",
+      "gid": 690,
+      "advance": 0,
+      "pdf_width": 0
+    },
+    {
+      "cp": "U+0306",
+      "gid": 695,
+      "advance": 0,
+      "pdf_width": 0
+    },
+    {
+      "cp": "U+0438",
+      "gid": 973,
+      "advance": 1331,
+      "pdf_width": 649
+    },
+    {
+      "cp": "U+0483",
+      "gid": 1048,
+      "advance": 0,
+      "pdf_width": 0
+    }
+  ],
+  "extracted_codepoints": [
+    "U+0065",
+    "U+0301",
+    "U+0020",
+    "U+0438",
+    "U+0306",
+    "U+0020",
+    "U+0301",
+    "U+0078",
+    "U+0483"
+  ],
+  "raster": {
+    "e_top_row": 252,
+    "marked_top_row": 242,
+    "mark_columns": [
+      179,
+      187
+    ],
+    "e_columns": [
+      168,
+      188
+    ]
+  },
+  "font_controls": [
+    "U+1E00 exit 1",
+    "U+0500 exit 1"
+  ],
+  "runs": {
+    "capacity_bytes": 1023,
+    "cases": [
+      {
+        "marks": 511,
+        "line_bytes": 1023,
+        "exit": 0
+      },
+      {
+        "marks": 512,
+        "line_bytes": 1025,
+        "exit": 4
+      }
+    ],
+    "pages_case": {
+      "records": 120,
+      "pages": 5
+    },
+    "wrap_lines": 3
+  }
+}

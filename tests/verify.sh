@@ -51,8 +51,10 @@ grep -Fxq "xml2pdf $version records-v1" "$SCRATCH/version.txt"
 
 ./test_stream >"$SCRATCH/unit.log" 2>&1
 groups=$(grep -c '^ok ' "$SCRATCH/unit.log" || true)
-if [[ "$groups" -ne 16 ]]; then
-    echo "expected 16 unit groups, got $groups" >&2
+# Every entry of the test table in main() must report ok.
+want_groups=$(grep -cE '^        \{"[a-z0-9_]+", test_[a-z0-9_]+\},$' tests/test_stream.c || true)
+if [[ "$want_groups" -lt 16 || "$groups" -ne "$want_groups" ]] || ! grep -qx 'all tests passed' "$SCRATCH/unit.log"; then
+    echo "expected $want_groups unit groups (at least 16), got $groups" >&2
     exit 1
 fi
 

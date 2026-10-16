@@ -113,10 +113,12 @@ def text_of(pdf):
 
 
 def gray(pdf, page=1):
-    """Grayscale page raster at 100 dpi as (width, height, bytes)."""
+    """Grayscale 300 dpi raster of the page's top-left 2.6 x 1.3 inches as
+    (width, height, bytes); the first two text lines lie inside it."""
     with tempfile.TemporaryDirectory() as tmp:
-        subprocess.run(["pdftoppm", "-gray", "-r", "100", "-f", str(page), "-l", str(page),
-                        str(pdf), f"{tmp}/p"], check=True, timeout=60)
+        subprocess.run(["pdftoppm", "-gray", "-r", "300", "-f", str(page), "-l", str(page),
+                        "-x", "0", "-y", "0", "-W", "800", "-H", "400", str(pdf), f"{tmp}/p"],
+                       check=True, timeout=60)
         img = next(Path(tmp).glob("p*.pgm")).read_bytes()
     m = re.match(rb"P5\s+(\d+)\s+(\d+)\s+255\s", img)
     w, h = int(m.group(1)), int(m.group(2))
@@ -184,7 +186,7 @@ def check_marks(binary, tmp, ev):
     run(binary, b"<doc>e</doc>", BUNDLED, base)
     run(binary, "<doc>e\u0301</doc>".encode(), BUNDLED, marked)
     rb_, rm = ink_rows(gray(base)), ink_rows(gray(marked))
-    # Rows 0..~50 hold the "doc" line; compare the second line only.
+    # The upper ink band is the "doc" line; compare the second line only.
     split = (min(rb_) + max(rb_)) // 2
     e_rows = [y for y in rb_ if y > split]
     m_rows = [y for y in rm if y > split]
@@ -196,7 +198,8 @@ def check_marks(binary, tmp, ev):
     width_of = lambda w, px, rows: {x for y in rows for x in range(w) if px[y * w + x] < 128}
     e_cols = width_of(wb, pb, e_rows)
     mark_cols = width_of(wm, pm, [y for y in m_rows if y < min(e_rows)])
-    require(mark_cols and max(mark_cols) <= max(e_cols) + 2, "mark not placed over its base")
+    require(mark_cols and min(mark_cols) >= min(e_cols) - 6 and max(mark_cols) <= max(e_cols) + 6,
+            "mark not placed over its base")
     ev["raster"] = {"e_top_row": min(e_rows), "marked_top_row": min(m_rows),
                     "mark_columns": [min(mark_cols), max(mark_cols)],
                     "e_columns": [min(e_cols), max(e_cols)]}
