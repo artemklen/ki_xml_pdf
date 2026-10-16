@@ -40,7 +40,7 @@ extern "C" {
    position. ki_convert leaves bytes
    already accepted by write_bytes in place when it fails. */
 
-#define KI_XML_PDF_VERSION "0.2.0"
+#define KI_XML_PDF_VERSION "0.3.0"
 #define KI_XML_PDF_PROFILE_RECORDS "records-v1"
 #define KI_XML_PDF_PROFILE_REPORT "report-v1"
 #define KI_XML_PDF_PROFILE KI_XML_PDF_PROFILE_RECORDS

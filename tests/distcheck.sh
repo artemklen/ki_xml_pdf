@@ -80,6 +80,7 @@ required=(
     tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c
     tests/pdf_offsets.py tests/font_metrics_check.py tests/pdf_streams.py
     tests/test_flate.c tests/pdf_inflate.c tests/test_layout_wrap.c tests/test_geometry.c tests/test_info.c tests/wrap_check.py tests/geometry_check.py tests/info_check.py
+    tests/test_integration.c tests/integration_check.py
     tests/verify.sh tests/fixture.xml tests/fuzz_smoke.py tests/large_proof.py
     tests/corpus/split_whitespace.xml tests/corpus/utf8_512.xml
     tests/corpus/truncated-hmtx.ttf tests/corpus/truncated-cmap-184.ttf tests/font_fixtures.py

@@ -2,7 +2,7 @@
 
 [Русский README](README.ru.md)
 
-A C library and command-line tool for converting large XML inputs to PDF with bounded converter memory. Version **0.2.0** adds installed CMake and pkg-config integration, stdin/stdout pipelines, and an example adapter for a project-owned XML schema.
+A C library and command-line tool for converting large XML inputs to PDF with bounded converter memory. Version **0.3.0** adds page geometry (Letter/A4, portrait/landscape or a custom size, margins and type size), word wrapping, Flate-compressed page and font streams, optional PDF `/Info` metadata and line/column/byte error positions. The new calls are additive: programs built against 0.2.0 keep running with the 0.3.0 shared library. Version 0.2.0 added installed CMake and pkg-config integration, stdin/stdout pipelines, and an example adapter for a project-owned XML schema.
 
 The built-in [report-v1](docs/report-v1.md) profile renders a sequential report with named fields and explicit record selection. The default `records-v1` profile prints element names, attributes, and text for diagnostic use. Other schemas require a mapper; start with the [mapper guide](docs/mapper-guide.md).
 
@@ -308,7 +308,7 @@ python3 tests/large_proof.py --self-test
 python3 tests/large_proof.py 1073741824
 ```
 
-`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. `python3 tests/wrap_check.py` compares wrapped lines, pages and word boxes from Poppler with the wrap rules applied to advances read independently from the bundled font. `python3 tests/geometry_check.py` checks each page's MediaBox with `pdfinfo` and its rendered ink with `pdftoppm` against the requested size and margins, and that rejected geometry exits 2 without reading stdin or touching the destination. `python3 tests/info_check.py` parses the `/Info` object through the xref, decodes its strings, compares them and the raw date with `pdfinfo`, checks that the body, page count and text match a run without metadata, and that invalid metadata exits 2 without reading stdin or touching the destination. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
+`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. `python3 tests/wrap_check.py` compares wrapped lines, pages and word boxes from Poppler with the wrap rules applied to advances read independently from the bundled font. `python3 tests/geometry_check.py` checks each page's MediaBox with `pdfinfo` and its rendered ink with `pdftoppm` against the requested size and margins, and that rejected geometry exits 2 without reading stdin or touching the destination. `python3 tests/info_check.py` parses the `/Info` object through the xref, decodes its strings, compares them and the raw date with `pdfinfo`, checks that the body, page count and text match a run without metadata, and that invalid metadata exits 2 without reading stdin or touching the destination. `python3 tests/integration_check.py` combines geometry, wrapping, a non-default font with zero-advance marks, Flate and `/Info` in both profiles, runs each case through all four file/stdin to file/stdout routes, requires identical bytes on every route and checks the words, MediaBox, ink, streams and metadata against expectations computed from the input; combined late XML and quota failures must keep or not create the destination. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
 
 To repeat the resource series, use a disk-backed scratch directory with several GiB free (the full 64 MiB `records-v1` PDF alone is about 713 MB) and a new evidence directory:
 
@@ -328,6 +328,6 @@ python3 tests/resource_baseline.py compare docs/evidence/osr-23-baseline-075455c
 
 ## Source distribution
 
-`make dist` creates `ki_xml_pdf-0.2.0.tar.gz` from the current Git HEAD and prints its SHA-256. `make distcheck` unpacks the same source archive, builds and installs it, runs external C/C++ consumers, and checks the report oracle. New build files, documentation, examples, tests, and licensing are included in the source archive.
+`make dist` creates `ki_xml_pdf-0.3.0.tar.gz` from the current Git HEAD and prints its SHA-256. `make distcheck` unpacks the same source archive, builds and installs it, runs external C/C++ consumers, and checks the report oracle. New build files, documentation, examples, tests, and licensing are included in the source archive.
 
 Successful [CI](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) preserves the source archive, `SHA256SUMS`, and `SOURCE_COMMIT` as artifacts tied to the checked revision. Downloading CI artifacts requires GitHub login. A version tag, GitHub Release, or package-registry publication is a separate action. See the [release checklist](docs/release-checklist.md).

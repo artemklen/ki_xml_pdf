@@ -113,6 +113,9 @@ if(BUILD_TESTING)
     add_test(NAME info_check COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/info_check.py"
         --binary "$<TARGET_FILE:xml2pdf>")
+    add_test(NAME integration_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/integration_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
 endif()
 
 set(KI_DEFAULT_SHARED "${BUILD_SHARED_LIBS}")
