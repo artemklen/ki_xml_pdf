@@ -79,6 +79,11 @@ required=(
     tests/verify.sh tests/fixture.xml tests/fuzz_smoke.py tests/large_proof.py
     tests/corpus/split_whitespace.xml tests/corpus/utf8_512.xml
     tests/corpus/truncated-hmtx.ttf fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright
+    tests/resource_recipe.py tests/resource_oracle.py tests/resource_measure.py
+    tests/resource_baseline.py tests/resource_controls.py tests/resource_baseline_test.py
+    tests/abi_canary/canary.c tests/abi_canary/canary.cpp tests/abi_canary/build_canary.sh
+    tests/abi_canary/run_canary.sh docs/evidence/osr-23-baseline-075455c/README.md
+    docs/evidence/osr-23-baseline-075455c/baseline/runs.csv
 )
 for file in "${required[@]}"; do
     test -s "$root/$file" || fail "missing source file $file"

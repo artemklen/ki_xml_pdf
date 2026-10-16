@@ -1,0 +1,7 @@
+layout KiOptions size=144 read_bytes=120 io_user=136
+layout KiResult size=224 report_skipped=216
+layout KiEvent size=184 byte_offset=176
+entry ki_convert_file rc=0 pages=1
+entry ki_convert rc=0 total=2 selected=1 skipped=1
+entry ki_convert_to_file rc=0 mapper_calls=5
+canary cpp ok

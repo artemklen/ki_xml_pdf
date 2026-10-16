@@ -1,0 +1,12 @@
+{
+  "recipe": "osr23-v1",
+  "profile": "report-v1",
+  "target_bytes": 1048576,
+  "input_bytes": 1048578,
+  "records": 15981,
+  "omitted_record": 0,
+  "tail": "valid",
+  "sha256": "290cf62618e6f0bb1cb62f4b916ef32391a0a9f08a0d494f2e3cd30a5fd956ee",
+  "path": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-1MiB.xml",
+  "command": "/usr/bin/python3 /home/artem/projects/ki_xml_pdf/tests/resource_recipe.py --profile report-v1 --target-bytes 1048576 --out /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-1MiB.xml"
+}

@@ -1,0 +1,5 @@
+prefix /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix
+cc cc (Debian 14.2.0-19) 14.2.0
+cxx c++ (Debian 14.2.0-19) 14.2.0
+c_cmd cc -std=c99 -Wall -Wextra -O2 -I/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/include -o /home/artem/projects/ki_xml_pdf-evidence/osr-23/abi-canary-0.2/abi_canary_c canary.c -L/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib -lki_xml_pdf
+cpp_cmd c++ -std=c++11 -Wall -Wextra -O2 -I/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/include -o /home/artem/projects/ki_xml_pdf-evidence/osr-23/abi-canary-0.2/abi_canary_cpp canary.cpp -L/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib -lki_xml_pdf

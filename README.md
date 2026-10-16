@@ -184,6 +184,15 @@ For atomic file output, the temporary PDF is created beside the destination and 
 
 The resource acceptance ceiling is **64 MiB converter RSS on the documented synthetic workload and Linux test environment**. Historical measurements on revision [`7c62fe4`](https://github.com/artemklen/ki_xml_pdf/commit/7c62fe4af72b097885d76a7f9f897492f5c4c2d5) recorded 2372 KiB converter RSS for a 1,073,741,815-byte synthetic report, selecting the first 1000 of 19,522,650 records: 41 PDF pages, 1,009,241 output bytes, and 720 spool bytes. These are measurements of that revision and workload, not a promise for arbitrary inputs. The [report reference](docs/report-v1.md) and [historical core contract](docs/contract.md) retain commands, budgets, and measurement boundaries.
 
+### Resource baseline on 075455c
+
+The [OSR-23 baseline](docs/evidence/osr-23-baseline-075455c/README.md) measured the unmodified 0.2.0 source at `075455c` on one Linux host with the bundled DejaVu Sans font. It has two separate series:
+
+- **Full output**, every record rendered: `records-v1` and `report-v1` at 1, 16 and 64 MiB. Converter peak RSS was 2340–2524 KiB. The 64 MiB inputs produced 115,552 pages / 713,436,448 bytes (`records-v1`) and 39,033 pages / 347,124,499 bytes (`report-v1`).
+- **Selection**, `report-v1 --record-limit 1000` from 16, 256 and 1024 MiB inputs: the whole input is read and validated, 1000 records are rendered. Converter peak RSS was 2340–2536 KiB, 41 pages and about 1.1 MB of PDF each time.
+
+An independent streaming oracle checked every rendered record against the fixture recipe. Raw CSV/JSON, per-process time records for the generator, converter and reader, hashes and negative controls are in that directory. PDF size, spool size and time grow with the rendered content, and RSS includes the loaded font, so a different font changes it. Full output of a 1 GiB input was not measured. The selection rows do not describe full output, and no comparison with other converters is made.
+
 Layout consists of sequential text blocks. Tables, global sorting, XSL-FO, UTF-16, additional operating systems, and automatic support for unknown schemas are outside the current contract. Adoption and comparisons with other converters have not been measured.
 
 ## Checks
@@ -201,6 +210,20 @@ python3 tests/large_proof.py 1073741824
 ```
 
 `make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
+
+To repeat the resource series, use a disk-backed scratch directory with several GiB free (the full 64 MiB `records-v1` PDF alone is about 713 MB) and a new evidence directory:
+
+```sh
+python3 tests/resource_baseline_test.py
+python3 tests/resource_baseline.py matrix --binary ./xml2pdf --font fonts/DejaVuSans.ttf \
+  --source-dir . --evidence-dir "$HOME/ki-evidence/run1" --scratch "$HOME/ki-scratch"
+python3 tests/resource_controls.py --binary ./xml2pdf --font fonts/DejaVuSans.ttf \
+  --evidence-dir "$HOME/ki-evidence/controls1" --scratch "$HOME/ki-scratch"
+python3 tests/resource_baseline.py compare docs/evidence/osr-23-baseline-075455c/baseline \
+  "$HOME/ki-evidence/run1"
+```
+
+`--cases full-records-1MiB,full-report-1MiB` limits `matrix` to a subset. The runner deletes its large XML/PDF files after each case and keeps their sizes and hashes.
 
 `tests/verify.sh` uses a temporary scratch directory or the directory named by `SCRATCH`. Its large synthetic XML/PDF files are removed after the RSS measurement; `mem.txt` retains the converter's maximum resident set size. See [CONTRIBUTING.md](CONTRIBUTING.md) for regression evidence and private security reporting.
 

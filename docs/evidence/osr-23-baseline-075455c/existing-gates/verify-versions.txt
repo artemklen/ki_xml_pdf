@@ -1,0 +1,6 @@
+cc cc (Debian 14.2.0-19) 14.2.0
+python Python 3.13.5
+pdfinfo pdfinfo version 25.03.0
+pdftotext pdftotext version 25.03.0
+commit 075455cc930a1f5e79a9ae4811e82b5c95af06c4
+Linux 6.12.111+deb13-cloud-amd64 x86_64

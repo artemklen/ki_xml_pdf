@@ -1,0 +1,9 @@
+{
+  "run_id": "ref-small-fixture",
+  "converter_exit": 0,
+  "converter_rss_kib": 2536,
+  "converter_elapsed_s": 0.02,
+  "input_bytes": 80197,
+  "pdf_bytes": 1485197,
+  "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf /home/artem/projects/ki_xml_pdf/tests/fixture.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/ref-small.pdf"
+}

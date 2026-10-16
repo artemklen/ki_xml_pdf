@@ -6,7 +6,7 @@
 
 Исходники и собственные примеры распространяются по [MIT](LICENSE). Шрифт DejaVu имеет [отдельное уведомление](fonts/DejaVuSans.copyright). Репозиторий: [artemklen/ki_xml_pdf](https://github.com/artemklen/ki_xml_pdf); результаты проверок: [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml).
 
-На собственной синтетике около 1 ГиБ с выборкой первых 1000 записей RSS конвертера составила 2372 КиБ, PDF — 41 страницу / 1 009 241 байт. Без выборки сохраняются все записи; размер PDF и время зависят от содержимого. Ревизия, команды, бюджеты и границы этих измерений описаны в [контрактах](docs/contract.md).
+Исторический замер на ревизии `7c62fe4`: на собственной синтетике около 1 ГиБ с выборкой первых 1000 записей RSS конвертера составила 2372 КиБ, PDF — 41 страницу / 1 009 241 байт. Без выборки сохраняются все записи; размер PDF и время зависят от содержимого. Ревизия, команды, бюджеты и границы этих измерений описаны в [контрактах](docs/contract.md). Текущий baseline на `075455c` — в разделе [«Ресурсный baseline 075455c»](#ресурсный-baseline-075455c).
 
 ## Сборка и запуск
 
@@ -92,6 +92,27 @@ python3 tests/large_proof.py 1073741824
 ```
 
 `tests/verify.sh` пишет отчёты в свой каталог (`mktemp -d`, либо `SCRATCH`, если он задан). Крупные файлы этого прогона — один XML около 16 МиБ и его PDF; после замера RSS они удаляются. В отчёте остаётся `mem.txt`. RSS в нём — это maximum resident set size процесса `./xml2pdf`, не генератора XML и не разбора PDF.
+
+Ресурсные серии повторяются так (scratch — каталог на диске, не tmpfs, с запасом в несколько ГиБ: один полный PDF `records-v1` 64 МиБ занимает около 713 МБ; каталог evidence — новый):
+
+```sh
+python3 tests/resource_baseline_test.py
+python3 tests/resource_baseline.py matrix --binary ./xml2pdf --font fonts/DejaVuSans.ttf \
+  --source-dir . --evidence-dir "$HOME/ki-evidence/run1" --scratch "$HOME/ki-scratch"
+python3 tests/resource_controls.py --binary ./xml2pdf --font fonts/DejaVuSans.ttf \
+  --evidence-dir "$HOME/ki-evidence/controls1" --scratch "$HOME/ki-scratch"
+python3 tests/resource_baseline.py compare docs/evidence/osr-23-baseline-075455c/baseline \
+  "$HOME/ki-evidence/run1"
+```
+
+## Ресурсный baseline 075455c
+
+[Baseline OSR-23](docs/evidence/osr-23-baseline-075455c/README.md) снят на неизменённых исходниках 0.2.0 ревизии `075455c`, на одном Linux-стенде со шрифтом DejaVu Sans из поставки. Серий две, и они не подменяют друг друга:
+
+- **Полный вывод**, все записи в PDF: `records-v1` и `report-v1` на 1, 16 и 64 МиБ. Пиковая RSS конвертера — 2340–2524 КиБ. Вход 64 МиБ дал 115 552 страницы / 713 436 448 байт (`records-v1`) и 39 033 страницы / 347 124 499 байт (`report-v1`).
+- **Выборка** `report-v1 --record-limit 1000` из входов 16, 256 и 1024 МиБ: весь XML читается и валидируется, в PDF попадают 1000 записей. Пиковая RSS конвертера — 2340–2536 КиБ, каждый раз 41 страница и около 1,1 МБ PDF.
+
+Независимый потоковый oracle сверил каждую выведенную запись с рецептом fixture. Там же лежат сырые CSV/JSON, отдельные замеры `/usr/bin/time` генератора, конвертера и reader, хеши и отрицательные контроли. Размер PDF, файла смещений и время растут вместе с выводимым содержимым; RSS включает загруженный шрифт и зависит от него. Полный вывод для входа 1 ГиБ не измерялся. Строки выборки не описывают полный вывод; сравнения с другими конвертерами нет.
 
 Запуск конвертера:
 
