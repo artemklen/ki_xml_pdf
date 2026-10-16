@@ -183,16 +183,39 @@ typedef struct KiConfig {
     double margin_bottom;
     double margin_left;
     double font_size;
+    /* Optional document information (/Info), each NULL by default and then
+       not written. title and producer are UTF-8, 1..KI_INFO_TEXT_MAX bytes,
+       any Unicode scalar value except control characters other than tab, LF
+       and CR; they are stored as UTF-16BE PDF text strings and do not need
+       glyphs in the body font. creation_date is exactly
+       YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DDTHH:MM:SS+HH:MM (or -HH:MM), a valid
+       Gregorian date and time with seconds 00..59 and an offset up to 23:59;
+       it is written as given, as D:YYYYMMDDHHmmSSZ or D:...+HH'mm'. The
+       library never adds a date, ModDate, XMP, trailer ID or PDF/A claim.
+       An invalid value fails with KI_CAUSE_USAGE before any file is opened
+       or callback runs. The values are copied at the start of the call.
+       A config whose size is KI_CONFIG_SIZE_GEOMETRY ends before these
+       fields and has no /Info. */
+    const char *title;
+    const char *producer;
+    const char *creation_date;
 } KiConfig;
 
-/* Writes defaults (Letter portrait, 40 pt margins, 10 pt font) when size is
-   a KiConfig size this library knows, writing no more than size bytes, and
-   returns 0. Otherwise writes nothing and returns 2. Use
-   ki_config_init(&cfg, sizeof cfg). A conversion rejects any other
-   cfg->size as KI_CAUSE_USAGE. */
+#define KI_INFO_TEXT_MAX 1024
+/* Size of the geometry-only KiConfig, before the /Info fields. */
+#define KI_CONFIG_SIZE_GEOMETRY offsetof(KiConfig, title)
+
+/* Writes defaults (Letter portrait, 40 pt margins, 10 pt font, no /Info)
+   when size is a KiConfig size this library knows (sizeof(KiConfig) or
+   KI_CONFIG_SIZE_GEOMETRY), writing no more than size bytes, and returns 0.
+   Otherwise writes nothing and returns 2. Use ki_config_init(&cfg,
+   sizeof cfg). A conversion rejects any other cfg->size as
+   KI_CAUSE_USAGE. */
 KI_API int ki_config_init(KiConfig *cfg, size_t size);
 /* As ki_convert_file, ki_convert and ki_convert_to_file, with cfg's page
-   geometry. A NULL cfg is the default geometry, identical to the 0.2 calls. */
+   geometry and optional /Info. A NULL cfg is the default geometry without
+   /Info, identical to the 0.2 calls. /Info bytes count against
+   max_output_bytes like any other output. */
 KI_API int ki_convert_file_cfg(const char *xml_path, const char *pdf_path, const KiOptions *opt, const KiConfig *cfg,
                                KiResult *result);
 KI_API int ki_convert_cfg(const KiOptions *opt, const KiConfig *cfg, KiResult *result);

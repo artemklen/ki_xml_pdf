@@ -84,6 +84,13 @@ static void usage(FILE *fp) {
             "Each geometry option may appear once. A custom size excludes --page-size\n"
             "and --orientation. Invalid geometry exits 2 before any input is read.\n"
             "\n"
+            "Document information (/Info), each optional and written only when given:\n"
+            "  --title TEXT             UTF-8, 1..1024 bytes; no controls except tab, LF, CR\n"
+            "  --producer TEXT          same rules as --title\n"
+            "  --creation-date DATE     YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DDTHH:MM:SS+HH:MM/-HH:MM\n"
+            "No date is added unless given; no XMP or PDF/A claim. Invalid metadata\n"
+            "exits 2 before any input is read or output created.\n"
+            "\n"
             "Input: UTF-8; no network access. XML bounds: depth 64, 8 attributes,\n"
             "names 63 bytes, attribute values 255 bytes, input window 4096 bytes.\n"
             "Exit codes: 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel.\n"
@@ -164,6 +171,7 @@ int main(int argc, char **argv) {
     KiConfig cfg;
     ki_config_init(&cfg, sizeof cfg);
     int seen_size = 0, seen_orient = 0, seen_width = 0, seen_height = 0, seen_margin = 0, seen_font = 0;
+    int seen_title = 0, seen_producer = 0, seen_date = 0;
     int i = 1;
     while (i < argc && argv[i][0] == '-' && strcmp(argv[i], "-") != 0) {
         if (strcmp(argv[i], "--") == 0) {
@@ -247,6 +255,24 @@ int main(int argc, char **argv) {
             cfg.margin_right = m[1];
             cfg.margin_bottom = m[2];
             cfg.margin_left = m[3];
+        } else if (strcmp(argv[i], "--title") == 0) {
+            if (seen_title++) {
+                usage(stderr);
+                return 2;
+            }
+            cfg.title = argv[++i];
+        } else if (strcmp(argv[i], "--producer") == 0) {
+            if (seen_producer++) {
+                usage(stderr);
+                return 2;
+            }
+            cfg.producer = argv[++i];
+        } else if (strcmp(argv[i], "--creation-date") == 0) {
+            if (seen_date++) {
+                usage(stderr);
+                return 2;
+            }
+            cfg.creation_date = argv[++i];
         } else if (strcmp(argv[i], "--font-size") == 0) {
             if (seen_font++ || take_points(argv[++i], &cfg.font_size) != 0) {
                 usage(stderr);

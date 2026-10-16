@@ -64,6 +64,21 @@ Pages default to US Letter portrait (612 × 792 pt), 40 pt margins, 10 pt type a
 
 The PDF MediaBox and the text placement use the same rounded values. Glyph outlines, not only advances, stay inside the margins: a line whose first glyph extends left of its origin starts further right, and the first baseline and the number of lines per page (at most 50) leave room for the font's tallest and deepest glyphs. Invalid geometry exits 2 before any input is read and before an output file is created or changed. So does a valid page with no room for one line, or for some single glyph of the font, which is detected right after the font loads.
 
+### Document information
+
+The PDF has no document information dictionary unless one is asked for. Three optional fields fill an ordinary `/Info` dictionary; any field not given is not written, and no date is ever taken from the clock:
+
+```sh
+./xml2pdf --title "Отчёт за октябрь" --producer "billing export" \
+  --creation-date 2026-10-16T12:34:56+03:00 input.xml titled.pdf
+```
+
+- `--title TEXT` and `--producer TEXT`: UTF-8, 1–1024 bytes. Any Unicode character is allowed except control characters other than tab, LF and CR; malformed UTF-8 is rejected. Values are stored whole as UTF-16BE PDF text strings in hexadecimal, so parentheses, backslashes, newlines and PDF syntax in the value stay text. They do not need glyphs in the body font.
+- `--creation-date DATE`: exactly `YYYY-MM-DDTHH:MM:SSZ` or `YYYY-MM-DDTHH:MM:SS+HH:MM` (or `-HH:MM`). The date must exist in the Gregorian calendar, seconds are 00–59 and the offset is at most 23:59. It is written as given, for example `D:20261016123456+03'00'`.
+- Each option may appear once. Invalid metadata exits 2 before any input is read and before an output file is created or changed, even when the input or font does not exist.
+
+The dictionary does not change the page content, geometry or page count, and its bytes count against `--max-output-bytes`. This is plain `/Info`: there is no `ModDate`, XMP metadata stream, trailer `/ID` or PDF/A or PDF/UA claim.
+
 An out-of-tree CMake build is also supported. CMake enables tests by default and requires Python 3 during configuration. Use `-DBUILD_TESTING=OFF` for a library/CLI build without test targets:
 
 ```sh
@@ -181,11 +196,11 @@ int main(void) {
 | `ki_convert_file(xml_path, pdf_path, options, result)` | File path; ignores read/write callbacks | Atomic file publication; preserves the previous destination on failure |
 | `ki_convert(options, result)` | `read_bytes` callback | `write_bytes` callback; previously accepted bytes remain on failure and `output_bytes` counts exactly those bytes |
 | `ki_convert_to_file(pdf_path, options, result)` | `read_bytes` callback; ignores `write_bytes` | Atomic file publication, including input from a pipe or application stream |
-| `ki_convert_file_cfg`, `ki_convert_cfg`, `ki_convert_to_file_cfg` | As the call without `_cfg`, plus a `const KiConfig *` before `result` | Same, with the configured page geometry; `NULL` is the default geometry |
+| `ki_convert_file_cfg`, `ki_convert_cfg`, `ki_convert_to_file_cfg` | As the call without `_cfg`, plus a `const KiConfig *` before `result` | Same, with the configured page geometry and optional `/Info`; `NULL` is the default geometry without `/Info` |
 
 A read callback returns 0 only at EOF, a positive byte count for data, and a negative value for an error. A positive short read is not EOF. A write callback must accept the entire requested count or return an error. The caller owns callback resources and closes them; the library does not close caller streams or free caller state.
 
-Page geometry lives in a separate `KiConfig`, so `KiOptions`, `KiResult` and `KiEvent` keep their 0.2 layout and the 0.2 functions keep their exports and behavior. Initialize it with `ki_config_init(&cfg, sizeof cfg)` and set `page_size` (`KI_PAGE_LETTER`, `KI_PAGE_A4`, `KI_PAGE_CUSTOM`), `orientation` (`KI_ORIENT_PORTRAIT`, `KI_ORIENT_LANDSCAPE`), `page_width`/`page_height` (custom sizes only), `margin_top`/`margin_right`/`margin_bottom`/`margin_left` and `font_size`, in points with the limits listed in [page geometry](#page-geometry). A `size` other than `sizeof(KiConfig)`, or an invalid value, fails with `KI_CAUSE_USAGE` (`page geometry: ...`) before any file is opened or callback runs. This program writes `input.xml` as A4 landscape with 36 pt margins and 12 pt type:
+Page geometry lives in a separate `KiConfig`, so `KiOptions`, `KiResult` and `KiEvent` keep their 0.2 layout and the 0.2 functions keep their exports and behavior. Initialize it with `ki_config_init(&cfg, sizeof cfg)` and set `page_size` (`KI_PAGE_LETTER`, `KI_PAGE_A4`, `KI_PAGE_CUSTOM`), `orientation` (`KI_ORIENT_PORTRAIT`, `KI_ORIENT_LANDSCAPE`), `page_width`/`page_height` (custom sizes only), `margin_top`/`margin_right`/`margin_bottom`/`margin_left` and `font_size`, in points with the limits listed in [page geometry](#page-geometry). `KiConfig` also carries the optional `/Info` fields `title`, `producer` and `creation_date` (`const char *`, `NULL` by default and then not written), with the rules of [document information](#document-information); `KI_INFO_TEXT_MAX` is the 1024-byte limit. The library copies them at the start of the call. A `size` other than `sizeof(KiConfig)` or `KI_CONFIG_SIZE_GEOMETRY` (a geometry-only config that ends before the `/Info` fields), or an invalid value, fails with `KI_CAUSE_USAGE` (`page geometry: ...` or `metadata: ...`) before any file is opened or callback runs. This program writes `input.xml` as A4 landscape with 36 pt margins, 12 pt type and a title:
 
 ```c
 #include "ki_xml_pdf.h"
@@ -202,6 +217,7 @@ int main(void) {
     cfg.orientation = KI_ORIENT_LANDSCAPE;
     cfg.margin_top = cfg.margin_right = cfg.margin_bottom = cfg.margin_left = 36;
     cfg.font_size = 12;
+    cfg.title = "Quarterly report";
 
     KiResult result;
     int status = ki_convert_file_cfg("input.xml", "a4.pdf", &options, &cfg, &result);
@@ -284,7 +300,7 @@ python3 tests/large_proof.py --self-test
 python3 tests/large_proof.py 1073741824
 ```
 
-`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. `python3 tests/wrap_check.py` compares wrapped lines, pages and word boxes from Poppler with the wrap rules applied to advances read independently from the bundled font. `python3 tests/geometry_check.py` checks each page's MediaBox with `pdfinfo` and its rendered ink with `pdftoppm` against the requested size and margins, and that rejected geometry exits 2 without reading stdin or touching the destination. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
+`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. `python3 tests/wrap_check.py` compares wrapped lines, pages and word boxes from Poppler with the wrap rules applied to advances read independently from the bundled font. `python3 tests/geometry_check.py` checks each page's MediaBox with `pdfinfo` and its rendered ink with `pdftoppm` against the requested size and margins, and that rejected geometry exits 2 without reading stdin or touching the destination. `python3 tests/info_check.py` parses the `/Info` object through the xref, decodes its strings, compares them and the raw date with `pdfinfo`, checks that the body, page count and text match a run without metadata, and that invalid metadata exits 2 without reading stdin or touching the destination. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
 
 To repeat the resource series, use a disk-backed scratch directory with several GiB free (the full 64 MiB `records-v1` PDF alone is about 713 MB) and a new evidence directory:
 

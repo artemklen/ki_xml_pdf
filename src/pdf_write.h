@@ -3,6 +3,7 @@
 
 #include "font.h"
 #include "geometry.h"
+#include "info.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -42,6 +43,8 @@ typedef struct PdfConfig {
     void *cancel_user;
     /* NULL is the default Letter geometry. */
     const Geometry *geometry;
+    /* NULL or empty writes no /Info; must outlive the writer. */
+    const PdfInfo *info;
 } PdfConfig;
 
 struct z_stream_s;
@@ -54,6 +57,7 @@ typedef struct PdfWriter {
     FontFace font;
     /* Fitted after the font loads and before the header is written. */
     PageFrame frame;
+    const PdfInfo *info;
     int nobj;
     int npages;
     int hit_limit;

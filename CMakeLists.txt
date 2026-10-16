@@ -20,7 +20,7 @@ include(GNUInstallDirs)
 include(CTest)
 find_package(ZLIB REQUIRED)
 option(BUILD_SHARED_LIBS "Select the shared library for the default package target" ON)
-set(KI_CORE_SOURCES src/xml_parse.c src/font.c src/geometry.c src/page_sink.c src/pdf_write.c
+set(KI_CORE_SOURCES src/xml_parse.c src/font.c src/geometry.c src/info.c src/page_sink.c src/pdf_write.c
                     src/layout.c src/report.c src/convert.c)
 set(KI_FONT_PATH "${CMAKE_INSTALL_FULL_DATADIR}/ki_xml_pdf/DejaVuSans.ttf")
 
@@ -109,6 +109,9 @@ if(BUILD_TESTING)
         --binary "$<TARGET_FILE:xml2pdf>")
     add_test(NAME geometry_check COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/geometry_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
+    add_test(NAME info_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/info_check.py"
         --binary "$<TARGET_FILE:xml2pdf>")
 endif()
 

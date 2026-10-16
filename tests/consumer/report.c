@@ -49,6 +49,23 @@ int main(int argc, char **argv) {
         config.margin_left = 30.5;
         config.font_size = 12;
         rc = ki_convert_file_cfg(argv[1], argv[2], &options, &config, &result);
+    } else if (argc == 4 && strcmp(argv[3], "info") == 0) {
+        KiConfig config;
+        if (ki_config_init(&config, KI_CONFIG_SIZE_GEOMETRY) != 0 || config.size != KI_CONFIG_SIZE_GEOMETRY ||
+            ki_config_init(&config, sizeof config) != 0 || config.title != NULL) {
+            fprintf(stderr, "consumer: ki_config_init info sizes failed\n");
+            return 1;
+        }
+        config.creation_date = "2026-02-30T00:00:00Z";
+        if (ki_convert_file_cfg(argv[1], argv[2], &options, &config, &result) != 2 ||
+            result.cause != KI_CAUSE_USAGE) {
+            fprintf(stderr, "consumer: invalid creation date accepted\n");
+            return 1;
+        }
+        config.title = "\xD0\x9E\xD1\x82\xD1\x87\xD1\x91\xD1\x82 (1)";
+        config.producer = "consumer";
+        config.creation_date = "2026-10-16T12:34:56+03:00";
+        rc = ki_convert_file_cfg(argv[1], argv[2], &options, &config, &result);
     } else if (argc == 4) {
         if (strcmp(argv[3], "callback") != 0) return 2;
         FILE *input = fopen(argv[1], "rb");

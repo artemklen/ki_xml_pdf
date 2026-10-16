@@ -158,6 +158,14 @@ for method in make cmake; do
                 pdfinfo -box "$foreign/$name-a4.pdf" | \
                     grep -E '^MediaBox: +0\.00 +0\.00 +841\.89 +595\.28$' >/dev/null || \
                     fail "$name A4 landscape MediaBox differs"
+                ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
+                    "$foreign/report-v1.xml" "$foreign/$name-info.pdf" info )
+                oracle "$foreign/$name-info.pdf"
+                info=$(pdfinfo -enc UTF-8 -rawdates "$foreign/$name-info.pdf")
+                grep -Fx 'Title:           Отчёт (1)' <<< "$info" >/dev/null &&
+                    grep -Fx 'Producer:        consumer' <<< "$info" >/dev/null &&
+                    grep -Fx "CreationDate:    D:20261016123456+03'00'" <<< "$info" >/dev/null || \
+                    fail "$name /Info differs"
                 echo "matrix PASS $name"
                 rows=$((rows + 1))
             done

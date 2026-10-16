@@ -66,7 +66,7 @@ required=(
     .github/workflows/ci.yml .gitignore
     docs/contract.md docs/license-decision.md docs/profile-decision.md
     docs/release-checklist.md docs/report-v1.md docs/mapper-guide.md
-    src/convert.c src/convert.h src/font.c src/font.h src/geometry.c src/geometry.h
+    src/convert.c src/convert.h src/font.c src/font.h src/geometry.c src/geometry.h src/info.c src/info.h
     src/layout.c src/layout.h
     src/main.c src/page_sink.c src/page_sink.h src/pdf_write.c src/pdf_write.h
     src/report.c src/report.h src/xml_parse.c src/xml_parse.h
@@ -79,7 +79,7 @@ required=(
     tests/distcheck.sh tests/install_smoke.sh tests/prefix_switch.sh tests/test_stream.c
     tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c
     tests/pdf_offsets.py tests/font_metrics_check.py tests/pdf_streams.py
-    tests/test_flate.c tests/pdf_inflate.c tests/test_layout_wrap.c tests/test_geometry.c tests/wrap_check.py tests/geometry_check.py
+    tests/test_flate.c tests/pdf_inflate.c tests/test_layout_wrap.c tests/test_geometry.c tests/test_info.c tests/wrap_check.py tests/geometry_check.py tests/info_check.py
     tests/verify.sh tests/fixture.xml tests/fuzz_smoke.py tests/large_proof.py
     tests/corpus/split_whitespace.xml tests/corpus/utf8_512.xml
     tests/corpus/truncated-hmtx.ttf tests/corpus/truncated-cmap-184.ttf tests/font_fixtures.py

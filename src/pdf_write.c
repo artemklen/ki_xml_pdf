@@ -661,6 +661,7 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
     w->debug_fail_page = cfg != NULL ? cfg->debug_fail_page : 0;
     w->cancelled = cfg != NULL ? cfg->cancelled : NULL;
     w->cancel_user = cfg != NULL ? cfg->cancel_user : NULL;
+    w->info = cfg != NULL && info_present(cfg->info) ? cfg->info : NULL;
     const char *tdir = cfg != NULL && cfg->temp_dir != NULL && cfg->temp_dir[0] != '\0' ? cfg->temp_dir : "/tmp";
     size_t path_n = strlen(tdir) + 24;
     w->off_path = malloc(path_n);
@@ -920,6 +921,13 @@ int pdf_end(PdfWriter *w) {
     if (fputs("<< /Type /Catalog /Pages 2 0 R >>\nendobj\n", w->fp) < 0) {
         return -1;
     }
+    int info_obj = 0;
+    if (w->info != NULL) {
+        info_obj = w->nobj + 1;
+        if (begin_obj(w, info_obj) != 0 || info_write(w->fp, w->info) != 0 || fputs("endobj\n", w->fp) < 0) {
+            return -1;
+        }
+    }
     if (fflush(w->offsets) != 0) {
         return -1;
     }
@@ -955,8 +963,12 @@ int pdf_end(PdfWriter *w) {
             return -1;
         }
     }
-    if (fprintf(w->fp, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%ld\n%%%%EOF\n", w->nobj + 1,
-                xref_off) < 0) {
+    char info_ref[32] = "";
+    if (info_obj != 0) {
+        snprintf(info_ref, sizeof info_ref, " /Info %d 0 R", info_obj);
+    }
+    if (fprintf(w->fp, "trailer\n<< /Size %d /Root 1 0 R%s >>\nstartxref\n%ld\n%%%%EOF\n", w->nobj + 1,
+                info_ref, xref_off) < 0) {
         return -1;
     }
     if (fflush(w->fp) != 0) {
