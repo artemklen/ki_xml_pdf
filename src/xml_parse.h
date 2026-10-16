@@ -6,9 +6,23 @@
 /* Fixed bounds. The parser never allocates a node list and never grows with
    the document: input is pulled through a fixed window, and the only nesting
    state is a fixed-depth stack of the elements that are still open.
-   CDATA bodies are emitted as text in those same fixed chunks. Numeric
-   character references are decoded to UTF-8; any other entity is left as
-   written. */
+   CDATA bodies are emitted as text in those same fixed chunks, and a text
+   chunk never ends inside a UTF-8 sequence.
+
+   In text and attribute values the five predefined entities (&amp; &lt;
+   &gt; &quot; &apos;) and decimal or hexadecimal character references
+   (&#N; and &#xH; with a lowercase x) are decoded to UTF-8. A reference to a non-XML Char, a
+   malformed or unterminated reference, and any other entity are errors;
+   CDATA keeps reference spelling literally. Every consumed byte, including
+   comments, PIs, the skipped DTD and content after the root, must be
+   well-formed UTF-8 encoding an XML Char.
+
+   The XML declaration must open the document (after an optional UTF-8
+   BOM) with ordered, unique version="1.0", encoding="UTF-8" and
+   standalone pseudo-attributes. At most one DOCTYPE is accepted before the
+   root; its internal subset is skipped with comment/PI/quote awareness, and
+   neither the external subset nor any declared entity is ever loaded or
+   expanded. */
 
 #define XML_NAME_MAX 64
 #define XML_ATTR_MAX 8
@@ -58,11 +72,13 @@ typedef struct XmlParser {
     int in_cdata;
     int cdata_mark;
     int seen_root;
+    int seen_doctype;
     int document_start;
     int bracket_run;
     int utf8_need;
     int utf8_bad;
     unsigned utf8_lead;
+    unsigned utf8_cp;
     size_t offset;
     char end_name[XML_NAME_MAX];
     char stack[XML_MAX_DEPTH][XML_NAME_MAX];

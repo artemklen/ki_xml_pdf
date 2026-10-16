@@ -1,0 +1,45 @@
+expected reject, got 0 for [<a>\xEF\xBF\xBE</a>] (10 bytes)
+FAIL tests/test_xml_subset.c:231: xs_expect(buf, n, 1, NULL, 0) == 0
+FAILED xml_char_contexts
+expected reject, got 0 for [<a>&#X41;</a>] (13 bytes)
+FAIL tests/test_xml_subset.c:285: xs_expect(buf, n, 1, NULL, 0) == 0
+FAILED xml_references
+expected reject, got 0 for [<root>\xEF\xBF\xBE</root>] (16 bytes)
+FAIL tests/test_xml_subset.c:332: xs_expect(xs_audited[i].xml, xs_audited[i].n, want, proj, proj ? strlen(proj) : 0) == 0
+FAILED xml_audited_corpus
+expected accept, got 1 for [<?xml-stylesheet type="text/xsl" href="view.xsl"?><root/>] (57 bytes)
+FAIL tests/test_xml_subset.c:338: xs_expect(XS_LIT("<?xml-stylesheet type=\"text/xsl\" href=\"view.xsl\"?><root/>"), 0, XS_LIT("<root></root>")) == 0
+FAILED xml_pi_and_declaration
+expected accept, got 1 for [<!DOCTYPE root [ <!-- ] --> ]><root/>] (37 bytes)
+FAIL tests/test_xml_subset.c:414: xs_expect(XS_LIT("<!DOCTYPE root [ <!-- ] --> ]><root/>"), 0, XS_LIT("<root></root>")) == 0
+FAILED xml_doctype_and_dtd
+expected reject, got 0 for [<a/>                                                                                                                    ...] (5014 bytes)
+FAILED xml_late_tails
+expected reject, got 0 for [<a>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA...] (1026 bytes)
+FAIL tests/test_xml_subset.c:558: rc == 0
+FAILED xml_chunk_boundaries
+chunk 1: cause 5 (font: U+FFFE), wanted 1 for [<root>\xEF\xBF\xBE</root>] (16 bytes)
+FAIL tests/test_xml_subset.c:621: xs_cause(XS_LIT("<root>\xEF\xBF\xBE</root>"), &opt, KI_CAUSE_XML) == 0
+FAILED xml_public_causes
+late record poison 0 chunk 1: status 0 cause 0 (xml2pdf: pages=1 objects=9 offset_bytes=80)
+FAIL tests/test_xml_subset.c:749: rc == 0
+FAILED xml_selected_tails
+9 test(s) failed
+ok big_stream_fixed_memory
+ok split_mid_tag_and_text
+ok one_byte_entities_and_nesting
+ok skips_and_errors
+ok cdata_and_numeric
+ok cdata_stream_fixed_memory
+ok page_sink_flushes
+ok pdf_appends_and_releases
+ok convert_pipeline
+ok output_keeps_previous
+ok wellformed_profile
+ok review_regressions
+ok library_contract
+ok callback_usage_result
+ok callback_to_file
+ok report_v1
+ok font_bounds
+exit status: 1

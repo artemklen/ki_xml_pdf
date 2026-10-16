@@ -110,22 +110,26 @@ def main() -> int:
         require({path.name for path in directory.iterdir()} == filenames | {"spool"}, "conversion leaked a temporary PDF")
 
     def check_xml(data: bytes, label: str, status: int | None = None,
-                  expected: list[str] | None = None) -> tuple[bool, bool]:
+                  expected: list[str] | None = None, profile: list[str] | None = None) -> tuple[bool, bool]:
+        if profile is None:
+            profile = ["--profile", "report-v1"]
         with tempfile.TemporaryDirectory(prefix="ki-fuzz.") as tmp:
             directory = Path(tmp)
             src, dst, spool = directory / "in.xml", directory / "out.pdf", directory / "spool"
             src.write_bytes(data)
             dst.write_bytes(old)
             spool.mkdir()
-            proc = bounded(["--profile", "report-v1", "--temp-dir", str(spool), str(src), str(dst)],
+            proc = bounded([*profile, "--temp-dir", str(spool), str(src), str(dst)],
                            data, ".xml", label)
+            if status == 1 and proc.returncode == 1:
+                require(proc.stderr.startswith(b"xml: "), f"{label}: expected an XML cause, got {proc.stderr!r}")
             if status is not None:
                 require(proc.returncode == status, f"{label}: got {proc.returncode}, expected {status}; {proc.stderr!r}")
             if proc.returncode == 0:
                 lines = read_pdf(dst)
                 if expected is not None:
-                    require(lines == expected, "golden report PDF differs from fixed full-text oracle")
-                projected = check_report_projection(data, lines)
+                    require(lines == expected, f"{label}: PDF text differs from fixed full-text oracle")
+                projected = check_report_projection(data, lines) if profile == ["--profile", "report-v1"] else False
             else:
                 require(dst.read_bytes() == old, f"{label}: failure replaced OLD output")
                 projected = False
@@ -150,6 +154,33 @@ def main() -> int:
         cuts = (0, 1, 4095, 4096, 4097, len(wide) - 1)
         for cut in cuts:
             check_xml(wide[:cut], f"truncation {cut}", status=1)
+
+        # Retained OSR-11 audit corpus: exact bytes, verdict and XML cause.
+        corpus = root / "tests" / "corpus" / "xml"
+        sums = {}
+        for line in (corpus / "SHA256SUMS").read_text(encoding="ascii").splitlines():
+            digest, name = line.split("  ", 1)
+            sums[name] = digest
+        valid = {"osr11-dtd-comment-bracket.xml", "osr11-xml-stylesheet.xml"}
+        for name in sorted(sums):
+            data = (corpus / name).read_bytes()
+            require(hashlib.sha256(data).hexdigest() == sums[name], f"corpus {name} changed")
+            check_xml(data, f"corpus {name}", status=0 if name in valid else 1, profile=[])
+            if name not in valid:
+                # The same input after a closed report root and in a skipped
+                # record still fails; selection does not hide it.
+                check_xml(base + b"\n" + data, f"tail {name}", status=1)
+                payload = data.replace(b"<root/>", b"").replace(b"<root>", b"").replace(b"</root>", b"")
+                if b"DOCTYPE" not in payload and b"<?xml " not in payload:
+                    skipped = (b'<report version="1" title="t">' + record * 100 +
+                               b'<record id="2"><field name="n">' + payload + b"</field></record></report>")
+                    check_xml(skipped, f"selection {name}", status=1,
+                              profile=["--profile", "report-v1", "--record-limit", "1"])
+        selected = b'<report version="1" title="t">' + record * 100 + b"</report>\n<!-- end --><?pi end?>"
+        check_xml(selected, "selection clean tail", status=0,
+                  expected=["t", "Запись 1", "n: pad", "Всего записей: 100", "Выбрано записей: 1",
+                            "Пропущено записей: 99"],
+                  profile=["--profile", "report-v1", "--record-limit", "1"])
 
         font = (root / "fonts" / "DejaVuSans.ttf").read_bytes()[:LIMIT]
         broken = bytearray(font)
@@ -176,7 +207,7 @@ def main() -> int:
         return 1
 
     print(f"fuzz_smoke seed={SEED} iters={ITERS} as_kib={AS_KIB} timeout={TIMEOUT}s "
-          f"golden=1 truncations={len(cuts)} fonts={len(samples)} "
+          f"golden=1 truncations={len(cuts)} xml_corpus={len(sums)} fonts={len(samples)} "
           f"successful_mutants={successful_mutants} projected_mutants={projected_mutants} "
           f"elapsed={time.monotonic() - started:.2f}s ok")
     return 0

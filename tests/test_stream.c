@@ -3543,6 +3543,8 @@ static int test_font_bounds(void) {
     return 0;
 }
 
+#include "test_xml_subset.c"
+
 int main(void) {
     struct {
         const char *name;
@@ -3565,6 +3567,15 @@ int main(void) {
         {"callback_to_file", test_callback_to_file},
         {"report_v1", test_report_v1},
         {"font_bounds", test_font_bounds},
+        {"xml_char_contexts", test_xml_char_contexts},
+        {"xml_references", test_xml_references},
+        {"xml_audited_corpus", test_xml_audited_corpus},
+        {"xml_pi_and_declaration", test_xml_pi_and_declaration},
+        {"xml_doctype_and_dtd", test_xml_doctype_and_dtd},
+        {"xml_late_tails", test_xml_late_tails},
+        {"xml_chunk_boundaries", test_xml_chunk_boundaries},
+        {"xml_public_causes", test_xml_public_causes},
+        {"xml_selected_tails", test_xml_selected_tails},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {

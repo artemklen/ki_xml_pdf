@@ -5,6 +5,7 @@
 ## Unreleased
 
 - Reject TTF files whose cmap subtable header, encoding records, table directory or table spans are truncated or out of range with `KI_CAUSE_FONT`, without reading past the font data. All range checks avoid offset-plus-length overflow. The `hmtx` table must hold all `numberOfHMetrics` entries. The 8 MiB font size cap is unchanged.
+- Validate every consumed scalar as an XML `Char` and well-formed UTF-8 in text, attributes, CDATA, comments, PIs, the skipped DTD, skipped records and content after the root. A literal U+FFFE/U+FFFF is now `KI_CAUSE_XML` instead of a font error or success, and text events never end inside a UTF-8 sequence. Accept `xml-stylesheet` and other non-`xml` PI targets; reject empty or non-name PI targets and `&#X...;`. Require ordered, unique, space-separated XML declaration pseudo-attributes, a single DOCTYPE with white space after the keyword, and skip its internal subset with comment/PI/quote awareness. External DTDs and entities are still never loaded or expanded; parser limits are unchanged.
 
 ## 0.2.0
 

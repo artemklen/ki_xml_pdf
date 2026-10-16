@@ -41,13 +41,15 @@ static int peek(XmlParser *p) {
     return (unsigned char)p->buf[p->pos];
 }
 
+static int xml_cp_ok(unsigned cp);
+
+/* Every consumed byte passes through here, including bytes of skipped
+   comments, PIs, DTD and records, so each completed scalar is checked
+   against the XML Char production. */
 static int feed_utf8(XmlParser *p, unsigned char c) {
     if (p->utf8_need == 0) {
-        if (c == 0) {
-            return -1;
-        }
         if (c < 0x80) {
-            return 0;
+            return xml_cp_ok(c) ? 0 : -1;
         }
         if ((c & 0xE0) == 0xC0) {
             if (c < 0xC2) {
@@ -55,11 +57,13 @@ static int feed_utf8(XmlParser *p, unsigned char c) {
             }
             p->utf8_need = 1;
             p->utf8_lead = c;
+            p->utf8_cp = c & 0x1Fu;
             return 0;
         }
         if ((c & 0xF0) == 0xE0) {
             p->utf8_need = 2;
             p->utf8_lead = c;
+            p->utf8_cp = c & 0x0Fu;
             return 0;
         }
         if ((c & 0xF8) == 0xF0) {
@@ -68,6 +72,7 @@ static int feed_utf8(XmlParser *p, unsigned char c) {
             }
             p->utf8_need = 3;
             p->utf8_lead = c;
+            p->utf8_cp = c & 0x07u;
             return 0;
         }
         return -1;
@@ -87,14 +92,16 @@ static int feed_utf8(XmlParser *p, unsigned char c) {
     if (p->utf8_lead == 0xF4 && p->utf8_need == 3 && c > 0x8F) {
         return -1;
     }
+    p->utf8_cp = (p->utf8_cp << 6) | (c & 0x3Fu);
     p->utf8_need--;
     if (p->utf8_need == 0) {
         p->utf8_lead = 0;
+        if (!xml_cp_ok(p->utf8_cp)) {
+            return -1;
+        }
     }
     return 0;
 }
-
-static int xml_cp_ok(unsigned cp);
 
 static int nextch(XmlParser *p) {
     int c = peek(p);
@@ -102,8 +109,6 @@ static int nextch(XmlParser *p) {
         p->pos++;
         p->offset++;
         if (feed_utf8(p, (unsigned char)c) != 0) {
-            p->utf8_bad = 1;
-        } else if (c < 0x80 && !xml_cp_ok((unsigned)c)) {
             p->utf8_bad = 1;
         }
     }
@@ -249,7 +254,7 @@ static int try_numeric(XmlParser *p, char decoded[4]) {
         return -2;
     }
     int hex = 0;
-    if (c == 'x' || c == 'X') {
+    if (c == 'x') {
         hex = 1;
         if (nextch(p) < 0) {
             return -1;
@@ -532,6 +537,12 @@ static int skip_comment(XmlParser *p) {
     }
 }
 
+/* A UTF-8 lead byte starts a new chunk unless the whole sequence fits, so
+   no text event ends inside a scalar. */
+static int lead_needs_room(int c, size_t n) {
+    return c >= 0xC0 && n > 0 && n + 4 >= XML_TEXT_MAX;
+}
+
 static int parse_cdata(XmlParser *p, XmlEvent *ev) {
     size_t n = 0;
     int ended = 0;
@@ -547,12 +558,12 @@ static int parse_cdata(XmlParser *p, XmlEvent *ev) {
             if (nextch(p) < 0) {
                 return fail(p, ev, "read error");
             }
+            if (p->utf8_bad) {
+                return fail_at(p, ev, "illegal character");
+            }
             if (p->cdata_mark < 2) {
                 p->cdata_mark++;
                 continue;
-            }
-            if (p->utf8_bad) {
-                return fail_at(p, ev, "illegal character");
             }
             ev->text[n++] = ']';
             continue;
@@ -560,6 +571,9 @@ static int parse_cdata(XmlParser *p, XmlEvent *ev) {
         if (c == '>' && p->cdata_mark == 2) {
             if (nextch(p) < 0) {
                 return fail(p, ev, "read error");
+            }
+            if (p->utf8_bad) {
+                return fail_at(p, ev, "illegal character");
             }
             p->in_cdata = 0;
             p->cdata_mark = 0;
@@ -570,6 +584,9 @@ static int parse_cdata(XmlParser *p, XmlEvent *ev) {
             ev->text[n++] = ']';
             p->cdata_mark--;
             continue;
+        }
+        if (lead_needs_room(c, n)) {
+            break;
         }
         if (nextch(p) < 0) {
             return fail(p, ev, "read error");
@@ -602,15 +619,242 @@ static int parse_cdata(XmlParser *p, XmlEvent *ev) {
     return XML_EV_TEXT;
 }
 
-/* '!' has been consumed. Comments and a leading DOCTYPE are skipped.
-   External identifiers are not fetched. Anything else is an error. */
-static int skip_decl_rest(XmlParser *p) {
-    int quote = 0;
-    int depth = 0;
+static int fail_eof(XmlParser *p, XmlEvent *ev, int c, const char *msg) {
+    if (c == -1) {
+        return fail(p, ev, "read error");
+    }
+    return fail_at(p, ev, msg);
+}
+
+/* "<!--" has been consumed. */
+static int comment_body(XmlParser *p, XmlEvent *ev) {
+    int rc = skip_comment(p);
+    if (rc == 0) {
+        return XML_EV_NONE;
+    }
+    if (p->utf8_bad) {
+        return fail_at(p, ev, "illegal character");
+    }
+    if (rc == -2) {
+        return fail_at(p, ev, "bad comment");
+    }
+    return fail_at(p, ev, "truncated comment");
+}
+
+static int ascii_ieq(const char *s, const char *lower) {
+    for (; *s != '\0' && *lower != '\0'; s++, lower++) {
+        int c = (unsigned char)*s;
+        if (c >= 'A' && c <= 'Z') {
+            c += 'a' - 'A';
+        }
+        if (c != *lower) {
+            return 0;
+        }
+    }
+    return *s == '\0' && *lower == '\0';
+}
+
+/* Raw quoted pseudo-attribute value of the XML declaration. */
+static int decl_value(XmlParser *p, char *out, int cap) {
+    int q = nextch(p);
+    if (q < 0) {
+        return q;
+    }
+    if (q != '"' && q != '\'') {
+        return -3;
+    }
+    int n = 0;
     for (;;) {
         int c = nextch(p);
         if (c < 0) {
-            return -1;
+            return c;
+        }
+        if (c == q) {
+            out[n] = '\0';
+            return n;
+        }
+        if (n + 1 >= cap) {
+            return -3;
+        }
+        out[n++] = (char)c;
+    }
+}
+
+/* "<?xml" has been consumed at the document start. Pseudo-attributes must
+   be version, then optional encoding, then optional standalone, each once
+   and each preceded by white space. */
+static int parse_xml_decl(XmlParser *p, XmlEvent *ev) {
+    static const char *const keys[3] = {"version", "encoding", "standalone"};
+    int last = -1;
+    for (;;) {
+        int sw = skip_ws(p);
+        if (sw < 0) {
+            return fail_eof(p, ev, sw, "truncated xml declaration");
+        }
+        int c = peek(p);
+        if (c == '?') {
+            nextch(p);
+            c = nextch(p);
+            if (c < 0) {
+                return fail_eof(p, ev, c, "truncated xml declaration");
+            }
+            if (c != '>' || last < 0) {
+                return fail_at(p, ev, "bad xml declaration");
+            }
+            return XML_EV_NONE;
+        }
+        char key[16];
+        if (sw == 0 || read_name(p, key, (int)sizeof key) <= 0) {
+            return fail_at(p, ev, "bad xml declaration");
+        }
+        int k = -1;
+        for (int i = 0; i < 3; i++) {
+            if (strcmp(key, keys[i]) == 0) {
+                k = i;
+            }
+        }
+        if (k < 0 || k <= last || (last < 0 && k != 0)) {
+            return fail_at(p, ev, "bad xml declaration");
+        }
+        last = k;
+        sw = skip_ws(p);
+        if (sw < 0) {
+            return fail_eof(p, ev, sw, "truncated xml declaration");
+        }
+        if (peek(p) != '=') {
+            return fail_at(p, ev, "bad xml declaration");
+        }
+        nextch(p);
+        sw = skip_ws(p);
+        if (sw < 0) {
+            return fail_eof(p, ev, sw, "truncated xml declaration");
+        }
+        char val[16];
+        int vn = decl_value(p, val, (int)sizeof val);
+        if (p->utf8_bad) {
+            return fail_at(p, ev, "illegal character");
+        }
+        if (vn == -1 || vn == -2) {
+            return fail_eof(p, ev, vn, "truncated xml declaration");
+        }
+        int ok = 0;
+        if (vn >= 0 && k == 0) {
+            ok = strcmp(val, "1.0") == 0;
+        } else if (vn >= 0 && k == 1) {
+            ok = strcmp(val, "UTF-8") == 0 || strcmp(val, "utf-8") == 0;
+        } else if (vn >= 0) {
+            ok = strcmp(val, "yes") == 0 || strcmp(val, "no") == 0;
+        }
+        if (!ok) {
+            return fail_at(p, ev, "bad xml declaration");
+        }
+    }
+}
+
+/* "<?" has been consumed. The target must be a Name followed by white space
+   or "?>". Only an exact lowercase "xml" target at the document start is a
+   declaration; "xml" in any other case or place is reserved. PI data is
+   never reported. */
+static int parse_pi(XmlParser *p, XmlEvent *ev, int at_start) {
+    char target[XML_NAME_MAX];
+    int c = peek(p);
+    if (c < 0) {
+        return fail_eof(p, ev, c, "truncated processing instruction");
+    }
+    if (read_name(p, target, (int)sizeof target) <= 0) {
+        return fail_at(p, ev, "bad processing instruction target");
+    }
+    if (p->utf8_bad) {
+        return fail_at(p, ev, "illegal character");
+    }
+    if (ascii_ieq(target, "xml")) {
+        if (strcmp(target, "xml") != 0) {
+            return fail_at(p, ev, "reserved processing instruction");
+        }
+        if (!at_start) {
+            return fail_at(p, ev, "xml declaration not at start");
+        }
+        return parse_xml_decl(p, ev);
+    }
+    c = peek(p);
+    if (c < 0) {
+        return fail_eof(p, ev, c, "truncated processing instruction");
+    }
+    if (c == '?') {
+        nextch(p);
+        c = nextch(p);
+        if (c < 0) {
+            return fail_eof(p, ev, c, "truncated processing instruction");
+        }
+        if (c != '>') {
+            return fail_at(p, ev, "bad processing instruction target");
+        }
+        return XML_EV_NONE;
+    }
+    if (!is_space(c)) {
+        return fail_at(p, ev, "bad processing instruction target");
+    }
+    int prev = 0;
+    for (;;) {
+        c = nextch(p);
+        if (c < 0) {
+            return fail_eof(p, ev, c, "truncated processing instruction");
+        }
+        if (p->utf8_bad) {
+            return fail_at(p, ev, "illegal character");
+        }
+        if (prev == '?' && c == '>') {
+            return XML_EV_NONE;
+        }
+        prev = c;
+    }
+}
+
+static int is_pubid_char(int c) {
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+        return 1;
+    }
+    return c == ' ' || c == '\r' || c == '\n' || (c > 0 && c < 0x80 && strchr("-'()+,./:=?;!*#@$_%", c) != NULL);
+}
+
+/* Quoted SystemLiteral or PubidLiteral; the identifier is never resolved. */
+static int skip_literal(XmlParser *p, XmlEvent *ev, int pubid) {
+    int q = nextch(p);
+    if (q < 0) {
+        return fail_eof(p, ev, q, "truncated doctype");
+    }
+    if (q != '"' && q != '\'') {
+        return fail_at(p, ev, "bad doctype");
+    }
+    for (;;) {
+        int c = nextch(p);
+        if (c < 0) {
+            return fail_eof(p, ev, c, "truncated doctype");
+        }
+        if (p->utf8_bad) {
+            return fail_at(p, ev, "illegal character");
+        }
+        if (c == q) {
+            return XML_EV_NONE;
+        }
+        if (pubid && !is_pubid_char(c)) {
+            return fail_at(p, ev, "bad doctype");
+        }
+    }
+}
+
+/* Keyword of an ELEMENT/ATTLIST/ENTITY/NOTATION declaration has been
+   consumed. Quoted values may hold '>' and ']'. Declared entities are
+   discarded, so they never become valid references. */
+static int skip_markup_decl(XmlParser *p, XmlEvent *ev) {
+    int quote = 0;
+    for (;;) {
+        int c = nextch(p);
+        if (c < 0) {
+            return fail_eof(p, ev, c, "truncated doctype");
+        }
+        if (p->utf8_bad) {
+            return fail_at(p, ev, "illegal character");
         }
         if (quote) {
             if (c == quote) {
@@ -620,52 +864,168 @@ static int skip_decl_rest(XmlParser *p) {
         }
         if (c == '"' || c == '\'') {
             quote = c;
-            continue;
-        }
-        if (c == '[') {
-            depth++;
-            continue;
-        }
-        if (c == ']' && depth > 0) {
-            depth--;
-            continue;
-        }
-        if (c == '>' && depth == 0) {
-            return 0;
+        } else if (c == '<') {
+            return fail_at(p, ev, "bad doctype");
+        } else if (c == '>') {
+            return XML_EV_NONE;
         }
     }
+}
+
+/* '[' has been consumed; returns after the closing ']'. */
+static int skip_internal_subset(XmlParser *p, XmlEvent *ev) {
+    for (;;) {
+        int sw = skip_ws(p);
+        if (sw < 0) {
+            return fail_eof(p, ev, sw, "truncated doctype");
+        }
+        int c = nextch(p);
+        if (p->utf8_bad) {
+            return fail_at(p, ev, "illegal character");
+        }
+        if (c == ']') {
+            return XML_EV_NONE;
+        }
+        if (c == '%') {
+            char name[XML_NAME_MAX];
+            if (read_name(p, name, (int)sizeof name) <= 0 || nextch(p) != ';') {
+                return fail_at(p, ev, "bad doctype");
+            }
+            continue;
+        }
+        if (c != '<') {
+            return fail_at(p, ev, "bad doctype");
+        }
+        c = nextch(p);
+        if (c < 0) {
+            return fail_eof(p, ev, c, "truncated doctype");
+        }
+        int k;
+        if (c == '?') {
+            k = parse_pi(p, ev, 0);
+        } else if (c != '!') {
+            return fail_at(p, ev, "bad doctype");
+        } else {
+            int dash = match_at(p, "--", 2);
+            if (dash < 0) {
+                return fail(p, ev, "read error");
+            }
+            if (dash == 1) {
+                consume_n(p, 2);
+                k = comment_body(p, ev);
+            } else {
+                char kw[16];
+                if (read_name(p, kw, (int)sizeof kw) <= 0 ||
+                    (strcmp(kw, "ELEMENT") != 0 && strcmp(kw, "ATTLIST") != 0 && strcmp(kw, "ENTITY") != 0 &&
+                     strcmp(kw, "NOTATION") != 0)) {
+                    return fail_at(p, ev, "bad doctype");
+                }
+                c = peek(p);
+                if (c < 0) {
+                    return fail_eof(p, ev, c, "truncated doctype");
+                }
+                if (!is_space(c)) {
+                    return fail_at(p, ev, "bad doctype");
+                }
+                k = skip_markup_decl(p, ev);
+            }
+        }
+        if (k != XML_EV_NONE) {
+            return k;
+        }
+    }
+}
+
+/* "<!DOCTYPE" has been consumed. One DOCTYPE is accepted before the root:
+   S Name (S ExternalID)? S? ('[' intSubset ']' S?)? '>'. The external
+   identifier is only checked for syntax; nothing is fetched. */
+static int skip_doctype(XmlParser *p, XmlEvent *ev) {
+    if (p->depth != 0 || p->seen_root) {
+        return fail_at(p, ev, "doctype placement");
+    }
+    if (p->seen_doctype) {
+        return fail_at(p, ev, "multiple doctype");
+    }
+    p->seen_doctype = 1;
+    int sw = skip_ws(p);
+    if (sw < 0) {
+        return fail_eof(p, ev, sw, "truncated doctype");
+    }
+    char name[XML_NAME_MAX];
+    if (sw == 0 || read_name(p, name, (int)sizeof name) <= 0) {
+        return fail_at(p, ev, "bad doctype");
+    }
+    sw = skip_ws(p);
+    if (sw < 0) {
+        return fail_eof(p, ev, sw, "truncated doctype");
+    }
+    int c = peek(p);
+    int k;
+    if (c == 'S' || c == 'P') {
+        char kw[8];
+        if (sw == 0 || read_name(p, kw, (int)sizeof kw) <= 0) {
+            return fail_at(p, ev, "bad doctype");
+        }
+        int pub = strcmp(kw, "PUBLIC") == 0;
+        if (!pub && strcmp(kw, "SYSTEM") != 0) {
+            return fail_at(p, ev, "bad doctype");
+        }
+        for (int lit = pub ? 2 : 1; lit > 0; lit--) {
+            sw = skip_ws(p);
+            if (sw < 0) {
+                return fail_eof(p, ev, sw, "truncated doctype");
+            }
+            if (sw == 0) {
+                return fail_at(p, ev, "bad doctype");
+            }
+            k = skip_literal(p, ev, pub && lit == 2);
+            if (k != XML_EV_NONE) {
+                return k;
+            }
+        }
+        sw = skip_ws(p);
+        if (sw < 0) {
+            return fail_eof(p, ev, sw, "truncated doctype");
+        }
+        c = peek(p);
+    }
+    if (c == '[') {
+        nextch(p);
+        k = skip_internal_subset(p, ev);
+        if (k != XML_EV_NONE) {
+            return k;
+        }
+        sw = skip_ws(p);
+        if (sw < 0) {
+            return fail_eof(p, ev, sw, "truncated doctype");
+        }
+        c = peek(p);
+    }
+    if (c != '>') {
+        return fail_at(p, ev, "bad doctype");
+    }
+    nextch(p);
+    return XML_EV_NONE;
 }
 
 static int skip_bang(XmlParser *p, XmlEvent *ev) {
     int c1 = peek(p);
     if (c1 < 0) {
-        return fail(p, ev, "truncated declaration");
+        return fail_eof(p, ev, c1, "truncated declaration");
     }
     if (c1 == '-') {
         if (nextch(p) < 0 || nextch(p) != '-') {
             return fail_at(p, ev, "bad comment");
         }
-        int rc = skip_comment(p);
-        if (rc == -2) {
-            return fail_at(p, ev, "bad comment");
-        }
-        if (rc < 0) {
-            return fail(p, ev, "truncated comment");
-        }
-        return XML_EV_NONE;
+        return comment_body(p, ev);
     }
     int is_doc = match_at(p, "DOCTYPE", 7);
     if (is_doc < 0) {
         return fail(p, ev, "read error");
     }
     if (is_doc == 1) {
-        if (p->depth != 0 || p->seen_root) {
-            return fail_at(p, ev, "doctype placement");
-        }
-        if (consume_n(p, 7) < 0 || skip_decl_rest(p) < 0) {
-            return fail(p, ev, "truncated declaration");
-        }
-        return XML_EV_NONE;
+        consume_n(p, 7);
+        return skip_doctype(p, ev);
     }
     return fail_at(p, ev, "unsupported declaration");
 }
@@ -693,6 +1053,12 @@ static int parse_text(XmlParser *p, XmlEvent *ev) {
             return fail(p, ev, "read error");
         }
         if (c == -2 || c == '<') {
+            if (p->utf8_need != 0) {
+                return fail_at(p, ev, "illegal character");
+            }
+            break;
+        }
+        if (lead_needs_room(c, n)) {
             break;
         }
         if (c == '&') {
@@ -711,6 +1077,9 @@ static int parse_text(XmlParser *p, XmlEvent *ev) {
             }
             if (r < 0) {
                 return fail_at(p, ev, "read error");
+            }
+            if (p->utf8_bad) {
+                return fail_at(p, ev, "illegal character");
             }
             if (p->depth == 0) {
                 for (int i = 0; i < r; i++) {
@@ -775,6 +1144,9 @@ static int parse_end(XmlParser *p, XmlEvent *ev) {
     }
     if (nextch(p) != '>') {
         return fail(p, ev, "bad end tag");
+    }
+    if (p->utf8_bad) {
+        return fail_at(p, ev, "illegal character");
     }
     int pr = pop_name(p, name);
     if (pr == -1) {
@@ -878,81 +1250,6 @@ static int parse_start(XmlParser *p, XmlEvent *ev) {
     return XML_EV_START;
 }
 
-static int eq_token(const char *s, size_t n, const char *lit) {
-    size_t m = strlen(lit);
-    return n == m && memcmp(s, lit, m) == 0;
-}
-
-/* body includes the final '?'. 0 = acceptable XML declaration. */
-static int xml_decl_ok(const char *body) {
-    const char *s = body;
-    if (strncmp(s, "xml", 3) != 0) {
-        return -1;
-    }
-    s += 3;
-    if (!is_space((unsigned char)*s)) {
-        return -1;
-    }
-    int saw_version = 0;
-    while (*s != '\0' && *s != '?') {
-        while (is_space((unsigned char)*s)) {
-            s++;
-        }
-        if (*s == '?' || *s == '\0') {
-            break;
-        }
-        const char *key = s;
-        while (*s != '\0' && *s != '=' && !is_space((unsigned char)*s) && *s != '?') {
-            s++;
-        }
-        size_t kn = (size_t)(s - key);
-        while (is_space((unsigned char)*s)) {
-            s++;
-        }
-        if (*s != '=') {
-            return -1;
-        }
-        s++;
-        while (is_space((unsigned char)*s)) {
-            s++;
-        }
-        if (*s != '"' && *s != '\'') {
-            return -1;
-        }
-        char quote = *s++;
-        const char *val = s;
-        while (*s != '\0' && *s != quote) {
-            s++;
-        }
-        if (*s != quote) {
-            return -1;
-        }
-        size_t vn = (size_t)(s - val);
-        s++;
-        if (eq_token(key, kn, "version")) {
-            if (!eq_token(val, vn, "1.0")) {
-                return -1;
-            }
-            saw_version = 1;
-        } else if (eq_token(key, kn, "encoding")) {
-            int utf8 = eq_token(val, vn, "utf-8") || eq_token(val, vn, "UTF-8");
-            if (!utf8) {
-                return -1;
-            }
-        } else if (eq_token(key, kn, "standalone")) {
-            if (!eq_token(val, vn, "yes") && !eq_token(val, vn, "no")) {
-                return -1;
-            }
-        } else {
-            return -1;
-        }
-    }
-    if (*s != '?' || !saw_version) {
-        return -1;
-    }
-    return 0;
-}
-
 /* Return XML_EV_NONE when markup was skipped (comment, declaration, PI). */
 static int parse_markup(XmlParser *p, XmlEvent *ev) {
     p->bracket_run = 0;
@@ -971,42 +1268,7 @@ static int parse_markup(XmlParser *p, XmlEvent *ev) {
         int at_start = p->document_start;
         p->document_start = 0;
         nextch(p);
-        char body[256];
-        int bn = 0;
-        int prev = 0;
-        for (;;) {
-            int c = nextch(p);
-            if (c < 0) {
-                return fail_at(p, ev, "truncated processing instruction");
-            }
-            if (p->utf8_bad) {
-                return fail_at(p, ev, "illegal character");
-            }
-            if (prev == '?' && c == '>') {
-                break;
-            }
-            if (bn >= (int)sizeof body - 1) {
-                return fail_at(p, ev, "processing instruction too long");
-            }
-            body[bn++] = (char)c;
-            prev = c;
-        }
-        body[bn] = '\0';
-        int xmlish = bn >= 3 && (body[0] == 'x' || body[0] == 'X') && (body[1] == 'm' || body[1] == 'M') &&
-                     (body[2] == 'l' || body[2] == 'L');
-        int exact = bn >= 4 && strncmp(body, "xml", 3) == 0 && (is_space((unsigned char)body[3]) || body[3] == '?');
-        if (xmlish && !exact) {
-            return fail_at(p, ev, "reserved processing instruction");
-        }
-        if (exact) {
-            if (!at_start) {
-                return fail_at(p, ev, "xml declaration not at start");
-            }
-            if (xml_decl_ok(body) != 0) {
-                return fail_at(p, ev, "bad xml declaration");
-            }
-        }
-        return XML_EV_NONE;
+        return parse_pi(p, ev, at_start);
     }
     if (n == '!') {
         p->document_start = 0;
