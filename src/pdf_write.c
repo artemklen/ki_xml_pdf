@@ -11,17 +11,24 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zlib.h>
 
 /* Objects 1 and 2 are written at the end. Font objects are a fixed block.
-   Each page then uses two object numbers, so page ids are not stored. */
+   Each page then uses PAGE_OBJS object numbers (contents, contents length,
+   page), so page ids are not stored. */
 #define OBJ_CATALOG 1
 #define OBJ_PAGES 2
 #define OBJ_TYPE0 3
 #define OBJ_CID 4
 #define OBJ_DESC 5
 #define OBJ_FILE 6
-#define OBJ_CMAP 7
-#define OBJ_FIRST 8
+/* Each Flate stream object N has its compressed /Length in object N + 1,
+   written right after the stream, so no stream is held whole or sought. */
+#define OBJ_FILE_LEN 7
+#define OBJ_CMAP 8
+#define OBJ_FIRST 9
+#define PAGE_OBJS 3
+#define FLATE_CHUNK 16384
 #define MAX_OBJECTS 8000000
 #define PAGE_FONT_PT 10
 #define PAGE_LEADING 14
@@ -87,6 +94,93 @@ static int write_stream_obj(PdfWriter *w, int num, const char *data, size_t len)
         return -1;
     }
     if (fputs("\nendstream\nendobj\n", w->fp) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+static int flate_fail(PdfWriter *w, int zrc) {
+    if (w->fail_kind == 0) {
+        w->fail_kind = zrc == Z_MEM_ERROR ? PDF_FAIL_LIMIT : PDF_FAIL_FLATE;
+    }
+    return -1;
+}
+
+static int flate_ready(PdfWriter *w) {
+    if (w->zs != NULL) {
+        int rc = deflateReset(w->zs);
+        return rc == Z_OK ? 0 : flate_fail(w, rc);
+    }
+    if (w->zbuf == NULL) {
+        w->zbuf = malloc(FLATE_CHUNK);
+    }
+    z_stream *zs = calloc(1, sizeof *zs);
+    if (w->zbuf == NULL || zs == NULL) {
+        free(zs);
+        return flate_fail(w, Z_MEM_ERROR);
+    }
+    int rc = deflateInit2(zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15, 8, Z_DEFAULT_STRATEGY);
+    if (rc != Z_OK) {
+        free(zs);
+        return flate_fail(w, rc);
+    }
+    w->zs = zs;
+    return 0;
+}
+
+/* Deflates data through a fixed FLATE_CHUNK window into the counted output
+   stream; *out_len receives the compressed byte count. */
+static int flate_emit(PdfWriter *w, const unsigned char *data, size_t len, unsigned long *out_len) {
+    z_stream *zs = w->zs;
+    unsigned long total = 0;
+    zs->next_in = (Bytef *)data;
+    zs->avail_in = 0;
+    size_t left = len;
+    for (;;) {
+        if (zs->avail_in == 0 && left > 0) {
+            uInt step = left > (size_t)UINT_MAX ? UINT_MAX : (uInt)left;
+            zs->avail_in = step;
+            left -= step;
+        }
+        int flush = left == 0 ? Z_FINISH : Z_NO_FLUSH;
+        zs->next_out = w->zbuf;
+        zs->avail_out = FLATE_CHUNK;
+        int rc = deflate(zs, flush);
+        if (rc != Z_OK && rc != Z_STREAM_END && rc != Z_BUF_ERROR) {
+            return flate_fail(w, rc);
+        }
+        size_t have = FLATE_CHUNK - zs->avail_out;
+        if (have > 0 && fwrite(w->zbuf, 1, have, w->fp) != have) {
+            return -1;
+        }
+        total += have;
+        if (rc == Z_STREAM_END) {
+            break;
+        }
+        if (rc == Z_BUF_ERROR && have == 0) {
+            return flate_fail(w, rc);
+        }
+    }
+    *out_len = total;
+    return 0;
+}
+
+/* Object num holds the FlateDecode stream; object num + 1 holds its length. */
+static int write_flate_obj(PdfWriter *w, int num, const void *data, size_t len, const char *extra) {
+    if (flate_ready(w) != 0 || begin_obj(w, num) != 0) {
+        return -1;
+    }
+    if (fprintf(w->fp, "<< /Length %d 0 R /Filter /FlateDecode%s >>\nstream\n", num + 1, extra) < 0) {
+        return -1;
+    }
+    unsigned long zlen = 0;
+    if (flate_emit(w, data, len, &zlen) != 0) {
+        return -1;
+    }
+    if (fputs("\nendstream\nendobj\n", w->fp) < 0 || begin_obj(w, num + 1) != 0) {
+        return -1;
+    }
+    if (fprintf(w->fp, "%lu\nendobj\n", zlen) < 0) {
         return -1;
     }
     return 0;
@@ -245,7 +339,9 @@ static int write_widths(FILE *fp, const FontFace *face) {
 
 static int write_font_objects(PdfWriter *w) {
     FontFace *face = &w->font;
-    if (write_stream_obj(w, OBJ_FILE, (const char *)face->ttf, face->ttf_len) != 0) {
+    char length1[32];
+    snprintf(length1, sizeof length1, " /Length1 %zu", face->ttf_len);
+    if (write_flate_obj(w, OBJ_FILE, face->ttf, face->ttf_len, length1) != 0) {
         return -1;
     }
     if (begin_obj(w, OBJ_DESC) != 0) {
@@ -296,7 +392,7 @@ static int write_font_objects(PdfWriter *w) {
                 name, OBJ_CID, OBJ_CMAP) < 0) {
         return -1;
     }
-    w->nobj = OBJ_CMAP;
+    w->nobj = OBJ_FIRST - 1;
     return 0;
 }
 
@@ -462,6 +558,13 @@ static int append_hex_line(char *out, size_t cap, size_t *o, const FontFace *fac
 
 void pdf_free(PdfWriter *w) {
     font_free(&w->font);
+    if (w->zs != NULL) {
+        deflateEnd(w->zs);
+        free(w->zs);
+        w->zs = NULL;
+    }
+    free(w->zbuf);
+    w->zbuf = NULL;
     if (w->fp != NULL && w->fp != w->raw) {
         fclose(w->fp);
         w->fp = NULL;
@@ -732,10 +835,10 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
     o += 3;
     w->live_page_bytes = o;
 
-    int cid = OBJ_FIRST + 2 * w->npages;
-    int pid = cid + 1;
+    int cid = OBJ_FIRST + PAGE_OBJS * w->npages;
+    int pid = cid + 2;
     int rc = -1;
-    if (write_stream_obj(w, cid, stream, o) != 0) {
+    if (write_flate_obj(w, cid, stream, o, "") != 0) {
         goto done;
     }
     if (begin_obj(w, pid) != 0) {
@@ -776,7 +879,7 @@ int pdf_end(PdfWriter *w) {
         if ((i % 64) == 0 && stop_pdf(w)) {
             return -1;
         }
-        int pid = OBJ_FIRST + 2 * i + 1;
+        int pid = OBJ_FIRST + PAGE_OBJS * i + 2;
         if (fprintf(w->fp, "%d 0 R ", pid) < 0) {
             return -1;
         }

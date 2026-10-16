@@ -27,6 +27,7 @@
 #define PDF_FAIL_SPOOL 5
 #define PDF_FAIL_CANCEL 6
 #define PDF_FAIL_XREF 7
+#define PDF_FAIL_FLATE 8 /* zlib reported an error other than out of memory */
 
 typedef struct PdfConfig {
     const char *font_path;
@@ -38,6 +39,8 @@ typedef struct PdfConfig {
     int (*cancelled)(void *user);
     void *cancel_user;
 } PdfConfig;
+
+struct z_stream_s;
 
 typedef struct PdfWriter {
     FILE *fp;
@@ -61,6 +64,9 @@ typedef struct PdfWriter {
     int (*cancelled)(void *user);
     void *cancel_user;
     size_t live_page_bytes;
+    /* One deflate state and output window, reused by every Flate stream. */
+    struct z_stream_s *zs;
+    unsigned char *zbuf;
 } PdfWriter;
 
 int pdf_begin(PdfWriter *w, FILE *fp);

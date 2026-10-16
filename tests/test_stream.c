@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <zlib.h>
 
 #if defined(__SANITIZE_ADDRESS__)
 #define KI_RSS_GATE 0
@@ -54,6 +55,32 @@ int __wrap_fsync(int fd) {
         arm_fsync_cancel = 2;
     }
     return rc;
+}
+
+/* Compressor fault injection, linked with --wrap. deflate_fail_in = n makes
+   the nth following deflate() call return deflate_fail_rc without running. */
+static int deflate_fail_in;
+static int deflate_fail_rc;
+static int deflate_init_fail_rc;
+static int deflate_calls;
+
+int __real_deflate(z_streamp strm, int flush);
+int __wrap_deflate(z_streamp strm, int flush) {
+    deflate_calls++;
+    if (deflate_fail_in > 0 && --deflate_fail_in == 0) {
+        return deflate_fail_rc;
+    }
+    return __real_deflate(strm, flush);
+}
+
+int __real_deflateInit2_(z_streamp strm, int level, int method, int bits, int mem, int strategy, const char *ver,
+                         int size);
+int __wrap_deflateInit2_(z_streamp strm, int level, int method, int bits, int mem, int strategy, const char *ver,
+                         int size) {
+    if (deflate_init_fail_rc != 0) {
+        return deflate_init_fail_rc;
+    }
+    return __real_deflateInit2_(strm, level, method, bits, mem, strategy, ver, size);
 }
 
 static int cancel_after_fsync(void *user) {
@@ -585,6 +612,8 @@ static int find_bytes(const char *buf, size_t n, const char *needle) {
     return 0;
 }
 
+#include "pdf_inflate.c"
+
 static int count_pages(const char *buf, size_t n) {
     const char *needle = "/Type /Page";
     size_t m = strlen(needle);
@@ -1007,16 +1036,23 @@ static int decode_hex_stream(const char *stream, size_t n, const unsigned *map, 
     return 0;
 }
 
-static int recovered_pages(const char *pdf, size_t n, char **texts, size_t *tlens, int max, int *npages) {
+static int recovered_pages(const char *raw, size_t raw_n, char **texts, size_t *tlens, int max, int *npages) {
+    char *pdf = NULL;
+    size_t n = 0;
+    if (pdf_inflate_copy(raw, raw_n, &pdf, &n, NULL) != 0) {
+        return -1;
+    }
     *npages = count_pages(pdf, n);
     unsigned *map = calloc(65536, sizeof(unsigned));
     if (map == NULL || load_gid_map(pdf, n, map) != 0) {
         free(map);
+        free(pdf);
         return -1;
     }
     char *streams[64];
     size_t slens[64];
     int ns = extract_streams(pdf, n, streams, slens, 64);
+    free(pdf);
     if (ns < 0) {
         free(map);
         return -1;
@@ -3546,6 +3582,7 @@ static int test_font_bounds(void) {
 #include "test_xml_subset.c"
 #include "test_font_metrics.c"
 #include "test_pdf_bounds.c"
+#include "test_flate.c"
 
 int main(void) {
     struct {
@@ -3583,6 +3620,10 @@ int main(void) {
         {"xml_selected_tails", test_xml_selected_tails},
         {"pdf_byte_ceiling", test_pdf_byte_ceiling},
         {"output_quota_exact", test_output_quota_exact},
+        {"flate_streams", test_flate_streams},
+        {"flate_expansion", test_flate_expansion},
+        {"flate_errors", test_flate_errors},
+        {"flate_reader_controls", test_flate_reader_controls},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {

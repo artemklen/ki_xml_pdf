@@ -21,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc g++ make cmake pkg-config binutils poppler-utils python3 time
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make cmake pkg-config zlib1g-dev binutils poppler-utils python3 time
       - name: summary
         run: |
           git rev-parse HEAD
@@ -33,6 +33,7 @@ jobs:
           python3 tests/cli_pipeline.py
           python3 tests/font_metrics_check.py
           python3 tests/catalog_verify.py
+          python3 tests/pdf_streams.py --binary ./xml2pdf
       - name: installed CMake and pkg-config consumers
         run: tests/build_integration.sh
       - name: documented commands and clients
@@ -65,7 +66,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y clang g++ make cmake pkg-config binutils poppler-utils python3 time
+        run: sudo apt-get update && sudo apt-get install -y clang g++ make cmake pkg-config zlib1g-dev binutils poppler-utils python3 time
       - name: summary
         run: |
           git rev-parse HEAD
@@ -85,7 +86,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc make poppler-utils python3
+        run: sudo apt-get update && sudo apt-get install -y gcc make zlib1g-dev poppler-utils python3
       - name: summary
         run: |
           git rev-parse HEAD
@@ -100,7 +101,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc g++ make poppler-utils python3 time
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make zlib1g-dev poppler-utils python3 time
       - name: summary
         run: |
           git rev-parse HEAD

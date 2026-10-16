@@ -10,7 +10,7 @@ Project source and original examples use [MIT](LICENSE). DejaVu Sans has a [sepa
 
 ## Build and convert
 
-The supported environment is **64-bit Linux with glibc**, GCC or Clang, GNU Make, and a GNU-compatible linker. The implementation uses GNU/POSIX APIs. Other operating systems have not been validated. CMake and pkg-config are needed for their respective integration workflows.
+The supported environment is **64-bit Linux with glibc**, GCC or Clang, GNU Make, a GNU-compatible linker and zlib development files (Debian/Ubuntu `zlib1g-dev`). The implementation uses GNU/POSIX APIs. Other operating systems have not been validated. CMake and pkg-config are needed for their respective integration workflows.
 
 Run these commands from the source directory:
 
@@ -106,7 +106,9 @@ c++ consume.cpp $(pkg-config --cflags ki_xml_pdf) \
 ./consume-static hello.xml consume-static.pdf
 ```
 
-`pkg-config --static` includes private dependency flags; the GNU linker flags above select the static library even when a shared library is installed alongside it.
+`pkg-config --static` includes private dependency flags (`-lz`); the GNU linker flags above select the static library even when a shared library is installed alongside it. The shared library records its zlib dependency itself. When linking `libki_xml_pdf.a` by path, add `-lz`; installed CMake targets find zlib through `find_dependency(ZLIB)`.
+
+Page contents and the embedded TrueType font are written as `/FlateDecode` streams. Each compressed stream takes its `/Length` from the indirect object that follows it, so the writer never seeks or holds a whole compressed stream; the font stream also carries `/Length1`, the original font size. The ToUnicode CMap stays uncompressed.
 
 In that consumer directory, save this as `CMakeLists.txt`:
 
@@ -199,7 +201,7 @@ Layout consists of sequential text blocks. Tables, global sorting, XSL-FO, UTF-1
 
 ## Checks
 
-Checks require C and C++ compilers, GNU Make, `python3`, `/usr/bin/time`, `readelf` (binutils), and Poppler’s `pdfinfo`, `pdftotext`, and `pdftohtml`. Integration checks additionally require CMake and pkg-config. On Debian/Ubuntu, the packages are `gcc g++ clang make cmake pkg-config python3 time poppler-utils`. Sanitizer jobs need these dependencies too; missing PDF readers cause a check failure.
+Checks require C and C++ compilers, GNU Make, `python3`, `/usr/bin/time`, `readelf` (binutils), and Poppler’s `pdfinfo`, `pdftotext`, and `pdftohtml`. Integration checks additionally require CMake and pkg-config. On Debian/Ubuntu, the packages are `gcc g++ clang make cmake pkg-config zlib1g-dev python3 time poppler-utils`. Sanitizer jobs need these dependencies too; missing PDF readers cause a check failure.
 
 From the source directory:
 

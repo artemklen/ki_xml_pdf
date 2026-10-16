@@ -31,11 +31,11 @@ catalog_prefix="$HOME/.local"
 make install PREFIX="$catalog_prefix"
 cc -std=c99 -Wall -Wextra -I"$catalog_prefix/include" \
   examples/catalog_driver.c examples/catalog_map.c \
-  "$catalog_prefix/lib/libki_xml_pdf.a" -o catalog
+  "$catalog_prefix/lib/libki_xml_pdf.a" -lz -o catalog
 ./catalog examples/catalog.xml catalog.pdf
 ```
 
-For a shared library, replace the archive argument with
+For a shared library, replace the archive and `-lz` arguments with
 `-L"$catalog_prefix/lib" -lki_xml_pdf` and make that directory available
 to the runtime linker. The installed font must remain at the configured prefix.
 A relocated installation can set `KiOptions.font_path` explicitly.

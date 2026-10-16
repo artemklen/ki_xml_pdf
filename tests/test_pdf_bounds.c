@@ -7,8 +7,10 @@
 
 #include <limits.h>
 
-/* First page object number in pdf_write.c's fixed layout. */
-#define OBJ_FIRST_TEST 8
+/* First page object number and objects per page in pdf_write.c's fixed
+   layout (contents, contents length, page). */
+#define OBJ_FIRST_TEST 9
+#define PAGE_OBJS_TEST 3
 
 typedef struct {
     PdfWriter w;
@@ -204,7 +206,7 @@ static int test_pdf_byte_ceiling(void) {
 
     /* Object counter maximum still fails RESOURCE before the ceiling. */
     CHECK(bound_open(&b, 0) == 0);
-    b.w.npages = (8000000 - OBJ_FIRST_TEST) / 2;
+    b.w.npages = (8000000 - OBJ_FIRST_TEST) / PAGE_OBJS_TEST;
     CHECK(pdf_add_page(&b.w, "X", 1) != 0);
     CHECK(b.w.fail_kind == PDF_FAIL_LIMIT && b.w.hit_limit);
     bound_close(&b);

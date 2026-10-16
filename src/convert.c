@@ -331,6 +331,11 @@ static int fail_from_pdf(PdfWriter *pdf, int *cause, const char **msg) {
         *msg = "resource limit";
         return XML2PDF_ERR_RESOURCE;
     }
+    if (pdf->fail_kind == PDF_FAIL_FLATE) {
+        *cause = KI_CAUSE_IO;
+        *msg = "pdf compression failed";
+        return XML2PDF_ERR_IO;
+    }
     if (pdf->fail_errno == ENAMETOOLONG) {
         *cause = KI_CAUSE_IO;
         *msg = "temp path too long";

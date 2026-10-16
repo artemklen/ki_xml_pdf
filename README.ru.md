@@ -10,7 +10,7 @@
 
 ## Сборка и запуск
 
-Поддерживаемый стенд: Linux 64-bit с glibc, GCC или Clang, GNU Make. Сборка использует GNU/POSIX API и GNU-compatible linker. Работа на других ОС не проверена.
+Поддерживаемый стенд: Linux 64-bit с glibc, GCC или Clang, GNU Make и заголовки zlib (Debian/Ubuntu: `zlib1g-dev`). Сборка использует GNU/POSIX API и GNU-compatible linker. Работа на других ОС не проверена.
 
 ```sh
 make
@@ -41,11 +41,11 @@ cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - report.pdf
 ```sh
 make install PREFIX="$HOME/.local"
 cc -I"$HOME/.local/include" examples/report.c \
-  "$HOME/.local/lib/libki_xml_pdf.a" -o report-example
+  "$HOME/.local/lib/libki_xml_pdf.a" -lz -o report-example
 ./report-example examples/report-v1.xml report.pdf
 ```
 
-Для shared library линковка использует `-L<prefix>/lib -lki_xml_pdf`; каталог должен быть доступен runtime linker. Устанавливаются публичный заголовок, `.a`, `.so`, font и notices. `PREFIX` задаёт runtime-путь шрифта; `DESTDIR` только стадирует файлы. При переносе данных можно явно задать `KiOptions.font_path` или `KI_XML_PDF_FONT`.
+Статическая библиотека требует `-lz` (`pkg-config --static` добавляет его сам, CMake-пакет вызывает `find_dependency(ZLIB)`). Для shared library линковка использует `-L<prefix>/lib -lki_xml_pdf`; зависимость от zlib записана в самой `.so`, каталог должен быть доступен runtime linker. Содержимое страниц и встроенный TrueType-шрифт записываются потоками `/FlateDecode`; `/Length` каждого сжатого потока лежит в следующем за ним косвенном объекте, поэтому writer не делает seek и не держит сжатый поток целиком. У шрифта `/Length1` равна исходному размеру файла; ToUnicode CMap не сжимается. Устанавливаются публичный заголовок, `.a`, `.so`, font и notices. `PREFIX` задаёт runtime-путь шрифта; `DESTDIR` только стадирует файлы. При переносе данных можно явно задать `KiOptions.font_path` или `KI_XML_PDF_FONT`.
 
 ```c
 #include "ki_xml_pdf.h"
@@ -71,7 +71,7 @@ int main(void) {
 
 ## Проверки
 
-Для проверок нужны compiler, `python3`, `/usr/bin/time`, `pdfinfo` и `pdftotext` (Poppler). Примеры и install checks также используют C++ compiler. В Ubuntu/Debian: `gcc g++ clang make python3 time poppler-utils`. Эти зависимости нужны и sanitizer jobs. Если reader отсутствует, проверка завершается ошибкой.
+Для проверок нужны compiler, `python3`, `/usr/bin/time`, `pdfinfo` и `pdftotext` (Poppler). Примеры и install checks также используют C++ compiler. В Ubuntu/Debian: `gcc g++ clang make zlib1g-dev python3 time poppler-utils`. Эти зависимости нужны и sanitizer jobs. Если reader отсутствует, проверка завершается ошибкой.
 
 ```sh
 make check

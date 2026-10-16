@@ -191,13 +191,22 @@ static int fm_convert(const char *xml, size_t n, int chunk, const char *font, Me
     return ki_convert(&opt, r);
 }
 
-static size_t fm_count(const char *buf, size_t len, const char *needle) {
+/* Counts needle in the PDF with every Flate stream decoded. A PDF the
+   independent reader rejects aborts the run instead of counting zero. */
+static size_t fm_count(const char *raw, size_t raw_len, const char *needle) {
+    char *buf = NULL;
+    size_t len = 0;
+    if (pdf_inflate_copy(raw, raw_len, &buf, &len, NULL) != 0) {
+        fprintf(stderr, "FAIL fm_count: PDF streams do not decode\n");
+        abort();
+    }
     size_t k = strlen(needle), c = 0;
     for (size_t i = 0; i + k <= len; i++) {
         if (memcmp(buf + i, needle, k) == 0) {
             c++;
         }
     }
+    free(buf);
     return c;
 }
 

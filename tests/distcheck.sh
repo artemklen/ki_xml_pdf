@@ -77,7 +77,8 @@ required=(
     tests/consumer/CMakeLists.txt tests/consumer/report.c tests/docs_smoke.sh
     tests/distcheck.sh tests/install_smoke.sh tests/prefix_switch.sh tests/test_stream.c
     tests/test_xml_subset.c tests/test_font_metrics.c tests/test_pdf_bounds.c
-    tests/pdf_offsets.py tests/font_metrics_check.py
+    tests/pdf_offsets.py tests/font_metrics_check.py tests/pdf_streams.py
+    tests/test_flate.c tests/pdf_inflate.c
     tests/verify.sh tests/fixture.xml tests/fuzz_smoke.py tests/large_proof.py
     tests/corpus/split_whitespace.xml tests/corpus/utf8_512.xml
     tests/corpus/truncated-hmtx.ttf tests/corpus/truncated-cmap-184.ttf tests/font_fixtures.py
@@ -112,15 +113,15 @@ make -C "$root" CC="$cc" CXX="$cxx" PREFIX="$work/prefix" install
 test -f "$work/prefix/share/ki_xml_pdf/LICENSE"
 test -f "$work/prefix/share/ki_xml_pdf/DejaVuSans.copyright"
 "$cc" -std=c99 -Wall -I"$work/prefix/include" -o "$work/host" \
-    "$root/examples/consume.c" "$work/prefix/lib/libki_xml_pdf.a"
+    "$root/examples/consume.c" "$work/prefix/lib/libki_xml_pdf.a" -lz
 "$cc" -std=c99 -Wall -I"$work/prefix/include" -o "$work/host-so" \
     "$root/examples/consume.c" -L"$work/prefix/lib" -lki_xml_pdf -Wl,-rpath,"$work/prefix/lib"
 "$cxx" -Wall -I"$work/prefix/include" -o "$work/hostcpp" \
-    "$root/examples/consume.cpp" "$work/prefix/lib/libki_xml_pdf.a"
+    "$root/examples/consume.cpp" "$work/prefix/lib/libki_xml_pdf.a" -lz
 "$cxx" -Wall -I"$work/prefix/include" -o "$work/hostso" \
     "$root/examples/consume.cpp" -L"$work/prefix/lib" -lki_xml_pdf -Wl,-rpath,"$work/prefix/lib"
 "$cc" -std=c99 -Wall -I"$work/prefix/include" -o "$work/report" \
-    "$root/examples/report.c" "$work/prefix/lib/libki_xml_pdf.a"
+    "$root/examples/report.c" "$work/prefix/lib/libki_xml_pdf.a" -lz
 ( cd / && env -u KI_XML_PDF_FONT "$work/host" "$root/examples/hello.xml" "$work/hello.pdf" )
 ( cd / && env -u KI_XML_PDF_FONT "$work/host-so" "$root/examples/hello.xml" "$work/hello-c-so.pdf" )
 ( cd / && env -u KI_XML_PDF_FONT "$work/hostcpp" "$root/examples/hello.xml" "$work/hello-cpp.pdf" )

@@ -6,4 +6,5 @@ Name: ki_xml_pdf
 Description: Bounded-memory streaming XML to PDF converter
 Version: @KI_VERSION@
 Libs: -L${libdir} -lki_xml_pdf
+Libs.private: -lz
 Cflags: -I${includedir}

@@ -4,6 +4,7 @@
 
 /* Build from another directory:
      cc -I$PREFIX/include examples/consume.c -L$PREFIX/lib -lki_xml_pdf -o consume
+     (static: $PREFIX/lib/libki_xml_pdf.a -lz)
    The default font uses the library's build PREFIX. A relocated installation
    can supply KiOptions.font_path explicitly. */
 

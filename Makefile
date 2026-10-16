@@ -13,6 +13,10 @@ LIB_SRCS = src/xml_parse.c src/font.c src/page_sink.c src/pdf_write.c src/layout
 LIB_OBJS = $(LIB_SRCS:.c=.o)
 
 PDFTOTEXT ?= pdftotext
+# zlib provides Flate compression for page and font streams.
+KI_LIBS = -lz
+# Internal tests replace these zlib entry points to reach compressor errors.
+TEST_WRAP = -Wl,--wrap=fsync -Wl,--wrap=deflate -Wl,--wrap=deflateInit2_
 
 .PHONY: all test check clean test-san install example dist distcheck font_prefix_check print-version print-dist-name
 
@@ -31,17 +35,18 @@ libki_xml_pdf.a: $(LIB_OBJS)
 	ar rcs $@ $(LIB_OBJS)
 
 libki_xml_pdf.so: $(LIB_OBJS) libki_xml_pdf.map
-	$(CC) -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o $@ $(LIB_OBJS)
+	$(CC) -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o $@ $(LIB_OBJS) $(KI_LIBS)
 
 xml2pdf: src/main.c libki_xml_pdf.a
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/main.c libki_xml_pdf.a
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/main.c libki_xml_pdf.a $(KI_LIBS)
 
-test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_font_metrics.c tests/test_pdf_bounds.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_stream.c libki_xml_pdf.a -pthread -Wl,--wrap=fsync
+test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_font_metrics.c tests/test_pdf_bounds.c tests/test_flate.c tests/pdf_inflate.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_stream.c libki_xml_pdf.a $(KI_LIBS) -pthread $(TEST_WRAP)
 
 test: test_stream xml2pdf
 	./test_stream
 	python3 tests/pdf_offsets.py --binary ./xml2pdf
+	python3 tests/pdf_streams.py --binary ./xml2pdf
 
 check:
 	$(MAKE) clean
@@ -53,14 +58,14 @@ check:
 	python3 tests/catalog_verify.py
 
 test-san:
-	$(CC) $(CFLAGS) -fsanitize=address,undefined -fno-omit-frame-pointer $(CPPFLAGS) -o test_stream_san $(LIB_SRCS) tests/test_stream.c -pthread -Wl,--wrap=fsync
+	$(CC) $(CFLAGS) -fsanitize=address,undefined -fno-omit-frame-pointer $(CPPFLAGS) -o test_stream_san $(LIB_SRCS) tests/test_stream.c $(KI_LIBS) -pthread $(TEST_WRAP)
 	ASAN_OPTIONS=halt_on_error=1:detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ./test_stream_san
 
 example: libki_xml_pdf.a
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/consume examples/consume.c libki_xml_pdf.a
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/report examples/report.c libki_xml_pdf.a
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/catalog examples/catalog_driver.c examples/catalog_map.c libki_xml_pdf.a
-	$(CXX) $(CXXFLAGS) -Wall -Wextra $(CPPFLAGS) -o examples/consume_cpp examples/consume.cpp libki_xml_pdf.a
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/consume examples/consume.c libki_xml_pdf.a $(KI_LIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/report examples/report.c libki_xml_pdf.a $(KI_LIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o examples/catalog examples/catalog_driver.c examples/catalog_map.c libki_xml_pdf.a $(KI_LIBS)
+	$(CXX) $(CXXFLAGS) -Wall -Wextra $(CPPFLAGS) -o examples/consume_cpp examples/consume.cpp libki_xml_pdf.a $(KI_LIBS)
 
 install: xml2pdf libki_xml_pdf.a libki_xml_pdf.so
 	mkdir -p $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/include \

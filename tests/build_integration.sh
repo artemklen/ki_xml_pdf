@@ -52,6 +52,12 @@ check_stage() {
     done
     readelf -d "$staged/lib/libki_xml_pdf.so" | \
         grep -F 'Library soname: [libki_xml_pdf.so.0]' >/dev/null
+    readelf -d "$staged/lib/libki_xml_pdf.so" | grep -F 'Shared library: [libz.so.1]' >/dev/null || \
+        fail "shared library does not record its zlib dependency"
+    PKG_CONFIG_LIBDIR="$staged/lib/pkgconfig" pkg-config --static --libs ki_xml_pdf | grep -qw -- -lz || \
+        fail "pkg-config --static omits zlib"
+    grep -Fq 'find_dependency(ZLIB)' "$staged/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake" || \
+        fail "CMake package does not find zlib"
     local installed_version installed_prefix
     installed_version=$(PKG_CONFIG_LIBDIR="$staged/lib/pkgconfig" pkg-config --modversion ki_xml_pdf)
     installed_prefix=$(PKG_CONFIG_LIBDIR="$staged/lib/pkgconfig" pkg-config --variable=prefix ki_xml_pdf)
