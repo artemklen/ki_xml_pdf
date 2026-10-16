@@ -1,0 +1,2 @@
+build_integration ok: 16 installed C/C++ rows, staging, CTest and Poppler oracle; cc=cc cxx=c++
+build_integration ok: 16 installed C/C++ rows, staging, CTest and Poppler oracle; cc=clang cxx=clang++

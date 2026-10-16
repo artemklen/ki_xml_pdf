@@ -105,6 +105,15 @@ class Controls:
                     f"reader stream with one changed digit in record {k + 1} fails",
                     not corrupt["ok"] and corrupt["oracle_exit"] == 1 and corrupt["mutated_lines"] == 1,
                     verdict=corrupt)
+        swap = {f"v: {resource_recipe.value(k)}": f"v: {resource_recipe.value(k + 1)}",
+                f"v: {resource_recipe.value(k + 1)}": f"v: {resource_recipe.value(k)}"}
+        reordered = self.oracle(pdf, "report-v1", total,
+                                mutate=lambda ln: ln.replace(ln.strip(), swap[ln.strip()])
+                                if ln.strip() in swap else ln)
+        self.record("oracle-reordered-values",
+                    f"reader stream with the values of records {k} and {k + 1} swapped fails",
+                    not reordered["ok"] and reordered["oracle_exit"] == 1 and reordered["mutated_lines"] == 2,
+                    verdict=reordered)
         pdf.unlink(missing_ok=True)
         src.unlink()
 

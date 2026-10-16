@@ -1,0 +1,17 @@
+obj 6 font filter=Flate length=382174 decoded=759720
+obj 8 cmap filter=none length=17333 decoded=17333
+obj 9 page filter=Flate length=340 decoded=6927
+obj 12 page filter=Flate length=341 decoded=7079
+obj 15 page filter=Flate length=342 decoded=7079
+obj 18 page filter=Flate length=342 decoded=7079
+obj 21 page filter=Flate length=341 decoded=7079
+obj 24 page filter=Flate length=345 decoded=7079
+obj 27 page filter=Flate length=166 decoded=254
+pages 7, font sha256 57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e matches
+control damaged page body: rejected (damaged Flate data: Error -3 while decompressing data: invalid distance too far back)
+control page body with lost deflate tail: rejected (damaged Flate data: Error -3 while decompressing data: incorrect data check)
+control output truncated inside a page stream: rejected (missing startxref)
+control page body cut in half: rejected (truncated Flate data)
+control wrong length object value: rejected (object 9: /Length 440 does not end at endstream)
+control wrong font /Length1: rejected (object 6: /Length1 859720 != decoded 759720)
+pdf streams ok

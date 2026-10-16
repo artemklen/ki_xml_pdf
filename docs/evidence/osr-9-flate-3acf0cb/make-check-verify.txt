@@ -1,0 +1,15 @@
+large_xml 16777313
+large_exit 0
+small_exit 0
+large_input_bytes 16777313
+small_input_bytes 80197
+large_pdf_bytes 19993339
+large_rss_kbytes 2800
+small_rss_kbytes 2828
+large_rss_bytes 2867200
+small_rss_bytes 2895872
+rss_cap_bytes 7090176
+large_pages 41944
+small_pages 21
+rss_under_half_input 1
+verify ok scratch=<osr9-root>/tmp/ki-xml-pdf-verify.96THmb
