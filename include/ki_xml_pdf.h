@@ -23,7 +23,9 @@ extern "C" {
    64 objects while the PDF is finished, and again after fsync and close
    before rename. After a successful rename, cancel does not roll the file
    back. A character outside the font repertoire is KI_CAUSE_FONT with the
-   U+ code point, not an XML syntax error. Profile failures name the rule
+   U+ code point, not an XML syntax error. A zero-advance glyph (combining
+   mark) is present; a line over 1023 UTF-8 bytes that cannot wrap is
+   KI_CAUSE_RESOURCE. Profile failures name the rule
    and the input byte offset. ki_convert leaves bytes already accepted by
    write_bytes in place when it fails. */
 

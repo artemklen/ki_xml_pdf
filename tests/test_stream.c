@@ -3544,6 +3544,7 @@ static int test_font_bounds(void) {
 }
 
 #include "test_xml_subset.c"
+#include "test_font_metrics.c"
 
 int main(void) {
     struct {
@@ -3567,6 +3568,9 @@ int main(void) {
         {"callback_to_file", test_callback_to_file},
         {"report_v1", test_report_v1},
         {"font_bounds", test_font_bounds},
+        {"font_names", test_font_names},
+        {"font_zero_advance", test_font_zero_advance},
+        {"font_mark_runs", test_font_mark_runs},
         {"xml_char_contexts", test_xml_char_contexts},
         {"xml_references", test_xml_references},
         {"xml_audited_corpus", test_xml_audited_corpus},

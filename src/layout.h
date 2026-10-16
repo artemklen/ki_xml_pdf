@@ -5,7 +5,7 @@
 
 #include <stddef.h>
 
-#define LAYOUT_LINE 1024
+#define LAYOUT_LINE PDF_LINE_BYTES
 #define LAYOUT_LINES 50
 
 typedef struct Layout {
@@ -19,6 +19,9 @@ typedef struct Layout {
     unsigned char hold[4];
     int hold_n;
     unsigned bad_cp;
+    /* Set when a line would exceed LAYOUT_LINE - 1 bytes without reaching
+       the width limit, e.g. a long run of zero-advance marks. */
+    int line_full;
 } Layout;
 
 int layout_init(Layout *lay, PdfWriter *pdf);

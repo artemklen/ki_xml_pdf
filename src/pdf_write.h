@@ -10,6 +10,10 @@
    returns. Object offsets live in a temporary file, not in a list that grows
    in RAM. Page object numbers are a fixed function of the page index. */
 
+/* Line buffer size shared with layout: a line holds at most
+   PDF_LINE_BYTES - 1 UTF-8 bytes. */
+#define PDF_LINE_BYTES 1024
+
 typedef struct PdfConfig {
     const char *font_path;
     const char *temp_dir;

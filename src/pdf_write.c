@@ -88,6 +88,20 @@ static int pdf_scale(const FontFace *face, int value) {
     return value * 1000 / face->units;
 }
 
+/* Bytes outside the PDF regular-character set, and '#', become #XX, so a
+   font name can never end or extend the name token. */
+static void pdf_name(const char *raw, char *out) {
+    size_t o = 0;
+    for (const unsigned char *p = (const unsigned char *)raw; *p != '\0'; p++) {
+        if (*p > 0x20 && *p < 0x7F && strchr("#()<>[]{}/%", *p) == NULL) {
+            out[o++] = (char)*p;
+        } else {
+            o += (size_t)sprintf(out + o, "#%02X", *p);
+        }
+    }
+    out[o] = '\0';
+}
+
 static int write_tounicode(PdfWriter *w, const FontFace *face) {
     size_t cap = 256 * 1024;
     char *buf = malloc(cap);
@@ -100,7 +114,7 @@ static int write_tounicode(PdfWriter *w, const FontFace *face) {
         "12 dict begin\n"
         "begincmap\n"
         "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def\n"
-        "/CMapName /DejaVuSans-UTF def\n"
+        "/CMapName /Adobe-Identity-UCS def\n"
         "/CMapType 2 def\n"
         "1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n";
     size_t hlen = strlen(head);
@@ -116,16 +130,22 @@ static int write_tounicode(PdfWriter *w, const FontFace *face) {
     size_t count_at = 0;
     unsigned cps[FONT_BMP_MAX + FONT_PUNCT_COUNT];
     int ncp = 0;
-    for (unsigned cp = 0; cp < FONT_BMP_MAX; cp++) {
-        if (face->gid[cp] != 0) {
+    /* A GID shared by several code points maps back to the lowest one only,
+       so every glyph has exactly one Unicode value. */
+    unsigned char *seen = calloc(65536 / 8, 1);
+    if (seen == NULL) {
+        free(buf);
+        return -1;
+    }
+    for (unsigned k = 0; k < FONT_BMP_MAX + FONT_PUNCT_COUNT; k++) {
+        unsigned cp = k < FONT_BMP_MAX ? k : FONT_PUNCT_BASE + (k - FONT_BMP_MAX);
+        unsigned g = k < FONT_BMP_MAX ? face->gid[k] : face->punct_gid[k - FONT_BMP_MAX];
+        if (g != 0 && !(seen[g / 8] & (1u << (g % 8)))) {
+            seen[g / 8] |= (unsigned char)(1u << (g % 8));
             cps[ncp++] = cp;
         }
     }
-    for (unsigned i = 0; i < FONT_PUNCT_COUNT; i++) {
-        if (face->punct_gid[i] != 0) {
-            cps[ncp++] = FONT_PUNCT_BASE + i;
-        }
-    }
+    free(seen);
     for (int i = 0; i < ncp; i++) {
         unsigned cp = cps[i];
         uint16_t gid = 0;
@@ -229,21 +249,24 @@ static int write_font_objects(PdfWriter *w) {
     int bbox3 = pdf_scale(face, face->bbox[3]);
     int ascent = pdf_scale(face, face->ascent);
     int descent = pdf_scale(face, face->descent);
+    char name[3 * FONT_NAME_MAX + 1];
+    pdf_name(face->name, name);
     if (fprintf(w->fp,
-                "<< /Type /FontDescriptor /FontName /DejaVuSans /Flags 32\n"
+                "<< /Type /FontDescriptor /FontName /%s /Flags 32\n"
                 "/FontBBox [%d %d %d %d]\n"
                 "/ItalicAngle 0 /Ascent %d /Descent %d /CapHeight %d /StemV 80\n"
                 "/FontFile2 %d 0 R >>\nendobj\n",
-                bbox0, bbox1, bbox2, bbox3, ascent, descent, ascent, OBJ_FILE) < 0) {
+                name, bbox0, bbox1, bbox2, bbox3, ascent, descent, ascent, OBJ_FILE) < 0) {
         return -1;
     }
     if (begin_obj(w, OBJ_CID) != 0) {
         return -1;
     }
-    if (fputs("<< /Type /Font /Subtype /CIDFontType2 /BaseFont /DejaVuSans\n"
-              "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>\n"
-              "/FontDescriptor 5 0 R /CIDToGIDMap /Identity /DW 500\n",
-              w->fp) < 0) {
+    if (fprintf(w->fp,
+                "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /%s\n"
+                "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>\n"
+                "/FontDescriptor 5 0 R /CIDToGIDMap /Identity /DW 500\n",
+                name) < 0) {
         return -1;
     }
     if (write_widths(w->fp, face) != 0) {
@@ -259,10 +282,10 @@ static int write_font_objects(PdfWriter *w) {
         return -1;
     }
     if (fprintf(w->fp,
-                "<< /Type /Font /Subtype /Type0 /BaseFont /DejaVuSans\n"
+                "<< /Type /Font /Subtype /Type0 /BaseFont /%s\n"
                 "/Encoding /Identity-H /DescendantFonts [%d 0 R] /ToUnicode %d 0 R >>\n"
                 "endobj\n",
-                OBJ_CID, OBJ_CMAP) < 0) {
+                name, OBJ_CID, OBJ_CMAP) < 0) {
         return -1;
     }
     w->nobj = OBJ_CMAP;
@@ -595,7 +618,9 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
         w->fail_kind = 1;
         return -1;
     }
-    size_t cap = 256 * 1024;
+    /* Worst case per line: four hex digits per byte in both ActualText and
+       the glyph string, plus operators. */
+    size_t cap = 256 + (size_t)PAGE_MAX_LINES * (8 * PDF_LINE_BYTES + 64);
     char *stream = malloc(cap);
     if (stream == NULL) {
         return -1;

@@ -154,7 +154,7 @@ static const unsigned char *format4(const unsigned char *cmap, size_t len, size_
 }
 
 static void remember(FontFace *face, unsigned cp, unsigned gid, unsigned adv) {
-    if (gid == 0 || adv == 0) {
+    if (gid == 0) {
         return;
     }
     if (cp < FONT_BMP_MAX) {
@@ -167,6 +167,78 @@ static void remember(FontFace *face, unsigned cp, unsigned gid, unsigned adv) {
         face->punct_gid[i] = (uint16_t)gid;
         face->punct_adv[i] = (uint16_t)adv;
     }
+}
+
+/* Decodes one PostScript-name record into out. Only printable ASCII names of
+   1..FONT_NAME_MAX characters qualify; the PDF writer escapes delimiters. */
+static int ps_name(const unsigned char *s, size_t n, int wide, char *out) {
+    size_t chars = wide ? n / 2 : n;
+    if ((wide && n % 2 != 0) || chars == 0 || chars > FONT_NAME_MAX) {
+        return -1;
+    }
+    for (size_t i = 0; i < chars; i++) {
+        unsigned c = wide ? ru16(s + 2 * i) : s[i];
+        if (c < 0x20 || c > 0x7E) {
+            return -1;
+        }
+        out[i] = (char)c;
+    }
+    out[chars] = '\0';
+    return 0;
+}
+
+/* -1 when the table or any record lies outside its bounds. Otherwise name
+   holds nameID 6, preferring Windows Unicode en-US, then Macintosh Roman,
+   then any other Windows record; an unusable name leaves it empty. */
+static int read_name(const unsigned char *t, size_t len, char *name) {
+    name[0] = '\0';
+    if (!span_ok(len, 0, 6)) {
+        return -1;
+    }
+    unsigned count = ru16(t + 2);
+    size_t store = ru16(t + 4);
+    if (!span_ok(len, 6, (size_t)count * 12) || store > len) {
+        return -1;
+    }
+    int best = 0;
+    for (unsigned i = 0; i < count; i++) {
+        const unsigned char *r = t + 6 + (size_t)i * 12;
+        unsigned plat = ru16(r), enc = ru16(r + 2), lang = ru16(r + 4), id = ru16(r + 6);
+        size_t n = ru16(r + 8), off = ru16(r + 10);
+        if (!span_ok(len - store, off, n)) {
+            return -1;
+        }
+        if (id != 6) {
+            continue;
+        }
+        int rank = 0;
+        int wide = 0;
+        if (plat == 3 && enc == 1 && lang == 0x409) {
+            rank = 3;
+            wide = 1;
+        } else if (plat == 1 && enc == 0) {
+            rank = 2;
+        } else if (plat == 3 && (enc == 0 || enc == 1)) {
+            rank = 1;
+            wide = 1;
+        }
+        char cand[FONT_NAME_MAX + 1];
+        if (rank > best && ps_name(t + store + off, n, wide, cand) == 0) {
+            memcpy(name, cand, sizeof cand);
+            best = rank;
+        }
+    }
+    return 0;
+}
+
+/* FNV-1a over the whole file, so equal bytes always get the same fallback. */
+static void fallback_name(FontFace *face, const unsigned char *data, size_t len) {
+    uint32_t h = 2166136261u;
+    for (size_t i = 0; i < len; i++) {
+        h = (h ^ data[i]) * 16777619u;
+    }
+    snprintf(face->name, sizeof face->name, "KiFont-%08X", (unsigned)h);
+    face->name_fallback = 1;
 }
 
 int font_load(FontFace *face, const char *path) {
@@ -228,13 +300,39 @@ int font_load(FontFace *face, const char *path) {
         return -1;
     }
     const unsigned char *hmtx = data + hmtx_off;
+    /* maxp is optional for the loader; when present a GID at or past
+       numGlyphs is a missing glyph, not a present one. */
+    unsigned num_glyphs = 0x10000;
+    size_t maxp_off = 0, maxp_len = 0;
+    if (find_table(data, (size_t)sz, "maxp", &maxp_off, &maxp_len) == 0) {
+        if (maxp_len < 6 || ru16(data + maxp_off + 4) == 0) {
+            free(data);
+            return -1;
+        }
+        num_glyphs = ru16(data + maxp_off + 4);
+    }
+    size_t name_off = 0, name_len = 0;
+    if (find_table(data, (size_t)sz, "name", &name_off, &name_len) == 0 &&
+        read_name(data + name_off, name_len, face->name) != 0) {
+        free(data);
+        return -1;
+    }
+    if (face->name[0] == '\0') {
+        fallback_name(face, data, (size_t)sz);
+    }
 
     for (unsigned cp = 0; cp < FONT_BMP_MAX; cp++) {
         unsigned gid = glyph_of(sub, sublen, cp);
+        if (gid >= num_glyphs) {
+            gid = 0;
+        }
         remember(face, cp, gid, advance_of(hmtx, hmtx_len, num_h, gid));
     }
     for (unsigned cp = FONT_PUNCT_BASE; cp < FONT_PUNCT_BASE + FONT_PUNCT_COUNT; cp++) {
         unsigned gid = glyph_of(sub, sublen, cp);
+        if (gid >= num_glyphs) {
+            gid = 0;
+        }
         remember(face, cp, gid, advance_of(hmtx, hmtx_len, num_h, gid));
     }
     if (face->gid[0x41] == 0 || face->gid[0x20] == 0) {
@@ -263,7 +361,7 @@ int font_lookup(const FontFace *face, unsigned cp, uint16_t *gid, uint16_t *adv)
         g = face->punct_gid[i];
         a = face->punct_adv[i];
     }
-    if (g == 0 || a == 0) {
+    if (g == 0) {
         return -1;
     }
     *gid = g;

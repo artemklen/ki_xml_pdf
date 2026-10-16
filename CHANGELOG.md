@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Name the embedded font in `BaseFont`/`FontName` by its own PostScript name (name ID 6) instead of a fixed `DejaVuSans`, escaping PDF delimiters, whitespace and `#` as `#XX`. A font without a usable 1–63 character printable-ASCII name gets a deterministic `KiFont-XXXXXXXX` name from a hash of its bytes; a `name` table whose header or records lie outside the table, or a truncated `maxp`, is rejected with `KI_CAUSE_FONT`.
+- Treat a glyph with zero advance as present: combining marks such as U+0301, U+0306 and U+0483 in DejaVu Sans now render with width 0 and extract through ToUnicode/ActualText, instead of failing as missing. A GID of 0 or at/past `maxp` numGlyphs is still a font error. Each GID maps back to a single code point. No shaping, composition or new repertoire.
+- A line longer than 1023 UTF-8 bytes that cannot wrap (a long run of zero-advance marks) now fails with exit 4 and `KI_CAUSE_RESOURCE` instead of an XML error. Page streams are sized for 50 such full lines.
+
 - Reject TTF files whose cmap subtable header, encoding records, table directory or table spans are truncated or out of range with `KI_CAUSE_FONT`, without reading past the font data. All range checks avoid offset-plus-length overflow. The `hmtx` table must hold all `numberOfHMetrics` entries. The 8 MiB font size cap is unchanged.
 - Validate every consumed scalar as an XML `Char` and well-formed UTF-8 in text, attributes, CDATA, comments, PIs, the skipped DTD, skipped records and content after the root. A literal U+FFFE/U+FFFF is now `KI_CAUSE_XML` instead of a font error or success, and text events never end inside a UTF-8 sequence. Accept `xml-stylesheet` and other non-`xml` PI targets; reject empty or non-name PI targets and `&#X...;`. Require ordered, unique, space-separated XML declaration pseudo-attributes, a single DOCTYPE with white space after the keyword, and skip its internal subset with comment/PI/quote awareness. External DTDs and entities are still never loaded or expanded; parser limits are unchanged.
 

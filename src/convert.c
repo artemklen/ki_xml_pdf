@@ -31,6 +31,8 @@ void xml2pdf_debug_fail_after_bytes(long n) {
     fail_after_bytes = n;
 }
 
+#define LINE_FULL_MSG "layout: line over 1023 bytes"
+
 static int text_is_space(const char *s, size_t n) {
     for (size_t i = 0; i < n; i++) {
         if (s[i] != ' ' && s[i] != '\t' && s[i] != '\n' && s[i] != '\r') {
@@ -278,6 +280,9 @@ int ki_doc_text(KiDoc *doc, const char *s, size_t n) {
     if (rc != 0 && doc->lay->bad_cp != 0) {
         doc->cause = KI_CAUSE_FONT;
         snprintf(doc->error, sizeof doc->error, "font: U+%04X", doc->lay->bad_cp);
+    } else if (rc != 0 && doc->lay->line_full) {
+        doc->cause = KI_CAUSE_RESOURCE;
+        snprintf(doc->error, sizeof doc->error, "%s", LINE_FULL_MSG);
     }
     return rc;
 }
@@ -575,8 +580,8 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
         if (mapped != 0) {
             const char *why = NULL;
             if (doc.error[0] != '\0') {
-                rc = XML2PDF_ERR_XML;
                 cause = doc.cause != 0 ? doc.cause : KI_CAUSE_PROFILE;
+                rc = cause == KI_CAUSE_RESOURCE ? XML2PDF_ERR_RESOURCE : XML2PDF_ERR_XML;
                 why = doc.error;
             } else {
                 rc = fail_from_pdf(&pdf, &cause, &why);
@@ -586,6 +591,10 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
                         cause = KI_CAUSE_FONT;
                         snprintf(glyph_msg, sizeof glyph_msg, "font: U+%04X", lay.bad_cp);
                         why = glyph_msg;
+                    } else if (lay.line_full) {
+                        rc = XML2PDF_ERR_RESOURCE;
+                        cause = KI_CAUSE_RESOURCE;
+                        why = LINE_FULL_MSG;
                     } else {
                         rc = XML2PDF_ERR_XML;
                         cause = KI_CAUSE_XML;

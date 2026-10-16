@@ -36,7 +36,7 @@ libki_xml_pdf.so: $(LIB_OBJS) libki_xml_pdf.map
 xml2pdf: src/main.c libki_xml_pdf.a
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/main.c libki_xml_pdf.a
 
-test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c
+test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_font_metrics.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_stream.c libki_xml_pdf.a -pthread -Wl,--wrap=fsync
 
 test: test_stream
@@ -48,6 +48,7 @@ check:
 	./tests/verify.sh
 	$(MAKE) example
 	python3 tests/cli_pipeline.py
+	python3 tests/font_metrics_check.py
 	python3 tests/catalog_verify.py
 
 test-san:

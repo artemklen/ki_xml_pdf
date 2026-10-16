@@ -138,6 +138,7 @@ static int seq_need(unsigned char c) {
 
 int layout_text(Layout *lay, const char *s, size_t n) {
     lay->bad_cp = 0;
+    lay->line_full = 0;
     size_t i = 0;
     long limit = line_limit(&lay->pdf->font);
     while (lay->hold_n > 0 || i < n) {
@@ -204,7 +205,11 @@ int layout_text(Layout *lay, const char *s, size_t n) {
                 return -1;
             }
         }
-        if ((long)adv > limit || lay->len + clen >= LAYOUT_LINE) {
+        if ((long)adv > limit) {
+            return -1;
+        }
+        if (lay->len + clen >= LAYOUT_LINE) {
+            lay->line_full = 1;
             return -1;
         }
         memcpy(lay->line + lay->len, chunk + (at - clen), clen);

@@ -31,6 +31,7 @@ jobs:
         run: |
           make test xml2pdf example
           python3 tests/cli_pipeline.py
+          python3 tests/font_metrics_check.py
           python3 tests/catalog_verify.py
       - name: installed CMake and pkg-config consumers
         run: tests/build_integration.sh
