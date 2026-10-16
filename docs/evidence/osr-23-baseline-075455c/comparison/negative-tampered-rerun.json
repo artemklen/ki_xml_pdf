@@ -1,6 +1,6 @@
 {
-  "base": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/baseline-075455c",
-  "other": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/compare-negative-control/tampered",
+  "base": "<evidence-root>/baseline-075455c",
+  "other": "<evidence-root>/compare-negative-control/tampered",
   "environment_differences": {},
   "runs": {
     "full-records-1MiB": {

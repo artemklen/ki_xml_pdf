@@ -1,4 +1,4 @@
-	Command being timed: "pdftotext -layout /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-256MiB-limit1000.pdf -"
+	Command being timed: "pdftotext -layout <evidence-root>/scratch/baseline/select-report-256MiB-limit1000.pdf -"
 	User time (seconds): 0.02
 	System time (seconds): 0.00
 	Percent of CPU this job got: 100%

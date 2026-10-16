@@ -16,4 +16,4 @@
   exit=0 rss=2340KiB in=268435464 pdf=1095481 pages=41 checked=1000/1000 gates=ok
 [04:06:54] select-report-1024MiB-limit1000 ...
   exit=0 rss=2456KiB in=1073741895 pdf=1095497 pages=41 checked=1000/1000 gates=ok
-evidence /home/artem/projects/ki_xml_pdf-evidence/osr-23/baseline-075455c all_gates_ok=True
+evidence <evidence-root>/baseline-075455c all_gates_ok=True

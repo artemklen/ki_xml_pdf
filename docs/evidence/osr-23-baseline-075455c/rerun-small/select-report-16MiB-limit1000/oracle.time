@@ -1,4 +1,4 @@
-	Command being timed: "/usr/bin/python3 /home/artem/projects/ki_xml_pdf/tests/resource_oracle.py report-v1 246368 0 1000"
+	Command being timed: "/usr/bin/python3 <repo>/tests/resource_oracle.py report-v1 246368 0 1000"
 	User time (seconds): 0.01
 	System time (seconds): 0.00
 	Percent of CPU this job got: 52%

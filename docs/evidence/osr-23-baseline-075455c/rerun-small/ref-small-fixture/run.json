@@ -5,5 +5,5 @@
   "converter_elapsed_s": 0.01,
   "input_bytes": 80197,
   "pdf_bytes": 1485197,
-  "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf /home/artem/projects/ki_xml_pdf/tests/fixture.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/rerun/ref-small.pdf"
+  "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf <repo>/tests/fixture.xml <evidence-root>/scratch/rerun/ref-small.pdf"
 }

@@ -1,4 +1,4 @@
-	Command being timed: "pdftotext -layout /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-64MiB.pdf -"
+	Command being timed: "pdftotext -layout <evidence-root>/scratch/baseline/full-records-64MiB.pdf -"
 	User time (seconds): 77.83
 	System time (seconds): 3.25
 	Percent of CPU this job got: 99%

@@ -4,4 +4,4 @@
   exit=0 rss=2524KiB in=1048578 pdf=6052147 pages=640 checked=15981/15981 gates=ok
 [04:08:26] select-report-16MiB-limit1000 ...
   exit=0 rss=2504KiB in=16777245 pdf=1095465 pages=41 checked=1000/1000 gates=ok
-evidence /home/artem/projects/ki_xml_pdf-evidence/osr-23/rerun-075455c-small all_gates_ok=True
+evidence <evidence-root>/rerun-075455c-small all_gates_ok=True

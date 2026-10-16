@@ -1,5 +1,5 @@
 {
-  "scratch": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline",
+  "scratch": "<evidence-root>/scratch/baseline",
   "fs_type": "ext2/ext3",
   "free_bytes": 247173160960,
   "budget_bytes": 6510608384

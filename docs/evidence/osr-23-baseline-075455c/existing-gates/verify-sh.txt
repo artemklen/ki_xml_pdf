@@ -33,4 +33,4 @@ wide line stays inside the margin
 xml2pdf: pages=1 objects=9 offset_bytes=80
 cyrillic readers agree; unsupported character rejected
 poppler page1 and last page match
-verify ok scratch=/home/artem/projects/ki_xml_pdf-evidence/osr-23/existing-gates-075455c/verify-scratch
+verify ok scratch=<evidence-root>/existing-gates-075455c/verify-scratch

@@ -1,4 +1,4 @@
-	Command being timed: "/usr/bin/python3 /home/artem/projects/ki_xml_pdf/tests/resource_recipe.py --profile records-v1 --target-bytes 1048576 --out /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/rerun/full-records-1MiB.xml"
+	Command being timed: "/usr/bin/python3 <repo>/tests/resource_recipe.py --profile records-v1 --target-bytes 1048576 --out <evidence-root>/scratch/rerun/full-records-1MiB.xml"
 	User time (seconds): 0.01
 	System time (seconds): 0.01
 	Percent of CPU this job got: 97%

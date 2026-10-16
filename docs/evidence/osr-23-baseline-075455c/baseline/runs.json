@@ -6,7 +6,7 @@
     "converter_elapsed_s": 0.02,
     "input_bytes": 80197,
     "pdf_bytes": 1485197,
-    "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf /home/artem/projects/ki_xml_pdf/tests/fixture.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/ref-small.pdf"
+    "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf <repo>/tests/fixture.xml <evidence-root>/scratch/baseline/ref-small.pdf"
   },
   "runs": [
     {
@@ -47,7 +47,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:04:19Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile records-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-1MiB.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-1MiB.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile records-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/full-records-1MiB.xml <evidence-root>/scratch/baseline/full-records-1MiB.pdf"
     },
     {
       "run_id": "full-records-16MiB",
@@ -87,7 +87,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:04:20Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile records-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-16MiB.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-16MiB.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile records-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/full-records-16MiB.xml <evidence-root>/scratch/baseline/full-records-16MiB.pdf"
     },
     {
       "run_id": "full-records-64MiB",
@@ -127,7 +127,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:04:43Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile records-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-64MiB.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-records-64MiB.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile records-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/full-records-64MiB.xml <evidence-root>/scratch/baseline/full-records-64MiB.pdf"
     },
     {
       "run_id": "full-report-1MiB",
@@ -167,7 +167,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:06:09Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-1MiB.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-1MiB.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/full-report-1MiB.xml <evidence-root>/scratch/baseline/full-report-1MiB.pdf"
     },
     {
       "run_id": "full-report-16MiB",
@@ -207,7 +207,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:06:10Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-16MiB.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-16MiB.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/full-report-16MiB.xml <evidence-root>/scratch/baseline/full-report-16MiB.pdf"
     },
     {
       "run_id": "full-report-64MiB",
@@ -247,7 +247,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:06:18Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-64MiB.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-64MiB.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --max-pages 1000000 --max-output-bytes 2147483648 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/full-report-64MiB.xml <evidence-root>/scratch/baseline/full-report-64MiB.pdf"
     },
     {
       "run_id": "select-report-16MiB-limit1000",
@@ -287,7 +287,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:06:50Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-16MiB-limit1000.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-16MiB-limit1000.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/select-report-16MiB-limit1000.xml <evidence-root>/scratch/baseline/select-report-16MiB-limit1000.pdf"
     },
     {
       "run_id": "select-report-256MiB-limit1000",
@@ -327,7 +327,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:06:51Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-256MiB-limit1000.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-256MiB-limit1000.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/select-report-256MiB-limit1000.xml <evidence-root>/scratch/baseline/select-report-256MiB-limit1000.pdf"
     },
     {
       "run_id": "select-report-1024MiB-limit1000",
@@ -367,7 +367,7 @@
       "gates_ok": true,
       "gate_failures": "",
       "started_utc": "2026-10-16T01:06:54Z",
-      "converter_command": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-1024MiB-limit1000.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-1024MiB-limit1000.pdf"
+      "converter_command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/select-report-1024MiB-limit1000.xml <evidence-root>/scratch/baseline/select-report-1024MiB-limit1000.pdf"
     }
   ],
   "finished_utc": "2026-10-16T01:07:08Z",

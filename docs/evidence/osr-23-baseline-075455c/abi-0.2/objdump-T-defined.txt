@@ -1,5 +1,5 @@
 
-/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/libki_xml_pdf.so:     file format elf64-x86-64
+<evidence-root>/old-0.2-prefix/lib/libki_xml_pdf.so:     file format elf64-x86-64
 
 DYNAMIC SYMBOL TABLE:
 0000000000000000 g    DO *ABS*	0000000000000000  KI_0_1      KI_0_1

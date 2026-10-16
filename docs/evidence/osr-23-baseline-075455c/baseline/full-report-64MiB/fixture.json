@@ -7,6 +7,6 @@
   "omitted_record": 0,
   "tail": "valid",
   "sha256": "2f31b944cd400b6a96da86d0653406145d329cef244038f3c67b31f7dd30b7c1",
-  "path": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-64MiB.xml",
-  "command": "/usr/bin/python3 /home/artem/projects/ki_xml_pdf/tests/resource_recipe.py --profile report-v1 --target-bytes 67108864 --out /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/full-report-64MiB.xml"
+  "path": "<evidence-root>/scratch/baseline/full-report-64MiB.xml",
+  "command": "/usr/bin/python3 <repo>/tests/resource_recipe.py --profile report-v1 --target-bytes 67108864 --out <evidence-root>/scratch/baseline/full-report-64MiB.xml"
 }

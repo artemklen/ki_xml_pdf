@@ -2,6 +2,17 @@
 
 This directory holds the raw measurements of the **unmodified** 0.2.0 implementation at [`075455c`](https://github.com/artemklen/ki_xml_pdf/commit/075455cc930a1f5e79a9ae4811e82b5c95af06c4), captured on 16 October 2026 before any writer or layout change. Later revisions are compared against these files; they are not replaced.
 
+## Path normalization
+
+The measurement host recorded absolute paths of its private workspace in commands, logs and JSON. So that the source archive contains no private paths, the committed files are copies in which exactly two prefixes were replaced, longest first:
+
+| Placeholder | Meaning |
+| --- | --- |
+| `<evidence-root>` | the external evidence directory on the measuring host, outside the repository and outside every `make clean` target; it holds the pristine `075455c` clone (`<evidence-root>/src-075455c`), scratch space, the old 0.2 prefix and ABI canaries |
+| `<repo>` | the harness checkout on the measuring host |
+
+No other byte was changed: every number, hash, status and message is as recorded. Lines that contain a placeholder are therefore not exact transcripts of the original command output. The `SHA256SUMS` files in `baseline/` and `rerun-small/` were written at capture time and still list the hashes of the **original** files; for the files that contained a path they do not match the committed copies. Replacing each placeholder with its original prefix restores every original byte for byte (checked against those lists and the external copy below). The hash lists in `abi-0.2/` cover the external binaries, whose names there use `<evidence-root>`. The unmodified originals, byte for byte as committed in `0773ffc`, are kept read-only on the measuring host in `<evidence-root>/committed-evidence-0773ffc/`, with their hashes in `SHA256SUMS-tree` there (SHA-256 of that list: `95e61b6282f72c69de3caa285d29690dde99532689e2e5656fc11ea42bf88d2d`). The original commit `0773ffc` also remains in the Git history.
+
 ## Provenance
 
 | Item | Value |
@@ -91,13 +102,13 @@ The oracle checked the title, all 1000 selected records and the three counter li
 
 The old installed prefix and precompiled consumers are kept outside the repository and outside any `make clean` target, read-only:
 
-- `/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/` — header, `libki_xml_pdf.so` (soname `libki_xml_pdf.so.0`), static library, CMake and pkg-config metadata from 075455c;
-- `/home/artem/projects/ki_xml_pdf-evidence/osr-23/abi-canary-0.2/` — `abi_canary_c` and `abi_canary_cpp`, compiled once against that header by `tests/abi_canary/build_canary.sh` and linked dynamically.
+- `<evidence-root>/old-0.2-prefix/` — header, `libki_xml_pdf.so` (soname `libki_xml_pdf.so.0`), static library, CMake and pkg-config metadata from 075455c;
+- `<evidence-root>/abi-canary-0.2/` — `abi_canary_c` and `abi_canary_cpp`, compiled once against that header by `tests/abi_canary/build_canary.sh` and linked dynamically.
 
 `abi-0.2/` holds their hashes, the exported symbol and version inventory, and the `KiOptions`/`KiResult`/`KiEvent` sizes and offsets as compiled: 144, 224 and 184 bytes. To check a newer library without recompiling the consumers:
 
 ```sh
-bash tests/abi_canary/run_canary.sh /home/artem/projects/ki_xml_pdf-evidence/osr-23/abi-canary-0.2 \
+bash tests/abi_canary/run_canary.sh <evidence-root>/abi-canary-0.2 \
   <new-prefix>/lib <font> <empty-output-dir>
 ```
 

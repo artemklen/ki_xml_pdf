@@ -1,4 +1,4 @@
-	Command being timed: "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf /home/artem/projects/ki_xml_pdf/tests/fixture.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/ref-small.pdf"
+	Command being timed: "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf <repo>/tests/fixture.xml <evidence-root>/scratch/baseline/ref-small.pdf"
 	User time (seconds): 0.00
 	System time (seconds): 0.00
 	Percent of CPU this job got: 31%

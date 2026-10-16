@@ -7,6 +7,6 @@
   "omitted_record": 0,
   "tail": "valid",
   "sha256": "5c34191d78dc33bd5929c7af0880dc9f928f05d99fad88059f1dd26a8d7c31f4",
-  "path": "/home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/rerun/full-records-1MiB.xml",
-  "command": "/usr/bin/python3 /home/artem/projects/ki_xml_pdf/tests/resource_recipe.py --profile records-v1 --target-bytes 1048576 --out /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/rerun/full-records-1MiB.xml"
+  "path": "<evidence-root>/scratch/rerun/full-records-1MiB.xml",
+  "command": "/usr/bin/python3 <repo>/tests/resource_recipe.py --profile records-v1 --target-bytes 1048576 --out <evidence-root>/scratch/rerun/full-records-1MiB.xml"
 }

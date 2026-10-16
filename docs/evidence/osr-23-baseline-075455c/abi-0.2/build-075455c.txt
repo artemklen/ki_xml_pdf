@@ -1,32 +1,32 @@
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
-printf '%s\n' '/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix' > src/.font_prefix.new
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '<evidence-root>/old-0.2-prefix' > src/.font_prefix.new
 if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
 ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
 cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a
-cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o test_stream tests/test_stream.c libki_xml_pdf.a -pthread -Wl,--wrap=fsync
-printf '%s\n' '/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix' > src/.font_prefix.new
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<evidence-root>/old-0.2-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o test_stream tests/test_stream.c libki_xml_pdf.a -pthread -Wl,--wrap=fsync
+printf '%s\n' '<evidence-root>/old-0.2-prefix' > src/.font_prefix.new
 if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
-mkdir -p /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/bin /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/include \
-	/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf
-cp xml2pdf /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/bin/xml2pdf
-cp libki_xml_pdf.a libki_xml_pdf.so /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/
-cp include/ki_xml_pdf.h /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/include/
-cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/share/ki_xml_pdf/
-ln -sfn libki_xml_pdf.so /home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/libki_xml_pdf.so.0
-mkdir -p "/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/cmake/ki_xml_pdf" "/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/pkgconfig"
+mkdir -p <evidence-root>/old-0.2-prefix/bin <evidence-root>/old-0.2-prefix/lib <evidence-root>/old-0.2-prefix/include \
+	<evidence-root>/old-0.2-prefix/share/ki_xml_pdf
+cp xml2pdf <evidence-root>/old-0.2-prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so <evidence-root>/old-0.2-prefix/lib/
+cp include/ki_xml_pdf.h <evidence-root>/old-0.2-prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE <evidence-root>/old-0.2-prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so <evidence-root>/old-0.2-prefix/lib/libki_xml_pdf.so.0
+mkdir -p "<evidence-root>/old-0.2-prefix/lib/cmake/ki_xml_pdf" "<evidence-root>/old-0.2-prefix/lib/pkgconfig"
 sed -e 's|@KI_VERSION@|0.2.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
-	cmake/ki_xml_pdfConfig.cmake.in > "/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+	cmake/ki_xml_pdfConfig.cmake.in > "<evidence-root>/old-0.2-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
 sed -e 's|@KI_VERSION@|0.2.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
 	-e 's|@KI_VERSION_MINOR@|2|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
-	> "/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
-cp cmake/ki_xml_pdfMakeTargets.cmake.in "/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
-sed -e 's|@KI_VERSION@|0.2.0|g' -e 's|@KI_PREFIX@|/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix|g' \
-	-e 's|@KI_LIBDIR@|/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/include|g' \
-	cmake/ki_xml_pdf.pc.in > "/home/artem/projects/ki_xml_pdf-evidence/osr-23/old-0.2-prefix/lib/pkgconfig/ki_xml_pdf.pc"
+	> "<evidence-root>/old-0.2-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "<evidence-root>/old-0.2-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.2.0|g' -e 's|@KI_PREFIX@|<evidence-root>/old-0.2-prefix|g' \
+	-e 's|@KI_LIBDIR@|<evidence-root>/old-0.2-prefix/lib|g' -e 's|@KI_INCLUDEDIR@|<evidence-root>/old-0.2-prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "<evidence-root>/old-0.2-prefix/lib/pkgconfig/ki_xml_pdf.pc"

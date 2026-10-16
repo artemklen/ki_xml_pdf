@@ -22,7 +22,7 @@ rss_within_small_plus_4mib 1
 pdf_larger_than_rss 1
 pass 1
 --- time large ---
-	Command being timed: "./xml2pdf /home/artem/projects/ki_xml_pdf-evidence/osr-23/existing-gates-075455c/verify-scratch/large.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/existing-gates-075455c/verify-scratch/large.pdf"
+	Command being timed: "./xml2pdf <evidence-root>/existing-gates-075455c/verify-scratch/large.xml <evidence-root>/existing-gates-075455c/verify-scratch/large.pdf"
 	User time (seconds): 0.74
 	System time (seconds): 0.06
 	Percent of CPU this job got: 93%
@@ -46,7 +46,7 @@ pass 1
 	Page size (bytes): 4096
 	Exit status: 0
 --- time small ---
-	Command being timed: "./xml2pdf tests/fixture.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/existing-gates-075455c/verify-scratch/small.pdf"
+	Command being timed: "./xml2pdf tests/fixture.xml <evidence-root>/existing-gates-075455c/verify-scratch/small.pdf"
 	User time (seconds): 0.00
 	System time (seconds): 0.00
 	Percent of CPU this job got: 41%
@@ -72,4 +72,4 @@ pass 1
 rss_scope converter_process_only
 removed_large_xml_bytes 16777313
 removed_large_pdf_bytes 173535332
-scratch /home/artem/projects/ki_xml_pdf-evidence/osr-23/existing-gates-075455c/verify-scratch
+scratch <evidence-root>/existing-gates-075455c/verify-scratch

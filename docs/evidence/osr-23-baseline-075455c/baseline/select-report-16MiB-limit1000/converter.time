@@ -1,4 +1,4 @@
-	Command being timed: "/home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/xml2pdf --font /home/artem/projects/ki_xml_pdf-evidence/osr-23/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/spool /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-16MiB-limit1000.xml /home/artem/projects/ki_xml_pdf-evidence/osr-23/scratch/baseline/select-report-16MiB-limit1000.pdf"
+	Command being timed: "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 --max-pages 10000 --max-output-bytes 268435456 --max-spool-bytes 67108864 --temp-dir <evidence-root>/scratch/baseline/spool <evidence-root>/scratch/baseline/select-report-16MiB-limit1000.xml <evidence-root>/scratch/baseline/select-report-16MiB-limit1000.pdf"
 	User time (seconds): 0.11
 	System time (seconds): 0.00
 	Percent of CPU this job got: 77%
