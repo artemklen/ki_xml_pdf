@@ -1,0 +1,8 @@
+### 13-header-dependency: sleep 1 && touch src/layout.h && make xml2pdf && test xml2pdf -nt src/layout.h
+### HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz

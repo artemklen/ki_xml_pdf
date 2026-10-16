@@ -1,0 +1,16 @@
+--- a/tests/test_integration.c
++++ b/tests/test_integration.c
+@@ -468,12 +468,7 @@
+ }
+ 
+ static int test_integration_contexts(void) {
+-    int rc = it_contexts();
+-    for (int i = 0; i < IT_JOBS; i++) {
+-        it_discard(&it_refs[i]);
+-        it_discard(&it_jobs[i]);
+-    }
+-    return rc;
++    return it_contexts();
+ }
+ 
+ /* Forced failures before, between and after the threaded conversions leave
