@@ -254,6 +254,9 @@ struct KiDoc {
     Layout *lay;
     char error[160];
     int cause;
+    size_t line;
+    size_t column;
+    size_t byte;
 };
 
 void ki_options_init(KiOptions *opt) {
@@ -267,7 +270,8 @@ void ki_options_init(KiOptions *opt) {
 int ki_doc_fail(KiDoc *doc, const char *rule) {
     if (doc != NULL) {
         doc->cause = KI_CAUSE_PROFILE;
-        snprintf(doc->error, sizeof doc->error, "%s", rule != NULL ? rule : "mapping failed");
+        xml_format_pos(doc->error, sizeof doc->error, rule != NULL ? rule : "mapping failed", doc->line, doc->column,
+                       doc->byte);
     }
     return -1;
 }
@@ -555,10 +559,16 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
                 rc = XML2PDF_ERR_IO;
                 cause = KI_CAUSE_IO;
                 snprintf(msg, sizeof msg, "read error");
+            } else if (parser.pos_full) {
+                rc = XML2PDF_ERR_RESOURCE;
+                cause = KI_CAUSE_RESOURCE;
+                xml_format_pos(msg, sizeof msg, "resource limit: input position", ev.line, ev.column, ev.byte_offset);
             } else {
+                char why[sizeof msg];
                 rc = XML2PDF_ERR_XML;
                 cause = KI_CAUSE_XML;
-                snprintf(msg, sizeof msg, "xml: %.*s", 140, ev.error);
+                snprintf(why, sizeof why, "xml: %.150s", parser.errmsg);
+                xml_format_pos(msg, sizeof msg, why, ev.line, ev.column, ev.byte_offset);
             }
             say(opt, msg);
             failed = 1;
@@ -580,6 +590,9 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
         kev.text_len = ev.text_len;
         kev.from_cdata = ev.from_cdata;
         kev.byte_offset = ev.byte_offset;
+        doc.line = ev.line;
+        doc.column = ev.column;
+        doc.byte = ev.byte_offset;
         int mapped;
         if (opt != NULL && opt->map != NULL) {
             mapped = opt->map(opt->map_user, &doc, &kev);

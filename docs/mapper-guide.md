@@ -131,11 +131,15 @@ in `CatalogMap.items`.
 
 ## Errors and file publication
 
-For a schema failure, construct a bounded message naming the rule and the current
-`event->byte_offset`, then return `ki_doc_fail(doc, message)`. This records
-`KI_CAUSE_PROFILE`. The byte offset is the parser position **after** consuming
-the event, including an empty element's synthetic END. It is not a character
-index or the beginning of the tag. The helper does not append an offset for you.
+For a schema failure, return `ki_doc_fail(doc, rule)` with a message naming the
+rule. This records `KI_CAUSE_PROFILE` and appends the current event position as
+`at line L, column C, byte B`, so the mapper does not format an offset itself.
+The position is the parser position **after** consuming the event, including
+an empty element's synthetic END; it is not the beginning of the tag. The byte
+equals `event->byte_offset`; line and column (1-based, Unicode scalars, CRLF as
+one line break) are only available in the message. The result keeps the whole
+position within 160 bytes and shortens a long rule at a UTF-8 boundary. A mapper
+that still adds its own offset gets both.
 
 `ki_doc_fail` is for mapper rules. Return an existing `ki_doc_text` or
 `ki_doc_break` failure directly; replacing it with a profile failure would

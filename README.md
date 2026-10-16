@@ -170,7 +170,19 @@ Call `ki_options_init` before setting options and leave `options.size` equal to 
 
 Use separate per-call options/result and mutable I/O/mapper state for concurrent conversions. Independent conversion calls can run simultaneously. The library does not install signal handlers and does not print to a terminal unless the caller supplies a log callback. `KiEvent` pointers are borrowed for the duration of the mapper callback; do not retain them. Mapping emits text with `ki_doc_text`/`ki_doc_break` and reports schema failures with `ki_doc_fail`. See the [public header](include/ki_xml_pdf.h) and [mapper guide](docs/mapper-guide.md) for the complete callback contract and working catalog adapter.
 
-Return codes are 0 for success, 1 for XML/profile/font errors, 2 for invalid usage, 3 for I/O errors, and 4 for resource limits or cancellation. `KiResult.cause` distinguishes XML, usage, I/O, resource, font, cancellation, and profile failures. Profile errors include the rule and input byte offset; unsupported characters are font errors with a `U+` code point.
+Return codes are 0 for success, 1 for XML/profile/font errors, 2 for invalid usage, 3 for I/O errors, and 4 for resource limits or cancellation. `KiResult.cause` distinguishes XML, usage, I/O, resource, font, cancellation, and profile failures. XML and profile errors end with the consumed input position, `at line L, column C, byte B` (see [error positions](#error-positions)); unsupported characters are font errors with a `U+` code point.
+
+### Error positions
+
+XML errors, built-in profile errors and every `ki_doc_fail` message end with `at line L, column C, byte B`, the position the parser has consumed:
+
+- Line and column start at 1. The byte offset starts at 0 and counts raw input bytes; a UTF-8 BOM adds 3 bytes and no column.
+- CR, LF and CRLF each end one line. A tab is one column. The column counts Unicode scalars, and references and CDATA count their source spelling, so `&amp;` is five columns.
+- A byte that the parser has only looked ahead at is not consumed: an unknown entity is reported before its `&`, a missing `>` after the last accepted byte. At the end of input the position is after the last byte.
+- Malformed UTF-8 is reported right after the first byte that makes the sequence invalid, or at the end of input when the input ends inside a sequence. A continuation byte inside an open sequence adds no column; any other byte, including an invalid one, adds one.
+- Profile and mapper failures use the position after the current event. An empty element's END has the same position as its START.
+
+Positions do not depend on read sizes or buffer boundaries and are counted incrementally, without keeping or rereading input. A counter that would wrap stops the conversion with `KI_CAUSE_RESOURCE` (`resource limit: input position`). A message stays within the 160-byte `KiResult.message`; a long rule is shortened at a UTF-8 boundary so the whole position remains. I/O, font, resource, cancellation and usage messages are unchanged and carry no position. `KiEvent` still offers only `byte_offset`; no public structure changed.
 
 ## XML, font, and resource limits
 

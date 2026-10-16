@@ -22,7 +22,18 @@
    standalone pseudo-attributes. At most one DOCTYPE is accepted before the
    root; its internal subset is skipped with comment/PI/quote awareness, and
    neither the external subset nor any declared entity is ever loaded or
-   expanded. */
+   expanded.
+
+   Positions describe consumed input: line and column are 1-based, column
+   counts Unicode scalars and byte_offset counts raw bytes from 0, BOM
+   included. A byte the parser has only looked at is not consumed. CR, LF and
+   CRLF each end one line; a tab is one column; references and CDATA count
+   their source spelling. A leading UTF-8 BOM adds bytes but no column. A
+   continuation byte inside an open multibyte sequence adds no column; any
+   other byte, including an invalid one, starts a column. A malformed
+   sequence is reported right after the first byte that makes it invalid, or
+   at EOF when the input ends inside it. A counter that would wrap stops the
+   parse instead (pos_full, "input position limit"). */
 
 #define XML_NAME_MAX 64
 #define XML_ATTR_MAX 8
@@ -50,6 +61,8 @@ typedef struct {
     size_t text_len;
     int from_cdata;
     size_t byte_offset;
+    size_t line;
+    size_t column;
     char error[160];
 } XmlEvent;
 
@@ -79,13 +92,20 @@ typedef struct XmlParser {
     int utf8_bad;
     unsigned utf8_lead;
     unsigned utf8_cp;
+    int last_cr;
+    int pos_full;
     size_t offset;
+    size_t line;
+    size_t column;
     char end_name[XML_NAME_MAX];
     char stack[XML_MAX_DEPTH][XML_NAME_MAX];
     char errmsg[160];
 } XmlParser;
 
 int xml_parser_init(XmlParser *p, XmlReadFn read, void *user);
+/* Writes "<msg> at line L, column C, byte B" into out. When it does not fit,
+   msg is shortened at a UTF-8 scalar boundary so the whole triple remains. */
+void xml_format_pos(char *out, size_t cap, const char *msg, size_t line, size_t column, size_t byte);
 int xml_parser_init_file(XmlParser *p, void *file);
 int xml_next(XmlParser *p, XmlEvent *ev);
 

@@ -1777,7 +1777,7 @@ static int test_wellformed_profile(void) {
             int k = xml_next(&p, &ev);
             if (k == XML_EV_ERROR) {
                 saw = 1;
-                CHECK(strstr(ev.error, "at byte") != NULL);
+                CHECK(strstr(ev.error, " at line ") != NULL && strstr(ev.error, ", byte ") != NULL);
                 break;
             }
             if (k == XML_EV_EOF) {
@@ -2342,7 +2342,7 @@ static int test_library_contract(void) {
     rc = ki_convert_file("tests/fixture.xml", kept, &opt, &result);
     CHECK(rc == XML2PDF_ERR_XML);
     CHECK(result.cause == KI_CAUSE_PROFILE);
-    CHECK(strcmp(result.message, "mapping failed") == 0);
+    CHECK(strncmp(result.message, "mapping failed at line ", 23) == 0);
     fp = fopen(kept, "rb");
     CHECK(fp != NULL);
     CHECK(fread(old, 1, 3, fp) == 3);
@@ -2831,7 +2831,7 @@ static int test_callback_to_file(void) {
     options.map = fail_late_map;
     options.map_user = &seen_text;
     CHECK(ki_convert_to_file(output, &options, &result) == XML2PDF_ERR_XML);
-    CHECK(result.cause == KI_CAUSE_PROFILE && strcmp(result.message, "mapping failed") == 0);
+    CHECK(result.cause == KI_CAUSE_PROFILE && strncmp(result.message, "mapping failed at line ", 23) == 0);
     CHECK(seen_text > 1 && same_bytes(output, old, strlen(old)));
     CHECK(count_temps(dir, "out.pdf") == 0);
     CHECK(callback_directory_entries(dir) == directory_baseline);
@@ -3220,8 +3220,8 @@ static int test_report_v1(void) {
     opt.profile = KI_PROFILE_REPORT;
     CHECK(ki_convert_file(empty_rec_path, out, &opt, &result) != 0);
     CHECK(result.cause == KI_CAUSE_PROFILE);
-    const char *at = strstr(result.message, "at byte ");
-    CHECK(at != NULL && atoi(at + 8) > 0);
+    const char *at = strstr(result.message, ", byte ");
+    CHECK(at != NULL && atoi(at + 7) > 0);
     unlink(empty_rec_path);
 
     {
@@ -3632,6 +3632,7 @@ static int test_font_bounds(void) {
 }
 
 #include "test_xml_subset.c"
+#include "test_xml_coords.c"
 #include "test_font_metrics.c"
 #include "test_pdf_bounds.c"
 #include "test_flate.c"
@@ -3671,6 +3672,10 @@ int main(void) {
         {"xml_chunk_boundaries", test_xml_chunk_boundaries},
         {"xml_public_causes", test_xml_public_causes},
         {"xml_selected_tails", test_xml_selected_tails},
+        {"xml_coordinates", test_xml_coordinates},
+        {"xml_coordinate_limits", test_xml_coordinate_limits},
+        {"profile_coordinates", test_profile_coordinates},
+        {"custom_fail_coordinates", test_custom_fail_coordinates},
         {"pdf_byte_ceiling", test_pdf_byte_ceiling},
         {"output_quota_exact", test_output_quota_exact},
         {"flate_streams", test_flate_streams},

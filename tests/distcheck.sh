@@ -76,7 +76,7 @@ required=(
     tests/build_integration.sh tests/catalog_verify.py tests/cli_pipeline.py
     tests/consumer/CMakeLists.txt tests/consumer/report.c tests/docs_smoke.sh
     tests/distcheck.sh tests/install_smoke.sh tests/prefix_switch.sh tests/test_stream.c
-    tests/test_xml_subset.c tests/test_font_metrics.c tests/test_pdf_bounds.c
+    tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c
     tests/pdf_offsets.py tests/font_metrics_check.py tests/pdf_streams.py
     tests/test_flate.c tests/pdf_inflate.c
     tests/verify.sh tests/fixture.xml tests/fuzz_smoke.py tests/large_proof.py
