@@ -310,17 +310,23 @@ static void set_result(KiResult *result, int status, int cause, const char *msg)
 }
 
 static int fail_from_pdf(PdfWriter *pdf, int *cause, const char **msg) {
-    if (pdf->fail_kind == 6) {
+    if (pdf->fail_kind == PDF_FAIL_CANCEL) {
         *cause = KI_CAUSE_CANCEL;
         *msg = "cancelled";
         return XML2PDF_ERR_RESOURCE;
     }
-    if (pdf->fail_kind == 3) {
+    if (pdf->fail_kind == PDF_FAIL_FONT) {
         *cause = KI_CAUSE_FONT;
         *msg = "font: cannot load";
         return XML2PDF_ERR_XML;
     }
-    if (pdf->fail_kind == 1 || pdf->fail_kind == 4 || pdf->fail_kind == 5 || pdf->hit_limit) {
+    if (pdf->fail_kind == PDF_FAIL_XREF) {
+        *cause = KI_CAUSE_RESOURCE;
+        *msg = "resource limit: PDF exceeds classic xref offsets";
+        return XML2PDF_ERR_RESOURCE;
+    }
+    if (pdf->fail_kind == PDF_FAIL_LIMIT || pdf->fail_kind == PDF_FAIL_QUOTA || pdf->fail_kind == PDF_FAIL_SPOOL ||
+        pdf->hit_limit) {
         *cause = KI_CAUSE_RESOURCE;
         *msg = "resource limit";
         return XML2PDF_ERR_RESOURCE;
@@ -654,7 +660,6 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
     if (pdf_ready) {
         pages = pdf_page_count(&pdf);
         objects = pdf_object_count(&pdf);
-        written = pdf.written;
         spool = pdf.spool_bytes;
         if (!failed && opt != NULL && opt->cancelled != NULL && opt->cancelled(opt->cancel_user)) {
             rc = XML2PDF_ERR_RESOURCE;
@@ -670,7 +675,10 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
             say(opt, msg);
             failed = 1;
         }
+        /* Closing the writer stream can still pass buffered bytes through
+           the accounting layer after a failure; count them too. */
         pdf_free(&pdf);
+        written = pdf.written;
         pdf_ready = 0;
     }
     if (!failed && out != NULL) {
@@ -744,6 +752,11 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
     }
 
 done:
+    if (pdf_ready) {
+        pdf_free(&pdf);
+        written = pdf.written;
+        pdf_ready = 0;
+    }
     if (result != NULL) {
         result->status = published ? XML2PDF_OK : rc;
         result->cause = cause;
@@ -758,9 +771,6 @@ done:
             result->report_selected = report_state.selected;
             result->report_skipped = report_state.total - report_state.selected;
         }
-    }
-    if (pdf_ready) {
-        pdf_free(&pdf);
     }
     if (out != NULL) {
         fclose(out);

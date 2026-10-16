@@ -89,6 +89,11 @@ if(BUILD_TESTING)
         --binary "$<TARGET_FILE:xml2pdf>"
         --fixture "${CMAKE_CURRENT_SOURCE_DIR}/examples/report-v1.xml"
         --oracle "${CMAKE_CURRENT_SOURCE_DIR}/examples/report-v1.expected.txt")
+    add_test(NAME pdf_offsets COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/pdf_offsets.py"
+        --binary "$<TARGET_FILE:xml2pdf>"
+        --fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixture.xml")
+    set_tests_properties(pdf_offsets PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
 set(KI_DEFAULT_SHARED "${BUILD_SHARED_LIBS}")

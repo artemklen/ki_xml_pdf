@@ -56,7 +56,7 @@ static void usage(FILE *fp) {
             "  --record-limit N         select N records after offset (0: all)\n"
             "  --font PATH              use only this font, with no fallback\n"
             "  --max-pages N            page quota (0: no separate quota)\n"
-            "  --max-output-bytes N     PDF byte quota\n"
+            "  --max-output-bytes N     PDF byte quota (0: only the 9999999999-byte xref ceiling)\n"
             "  --max-spool-bytes N      offset-file quota (0: 64 MiB)\n"
             "  --temp-dir DIR           offset-file directory\n"
             "\n"

@@ -3545,6 +3545,7 @@ static int test_font_bounds(void) {
 
 #include "test_xml_subset.c"
 #include "test_font_metrics.c"
+#include "test_pdf_bounds.c"
 
 int main(void) {
     struct {
@@ -3580,6 +3581,8 @@ int main(void) {
         {"xml_chunk_boundaries", test_xml_chunk_boundaries},
         {"xml_public_causes", test_xml_public_causes},
         {"xml_selected_tails", test_xml_selected_tails},
+        {"pdf_byte_ceiling", test_pdf_byte_ceiling},
+        {"output_quota_exact", test_output_quota_exact},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {

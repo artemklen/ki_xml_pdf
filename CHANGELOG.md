@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Count every emitted PDF byte in one checked place and cap the total at 9,999,999,999 bytes even when `max_output_bytes` is 0, so no classic xref offset or `startxref` needs an eleventh digit. Crossing the ceiling fails with `KI_CAUSE_RESOURCE` before the bytes reach the destination. `output_bytes` now also includes bytes flushed while a failed conversion closes its stream. An output quota equal to the PDF size succeeds and one byte less fails, including during xref/trailer finalization.
 - Name the embedded font in `BaseFont`/`FontName` by its own PostScript name (name ID 6) instead of a fixed `DejaVuSans`, escaping PDF delimiters, whitespace and `#` as `#XX`. A font without a usable 1–63 character printable-ASCII name gets a deterministic `KiFont-XXXXXXXX` name from a hash of its bytes; a `name` table whose header or records lie outside the table, or a truncated `maxp`, is rejected with `KI_CAUSE_FONT`.
 - Treat a glyph with zero advance as present: combining marks such as U+0301, U+0306 and U+0483 in DejaVu Sans now render with width 0 and extract through ToUnicode/ActualText, instead of failing as missing. A GID of 0 or at/past `maxp` numGlyphs is still a font error. Each GID maps back to a single code point. No shaping, composition or new repertoire.
 - A line longer than 1023 UTF-8 bytes that cannot wrap (a long run of zero-advance marks) now fails with exit 4 and `KI_CAUSE_RESOURCE` instead of an XML error. Page streams are sized for 50 such full lines.

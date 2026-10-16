@@ -5,6 +5,7 @@
 #include "font.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,23 +30,30 @@
 #define PAGE_TOP 750
 #define PAGE_MAX_LINES 50
 
+static int offset_representable(PdfWriter *w, long off);
+
 static int note_offset(PdfWriter *w, int num) {
     if (num <= 0 || num >= MAX_OBJECTS) {
         w->hit_limit = 1;
-        w->fail_kind = 1;
+        w->fail_kind = PDF_FAIL_LIMIT;
         return -1;
     }
     long spool = (long)(num + 1) * 8;
     if (w->max_spool > 0 && spool > w->max_spool) {
         w->hit_limit = 1;
-        w->fail_kind = 5;
+        w->fail_kind = PDF_FAIL_SPOOL;
         return -1;
     }
     if (fflush(w->fp) != 0) {
-        w->fail_kind = 2;
+        if (w->fail_kind == 0) {
+            w->fail_kind = PDF_FAIL_IO;
+        }
         return -1;
     }
     long off = w->written;
+    if (!offset_representable(w, off)) {
+        return -1;
+    }
     if (fseek(w->offsets, (long)num * 8, SEEK_SET) != 0) {
         return -1;
     }
@@ -491,21 +499,50 @@ struct PdfCap {
     PdfWriter *writer;
 };
 
-static ssize_t cap_write(void *cookie, const char *buf, size_t n) {
-    struct PdfCap *cap = cookie;
-    PdfWriter *w = cap->writer;
-    if (w->max_output > 0 && (w->written > w->max_output || (long)n > w->max_output - w->written)) {
-        w->fail_kind = 4;
+long pdf_byte_ceiling(void) {
+    return (long long)LONG_MAX < PDF_XREF_MAX_OFFSET ? LONG_MAX : (long)PDF_XREF_MAX_OFFSET;
+}
+
+/* The single place that admits output bytes. A chunk that would cross the
+   user quota or the xref ceiling is rejected whole, before the sink sees it. */
+static int account_bytes(PdfWriter *w, size_t n) {
+    long ceiling = pdf_byte_ceiling();
+    int kind = PDF_FAIL_XREF;
+    long limit = ceiling;
+    if (w->max_output > 0 && w->max_output <= ceiling) {
+        limit = w->max_output;
+        kind = PDF_FAIL_QUOTA;
+    }
+    if (w->written < 0 || w->written > limit || n > (size_t)(limit - w->written)) {
+        w->fail_kind = kind;
         w->hit_limit = 1;
         errno = EFBIG;
         return -1;
     }
+    return 0;
+}
+
+static ssize_t cap_write(void *cookie, const char *buf, size_t n) {
+    struct PdfCap *cap = cookie;
+    PdfWriter *w = cap->writer;
+    if (account_bytes(w, n) != 0) {
+        return -1;
+    }
     if (fwrite(buf, 1, n, cap->raw) != n) {
-        w->fail_kind = 2;
+        w->fail_kind = PDF_FAIL_IO;
         return -1;
     }
     w->written += (long)n;
     return (ssize_t)n;
+}
+
+static int offset_representable(PdfWriter *w, long off) {
+    if (off < 0 || (long long)off > PDF_XREF_MAX_OFFSET || off > pdf_byte_ceiling()) {
+        w->fail_kind = PDF_FAIL_XREF;
+        w->hit_limit = 1;
+        return 0;
+    }
+    return 1;
 }
 
 static int cap_close(void *cookie) {
@@ -526,14 +563,14 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
     size_t path_n = strlen(tdir) + 24;
     w->off_path = malloc(path_n);
     if (w->off_path == NULL) {
-        w->fail_kind = 1;
+        w->fail_kind = PDF_FAIL_LIMIT;
         return -1;
     }
     int nw = snprintf(w->off_path, path_n, "%s/ki-xml-pdf-off-XXXXXX", tdir);
     if (nw < 0 || (size_t)nw >= path_n) {
         free(w->off_path);
         w->off_path = NULL;
-        w->fail_kind = 2;
+        w->fail_kind = PDF_FAIL_IO;
         w->fail_errno = ENAMETOOLONG;
         return -1;
     }
@@ -542,7 +579,7 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
         w->fail_errno = errno;
         free(w->off_path);
         w->off_path = NULL;
-        w->fail_kind = 2;
+        w->fail_kind = PDF_FAIL_IO;
         return -1;
     }
     w->offsets = fdopen(fd, "w+b");
@@ -552,7 +589,7 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
         unlink(w->off_path);
         free(w->off_path);
         w->off_path = NULL;
-        w->fail_kind = 2;
+        w->fail_kind = PDF_FAIL_IO;
         return -1;
     }
     int loaded;
@@ -562,13 +599,13 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
         loaded = font_open_default(&w->font);
     }
     if (loaded != 0) {
-        w->fail_kind = 3;
+        w->fail_kind = PDF_FAIL_FONT;
         pdf_free(w);
         return -1;
     }
     struct PdfCap *cap = malloc(sizeof *cap);
     if (cap == NULL) {
-        w->fail_kind = 1;
+        w->fail_kind = PDF_FAIL_LIMIT;
         pdf_free(w);
         return -1;
     }
@@ -581,7 +618,7 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
     w->fp = fopencookie(cap, "w", fn);
     if (w->fp == NULL) {
         free(cap);
-        w->fail_kind = 2;
+        w->fail_kind = PDF_FAIL_IO;
         pdf_free(w);
         return -1;
     }
@@ -591,7 +628,7 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
     }
     if (write_font_objects(w) != 0) {
         if (w->fail_kind == 0) {
-            w->fail_kind = 2;
+            w->fail_kind = PDF_FAIL_IO;
         }
         pdf_free(w);
         return -1;
@@ -610,12 +647,12 @@ void pdf_debug_fail_at_page(int n) {
 int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
     w->debug_pages++;
     if (w->debug_fail_page > 0 && w->debug_pages >= w->debug_fail_page) {
-        w->fail_kind = 2;
+        w->fail_kind = PDF_FAIL_IO;
         return -1;
     }
     if (w->max_pages > 0 && w->npages >= w->max_pages) {
         w->hit_limit = 1;
-        w->fail_kind = 1;
+        w->fail_kind = PDF_FAIL_LIMIT;
         return -1;
     }
     /* Worst case per line: four hex digits per byte in both ActualText and
@@ -722,7 +759,7 @@ done:
 
 static int stop_pdf(PdfWriter *w) {
     if (w->cancelled != NULL && w->cancelled(w->cancel_user)) {
-        w->fail_kind = 6;
+        w->fail_kind = PDF_FAIL_CANCEL;
         return 1;
     }
     return 0;
@@ -767,6 +804,9 @@ int pdf_end(PdfWriter *w) {
         return -1;
     }
     long xref_off = w->written;
+    if (!offset_representable(w, xref_off)) {
+        return -1;
+    }
     if (fprintf(w->fp, "xref\n0 %d\n", w->nobj + 1) < 0) {
         return -1;
     }

@@ -14,6 +14,20 @@
    PDF_LINE_BYTES - 1 UTF-8 bytes. */
 #define PDF_LINE_BYTES 1024
 
+/* A classic xref entry has a ten-digit offset field. Every emitted byte is
+   counted against this ceiling, even when the user output quota is 0, so no
+   object offset or startxref value can need an eleventh digit. */
+#define PDF_XREF_MAX_OFFSET 9999999999LL
+
+/* fail_kind values. */
+#define PDF_FAIL_LIMIT 1 /* object, page or allocation limit */
+#define PDF_FAIL_IO 2
+#define PDF_FAIL_FONT 3
+#define PDF_FAIL_QUOTA 4
+#define PDF_FAIL_SPOOL 5
+#define PDF_FAIL_CANCEL 6
+#define PDF_FAIL_XREF 7
+
 typedef struct PdfConfig {
     const char *font_path;
     const char *temp_dir;
@@ -39,6 +53,7 @@ typedef struct PdfWriter {
     int max_pages;
     long max_output;
     long max_spool;
+    /* Bytes accepted by the destination stream; never above pdf_byte_ceiling(). */
     long written;
     long spool_bytes;
     int debug_fail_page;
@@ -59,5 +74,7 @@ size_t pdf_live_page_bytes(const PdfWriter *w);
 int pdf_page_count(const PdfWriter *w);
 int pdf_object_count(const PdfWriter *w);
 int pdf_hit_object_limit(const PdfWriter *w);
+/* Hard total-output ceiling: PDF_XREF_MAX_OFFSET, or LONG_MAX if smaller. */
+long pdf_byte_ceiling(void);
 
 #endif
