@@ -15,7 +15,7 @@ The spike started at 2026-10-16 13:20:46 MSK. `predictions.txt` was written at 1
 - Adapter: `gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -O2 -Iinclude tests/research_utf16_adapter.c libki_xml_pdf.a -lz`. The harness builds it, plus a control build with `-DLENIENT -DRING=16`.
 - Run: `python3 tests/research_utf16.py --scratch ../osr16-scratch/run2 --large-mib 16 --json docs/evidence/osr-16-utf16-spike/results.json`. Result: 168/168 checks passed, exit 0, 9.9 s wall time, 39,208 KiB peak RSS for the Python harness itself. A first run without `--large-mib` (`run1`) produced identical fixture, adapter and PDF hashes for all 167 shared checks.
 - Fixtures: generated in the harness from fixed strings, with no private data. Each holds Cyrillic, `«»`, `…`, `–`/`—`, and a comment with U+1F600, U+1D11E (surrogate pairs) and U+4E2D. Comments are parsed and validated but not rendered, so the pairs pass through the library without needing glyphs. The six valid variants are LE+BOM, BE+BOM, LE+BOM with `utf-16` in lower case, BE+BOM with no declaration, LE without a BOM declared `UTF-16LE`, and BE without a BOM declared `UTF-16BE`. Their hashes are in `results.json` (`fixtures`) and `SHA256SUMS`.
-- Scratch on the project disk, `/home/artem/projects/osr16-scratch`, outside the repository. The large XML/PDF files were deleted after hashing.
+- Scratch on the project disk, `../osr16-scratch` relative to the repository root (a sibling of the checkout, outside the repository; the machine-specific absolute path is omitted). The large XML/PDF files were deleted after hashing.
 
 ## What the current library does (characterization, no change)
 

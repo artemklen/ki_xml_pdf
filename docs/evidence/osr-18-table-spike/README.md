@@ -15,7 +15,7 @@ The spike started at 2026-10-16 13:33:23 MSK, after the OSR-18 card was read. `p
 - Source: `b018964` (OSR-16 head of the shared `osr-8` branch), `make -j2 xml2pdf`. The hashes of `xml2pdf`, the font, the harness and the fixture are in `SHA256SUMS`.
 - Font and geometry: `fonts/DejaVuSans.ttf`, default repertoire, default geometry (Letter, 40 pt margins, 10 pt type, 14 pt leading, 532 pt text width, 50 lines per page).
 - Run: `python3 tests/research_table.py --scratch ../osr18-scratch/run2 --json docs/evidence/osr-18-table-spike/results.json`. Result: all six groups passed (`caps`, `firstn`, `fixture`, `stream`, `hugecell`, `late`), exit 0, 28.5 s wall time. A first run (`run1`, before the negative controls were added) produced the same fixture XML (`f6394f97…`), fixture PDF (`c7c011d5…`) and 100,000-row XML (`9ae014b5…`).
-- Scratch on the project disk, `/home/artem/projects/osr18-scratch`, outside the repository. The large XML/PDF files were deleted after measurement.
+- Scratch on the project disk, `../osr18-scratch` relative to the repository root (a sibling of the checkout, outside the repository; the machine-specific absolute path is omitted). The large XML/PDF files were deleted after measurement.
 - All rows are generated from fixed strings in the harness. They contain no private data.
 
 ## Model, fixed before measuring
