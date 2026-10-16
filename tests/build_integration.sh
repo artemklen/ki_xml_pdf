@@ -5,7 +5,7 @@ root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cc=${CC:-cc}
 cxx=${CXX:-c++}
 pdftext=${PDFTOTEXT:-pdftotext}
-for tool in "$cc" "$cxx" "$pdftext" cmake pkg-config make python3 readelf; do
+for tool in "$cc" "$cxx" "$pdftext" pdfinfo cmake pkg-config make python3 readelf; do
     command -v "$tool" >/dev/null
 done
 work=$(mktemp -d "${TMPDIR:-/tmp}/ki-build-integration.XXXXXX")
@@ -152,6 +152,12 @@ for method in make cmake; do
                 ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
                     "$foreign/report-v1.xml" "$foreign/$name-callback.pdf" callback )
                 oracle "$foreign/$name-callback.pdf"
+                ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
+                    "$foreign/report-v1.xml" "$foreign/$name-a4.pdf" a4-landscape )
+                oracle "$foreign/$name-a4.pdf"
+                pdfinfo -box "$foreign/$name-a4.pdf" | \
+                    grep -E '^MediaBox: +0\.00 +0\.00 +841\.89 +595\.28$' >/dev/null || \
+                    fail "$name A4 landscape MediaBox differs"
                 echo "matrix PASS $name"
                 rows=$((rows + 1))
             done

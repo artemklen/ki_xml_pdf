@@ -1894,9 +1894,11 @@ static int test_review_regressions(void) {
     CHECK(font_open_default(&face) != 0);
     unsetenv("KI_XML_PDF_FONT");
     CHECK(font_load(&face, "fonts/DejaVuSans.ttf") == 0);
-    int baseline = font_first_baseline(&face, 792, 40, 10);
-    int ascent = face.ascent * 10 / face.units;
-    CHECK(792 - baseline - ascent >= 40);
+    Geometry legacy;
+    geom_default(&legacy);
+    PageFrame frame;
+    CHECK(geom_frame(&frame, &legacy, &face) == 0);
+    CHECK((792000 - 40000 - frame.baseline) * face.units >= (long long)face.ascent * 10000);
     font_free(&face);
 
     char out[] = "/tmp/ki-xml-pdf-review-XXXXXX";
@@ -3638,6 +3640,7 @@ static int test_font_bounds(void) {
 #include "test_pdf_bounds.c"
 #include "test_flate.c"
 #include "test_layout_wrap.c"
+#include "test_geometry.c"
 
 int main(void) {
     struct {
@@ -3691,6 +3694,12 @@ int main(void) {
         {"wrap_pages", test_wrap_pages},
         {"wrap_token_memory", test_wrap_token_memory},
         {"wrap_profiles", test_wrap_profiles},
+        {"geometry_config", test_geometry_config},
+        {"geometry_usage", test_geometry_usage},
+        {"geometry_matrix", test_geometry_matrix},
+        {"geometry_legacy", test_geometry_legacy},
+        {"geometry_ink", test_geometry_ink},
+        {"geometry_outline_bounds", test_geometry_outline_bounds},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {

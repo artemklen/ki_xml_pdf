@@ -33,6 +33,7 @@ jobs:
           python3 tests/cli_pipeline.py
           python3 tests/font_metrics_check.py
           python3 tests/wrap_check.py
+          python3 tests/geometry_check.py
           python3 tests/catalog_verify.py
           python3 tests/pdf_streams.py --binary ./xml2pdf
       - name: installed CMake and pkg-config consumers

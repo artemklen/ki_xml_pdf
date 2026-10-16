@@ -6,7 +6,7 @@
 #include <stddef.h>
 
 #define LAYOUT_LINE PDF_LINE_BYTES
-#define LAYOUT_LINES 50
+#define LAYOUT_LINES GEOM_MAX_LINES
 
 /* line[0, len) is placed on the current output line and line[len, len +
    wlen) is the word still being collected, so the pending word needs no
@@ -15,13 +15,13 @@ typedef struct Layout {
     PdfWriter *pdf;
     char line[LAYOUT_LINE];
     size_t len;
-    long units;
+    InkRun run;
     size_t wlen;
-    long wunits;
+    InkRun wrun;
     /* Start of the word's last positive-advance code point and the word's
-       width before it: the latest split that keeps marks with their base. */
+       extent before it: the latest split that keeps marks with their base. */
     size_t wbase;
-    long wbase_units;
+    InkRun wbase_run;
     char page[LAYOUT_LINES][LAYOUT_LINE];
     size_t plen[LAYOUT_LINES];
     int nlines;
@@ -31,6 +31,8 @@ typedef struct Layout {
     /* Set when a word would exceed LAYOUT_LINE - 1 bytes and the next code
        point has zero advance, so no split can keep a mark with its base. */
     int line_full;
+    /* Set when a base and its zero-advance marks do not fit one line. */
+    int too_wide;
 } Layout;
 
 int layout_init(Layout *lay, PdfWriter *pdf);

@@ -46,6 +46,24 @@ For large inputs, selection and quotas are explicit:
 
 Without a record limit, all records after the offset are selected. Selection still reads and validates the entire XML, including skipped records; reaching the limit does not hide a later error.
 
+### Page geometry
+
+Pages default to US Letter portrait (612 × 792 pt), 40 pt margins, 10 pt type and 14 pt line spacing. The page size, orientation, margins and type size can be chosen, all in PostScript points (1/72 inch):
+
+```sh
+./xml2pdf --page-size a4 --orientation landscape input.xml a4-landscape.pdf
+./xml2pdf --page-width 360 --page-height 504 --margin 24 --font-size 12 input.xml custom.pdf
+./xml2pdf --margin 36,40,48,40 input.xml margins.pdf
+```
+
+- `--page-size letter|a4`: Letter 612 × 792 or A4 595.276 × 841.89 (210 × 297 mm). `--orientation landscape` swaps width and height; `portrait` is the default.
+- `--page-width PT --page-height PT`: a custom size, 3–14400 pt per side. Both are required together and exclude `--page-size` and `--orientation`.
+- `--margin PT` sets all four margins; `--margin T,R,B,L` sets top, right, bottom and left. Each is 0–14400 pt, and the margins must leave a positive width and height.
+- `--font-size PT`: 1–144 pt. Line spacing is 1.4 × the type size.
+- Values are plain decimals such as `24` or `10.5` (no sign, exponent or unit) and are rounded to 0.001 pt. Each option may appear once.
+
+The PDF MediaBox and the text placement use the same rounded values. Glyph outlines, not only advances, stay inside the margins: a line whose first glyph extends left of its origin starts further right, and the first baseline and the number of lines per page (at most 50) leave room for the font's tallest and deepest glyphs. Invalid geometry exits 2 before any input is read and before an output file is created or changed. So does a valid page with no room for one line, or for some single glyph of the font, which is detected right after the font loads.
+
 An out-of-tree CMake build is also supported. CMake enables tests by default and requires Python 3 during configuration. Use `-DBUILD_TESTING=OFF` for a library/CLI build without test targets:
 
 ```sh
@@ -163,8 +181,36 @@ int main(void) {
 | `ki_convert_file(xml_path, pdf_path, options, result)` | File path; ignores read/write callbacks | Atomic file publication; preserves the previous destination on failure |
 | `ki_convert(options, result)` | `read_bytes` callback | `write_bytes` callback; previously accepted bytes remain on failure and `output_bytes` counts exactly those bytes |
 | `ki_convert_to_file(pdf_path, options, result)` | `read_bytes` callback; ignores `write_bytes` | Atomic file publication, including input from a pipe or application stream |
+| `ki_convert_file_cfg`, `ki_convert_cfg`, `ki_convert_to_file_cfg` | As the call without `_cfg`, plus a `const KiConfig *` before `result` | Same, with the configured page geometry; `NULL` is the default geometry |
 
 A read callback returns 0 only at EOF, a positive byte count for data, and a negative value for an error. A positive short read is not EOF. A write callback must accept the entire requested count or return an error. The caller owns callback resources and closes them; the library does not close caller streams or free caller state.
+
+Page geometry lives in a separate `KiConfig`, so `KiOptions`, `KiResult` and `KiEvent` keep their 0.2 layout and the 0.2 functions keep their exports and behavior. Initialize it with `ki_config_init(&cfg, sizeof cfg)` and set `page_size` (`KI_PAGE_LETTER`, `KI_PAGE_A4`, `KI_PAGE_CUSTOM`), `orientation` (`KI_ORIENT_PORTRAIT`, `KI_ORIENT_LANDSCAPE`), `page_width`/`page_height` (custom sizes only), `margin_top`/`margin_right`/`margin_bottom`/`margin_left` and `font_size`, in points with the limits listed in [page geometry](#page-geometry). A `size` other than `sizeof(KiConfig)`, or an invalid value, fails with `KI_CAUSE_USAGE` (`page geometry: ...`) before any file is opened or callback runs. This program writes `input.xml` as A4 landscape with 36 pt margins and 12 pt type:
+
+```c
+#include "ki_xml_pdf.h"
+#include <stdio.h>
+
+int main(void) {
+    KiOptions options;
+    ki_options_init(&options);
+    options.profile = KI_PROFILE_REPORT;
+
+    KiConfig cfg;
+    ki_config_init(&cfg, sizeof cfg);
+    cfg.page_size = KI_PAGE_A4;
+    cfg.orientation = KI_ORIENT_LANDSCAPE;
+    cfg.margin_top = cfg.margin_right = cfg.margin_bottom = cfg.margin_left = 36;
+    cfg.font_size = 12;
+
+    KiResult result;
+    int status = ki_convert_file_cfg("input.xml", "a4.pdf", &options, &cfg, &result);
+    if (status != 0) {
+        fprintf(stderr, "%d: %s\n", result.cause, result.message);
+    }
+    return status;
+}
+```
 
 Call `ki_options_init` before setting options and leave `options.size` equal to `sizeof(KiOptions)`. The 0.x API remains unstable until 1.0; this version preserves the existing `KiOptions` layout and adds `ki_convert_to_file`. A non-null `KiResult` is initialized for the current call, including early argument errors, rather than retaining previous conversion counters.
 
@@ -192,13 +238,13 @@ The parser supports XML declarations, comments, processing instructions, one DOC
 
 Every consumed byte must be well-formed UTF-8 that encodes an XML `Char`, including comments, processing instructions, the skipped DTD, records skipped by selection, and content after the root. For example, a literal U+FFFE or U+FFFF is an XML error, not a font error. The XML declaration may appear only at the start (after an optional UTF-8 BOM). Its `version="1.0"`, optional `encoding="UTF-8"` and optional `standalone` pseudo-attributes must appear in that order, once each, and be separated by white space. A processing instruction target must be a name of at most 63 bytes followed by white space or `?>`; the target `xml` in any letter case is reserved, while targets such as `xml-stylesheet` are ordinary PIs that are not rendered. The DOCTYPE must precede the root. Its internal subset is skipped with awareness of comments, PIs and quoted values, so `]` or `>` inside them does not end it. This is a documented XML subset, rather than a full XML 1.0 implementation. `report-v1` requires UTF-8 and rejects namespaces; see its [grammar and whitespace contract](docs/report-v1.md).
 
-Text uses DejaVu Sans. The repertoire is U+0009/U+000A/U+000D, U+0020–U+04FF, and U+2010–U+2027; a character outside it produces a font error. A character counts as present when the font maps it to an existing glyph (nonzero GID below `maxp` numGlyphs), even with zero advance: combining marks such as U+0301 and U+0306 are drawn over the previous glyph and kept in extracted text, without shaping, composition or normalization. One output line holds at most 1023 UTF-8 bytes; a single base character with zero-advance marks longer than that cannot be split and is a resource error (exit 4, `KI_CAUSE_RESOURCE`). The PDF `BaseFont`/`FontName` is the embedded font's own PostScript name (name ID 6), escaped as a PDF name; a font without a usable printable-ASCII name of 1–63 characters gets `KiFont-XXXXXXXX` from a hash of its bytes, and a font whose `name` table records lie outside the table is rejected as a font error. Pages are Letter with 40 pt margins, 10 pt type, 14 pt line spacing, and at most 50 complete lines per page. Text wraps using glyph widths, not a byte-count threshold.
+Text uses DejaVu Sans. The repertoire is U+0009/U+000A/U+000D, U+0020–U+04FF, and U+2010–U+2027; a character outside it produces a font error. A character counts as present when the font maps it to an existing glyph (nonzero GID below `maxp` numGlyphs), even with zero advance: combining marks such as U+0301 and U+0306 are drawn over the previous glyph and kept in extracted text, without shaping, composition or normalization. One output line holds at most 1023 UTF-8 bytes; a single base character with zero-advance marks longer than that cannot be split and is a resource error (exit 4, `KI_CAUSE_RESOURCE`). The PDF `BaseFont`/`FontName` is the embedded font's own PostScript name (name ID 6), escaped as a PDF name; a font without a usable printable-ASCII name of 1–63 characters gets `KiFont-XXXXXXXX` from a hash of its bytes, and a font whose `name` table records lie outside the table is rejected as a font error. By default pages are Letter with 40 pt margins, 10 pt type and 14 pt line spacing, with at most 50 complete lines per page; see [page geometry](#page-geometry) for other sizes. Text wraps using glyph widths, not a byte-count threshold.
 
 ### Line wrapping
 
 Lines break between words, measured with the font's own advances:
 
-- A line holds 532 pt of advances: `532 × unitsPerEm / 10` font units, rounded down. A word that ends exactly at that width fits, so a first word never leaves an empty line before it.
+- A line holds the width between the margins, 532 pt by default. The advances up to its last non-space glyph must fit in `width × unitsPerEm / size` font units (`532 × unitsPerEm / 10` by default), and every glyph outline must also end inside the right margin. A word that ends exactly at that width fits, so a first word never leaves an empty line before it.
 - Only space (U+0020) and tab (U+0009, measured as a space) are break opportunities. LF ends a line, including an empty one. No-break space (U+00A0), hyphens and punctuation belong to the word around them; no hyphen is ever inserted and NBSP stays U+00A0 in the PDF.
 - A word that does not fit after the content already on the line starts the next line. Spaces and tabs stay at the end of the line they follow even past the right margin; they are not drawn past it but stay in extracted text.
 - A word wider than a whole line starts on a new line and is cut before the code point that would overflow it. A word that would exceed the 1023-byte line is cut at the same kind of boundary, before a code point with an advance, so zero-advance marks stay with their base. A cut is always at a complete UTF-8 code point and loses nothing.
@@ -238,7 +284,7 @@ python3 tests/large_proof.py --self-test
 python3 tests/large_proof.py 1073741824
 ```
 
-`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. `python3 tests/wrap_check.py` compares wrapped lines, pages and word boxes from Poppler with the wrap rules applied to advances read independently from the bundled font. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
+`make check` cleans and rebuilds the CLI and test binary, runs the streaming API tests, and checks PDFs through Poppler. `python3 tests/wrap_check.py` compares wrapped lines, pages and word boxes from Poppler with the wrap rules applied to advances read independently from the bundled font. `python3 tests/geometry_check.py` checks each page's MediaBox with `pdfinfo` and its rendered ink with `pdftoppm` against the requested size and margins, and that rejected geometry exits 2 without reading stdin or touching the destination. CMake users can run the registered checks with `ctest --test-dir build --output-on-failure`. RSS is measured on the ordinary converter, separately from the XML generator, PDF reader, and ASan/UBSan.
 
 To repeat the resource series, use a disk-backed scratch directory with several GiB free (the full 64 MiB `records-v1` PDF alone is about 713 MB) and a new evidence directory:
 

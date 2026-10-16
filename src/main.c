@@ -19,17 +19,31 @@ static int cli_cancelled(void *user) {
     return cli_stop != 0;
 }
 
+typedef struct {
+    FILE *input;
+    const char *path;
+    int open_failed;
+} CliIo;
+
 static void cli_log(void *user, const char *msg) {
-    (void)user;
+    const CliIo *io = user;
+    /* The open failure is reported once, by name, after the conversion. */
+    if (io->open_failed) {
+        return;
+    }
     fprintf(stderr, "%s\n", msg);
 }
 
-typedef struct {
-    FILE *input;
-} CliIo;
-
 static int cli_read(void *user, char *dst, int max) {
     CliIo *io = user;
+    /* Opened on the first read so that rejected options never touch the input. */
+    if (io->input == NULL) {
+        io->input = fopen(io->path, "rb");
+        if (io->input == NULL) {
+            io->open_failed = 1;
+            return -1;
+        }
+    }
     errno = 0;
     size_t n = fread(dst, 1, (size_t)max, io->input);
     if (ferror(io->input) || (n == 0 && errno == EINTR)) {
@@ -60,11 +74,71 @@ static void usage(FILE *fp) {
             "  --max-spool-bytes N      offset-file quota (0: 64 MiB)\n"
             "  --temp-dir DIR           offset-file directory\n"
             "\n"
+            "Page geometry (points, 1/72 inch; decimal digits only, e.g. 24 or 595.276):\n"
+            "  --page-size NAME         letter (default, 612x792) or a4 (595.276x841.89)\n"
+            "  --orientation NAME       portrait (default) or landscape for --page-size\n"
+            "  --page-width PT          custom width 3..14400, with --page-height\n"
+            "  --page-height PT         custom height 3..14400, with --page-width\n"
+            "  --margin PT|T,R,B,L      all margins, or top,right,bottom,left (default 40)\n"
+            "  --font-size PT           1..144 (default 10); leading is 1.4 x size\n"
+            "Each geometry option may appear once. A custom size excludes --page-size\n"
+            "and --orientation. Invalid geometry exits 2 before any input is read.\n"
+            "\n"
             "Input: UTF-8; no network access. XML bounds: depth 64, 8 attributes,\n"
             "names 63 bytes, attribute values 255 bytes, input window 4096 bytes.\n"
             "Exit codes: 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel.\n"
             "Files are replaced atomically; stdout may contain a partial PDF on failure.\n",
             KI_XML_PDF_VERSION, KI_XML_PDF_PROFILE_RECORDS, KI_XML_PDF_PROFILE_REPORT);
+}
+
+/* Plain decimal points only: no sign, exponent, hex, inf/nan or spaces. */
+static int take_points(const char *text, double *out) {
+    size_t n = strlen(text);
+    size_t digits = strspn(text, "0123456789");
+    if (n == 0 || n > 32 || digits == 0) {
+        return -1;
+    }
+    if (text[digits] == '.') {
+        size_t frac = strspn(text + digits + 1, "0123456789");
+        if (frac == 0 || digits + 1 + frac != n) {
+            return -1;
+        }
+    } else if (digits != n) {
+        return -1;
+    }
+    char *end = NULL;
+    errno = 0;
+    *out = strtod(text, &end);
+    return end != NULL && *end == '\0' && errno == 0 ? 0 : -1;
+}
+
+/* One value for all four margins, or top,right,bottom,left. */
+static int take_margins(const char *text, double margin[4]) {
+    char part[33];
+    int count = 0;
+    const char *p = text;
+    for (;;) {
+        const char *comma = strchr(p, ',');
+        size_t len = comma != NULL ? (size_t)(comma - p) : strlen(p);
+        if (count == 4 || len >= sizeof part) {
+            return -1;
+        }
+        memcpy(part, p, len);
+        part[len] = '\0';
+        if (take_points(part, &margin[count]) != 0) {
+            return -1;
+        }
+        count++;
+        if (comma == NULL) {
+            break;
+        }
+        p = comma + 1;
+    }
+    if (count == 1) {
+        margin[1] = margin[2] = margin[3] = margin[0];
+        return 0;
+    }
+    return count == 4 ? 0 : -1;
 }
 
 static int take_long(const char *text, long *out) {
@@ -87,6 +161,9 @@ int main(int argc, char **argv) {
     long max_spool = 0;
     long record_offset = 0;
     long record_limit = 0;
+    KiConfig cfg;
+    ki_config_init(&cfg, sizeof cfg);
+    int seen_size = 0, seen_orient = 0, seen_width = 0, seen_height = 0, seen_margin = 0, seen_font = 0;
     int i = 1;
     while (i < argc && argv[i][0] == '-' && strcmp(argv[i], "-") != 0) {
         if (strcmp(argv[i], "--") == 0) {
@@ -136,6 +213,45 @@ int main(int argc, char **argv) {
                 usage(stderr);
                 return 2;
             }
+        } else if (strcmp(argv[i], "--page-size") == 0) {
+            const char *v = argv[++i];
+            if (seen_size++ || (strcmp(v, "letter") != 0 && strcmp(v, "a4") != 0)) {
+                usage(stderr);
+                return 2;
+            }
+            cfg.page_size = strcmp(v, "a4") == 0 ? KI_PAGE_A4 : KI_PAGE_LETTER;
+        } else if (strcmp(argv[i], "--orientation") == 0) {
+            const char *v = argv[++i];
+            if (seen_orient++ || (strcmp(v, "portrait") != 0 && strcmp(v, "landscape") != 0)) {
+                usage(stderr);
+                return 2;
+            }
+            cfg.orientation = strcmp(v, "landscape") == 0 ? KI_ORIENT_LANDSCAPE : KI_ORIENT_PORTRAIT;
+        } else if (strcmp(argv[i], "--page-width") == 0) {
+            if (seen_width++ || take_points(argv[++i], &cfg.page_width) != 0) {
+                usage(stderr);
+                return 2;
+            }
+        } else if (strcmp(argv[i], "--page-height") == 0) {
+            if (seen_height++ || take_points(argv[++i], &cfg.page_height) != 0) {
+                usage(stderr);
+                return 2;
+            }
+        } else if (strcmp(argv[i], "--margin") == 0) {
+            double m[4];
+            if (seen_margin++ || take_margins(argv[++i], m) != 0) {
+                usage(stderr);
+                return 2;
+            }
+            cfg.margin_top = m[0];
+            cfg.margin_right = m[1];
+            cfg.margin_bottom = m[2];
+            cfg.margin_left = m[3];
+        } else if (strcmp(argv[i], "--font-size") == 0) {
+            if (seen_font++ || take_points(argv[++i], &cfg.font_size) != 0) {
+                usage(stderr);
+                return 2;
+            }
         } else {
             usage(stderr);
             return 2;
@@ -147,9 +263,12 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    if (max_pages > INT_MAX) {
+    if (max_pages > INT_MAX || seen_width != seen_height || (seen_width && (seen_size || seen_orient))) {
         usage(stderr);
         return 2;
+    }
+    if (seen_width) {
+        cfg.page_size = KI_PAGE_CUSTOM;
     }
     KiOptions opt;
     ki_options_init(&opt);
@@ -173,13 +292,11 @@ int main(int argc, char **argv) {
     int input_stream = strcmp(input_path, "-") == 0;
     int output_stream = strcmp(output_path, "-") == 0;
     CliIo io;
-    io.input = NULL;
+    io.input = input_stream ? stdin : NULL;
+    io.path = input_path;
+    io.open_failed = 0;
+    opt.log_user = &io;
     if (input_stream || output_stream) {
-        io.input = input_stream ? stdin : fopen(input_path, "rb");
-        if (io.input == NULL) {
-            fprintf(stderr, "cannot open input %s\n", input_path);
-            return 3;
-        }
         opt.read_bytes = cli_read;
         opt.write_bytes = cli_write;
         opt.io_user = &io;
@@ -200,18 +317,22 @@ int main(int argc, char **argv) {
     KiResult result;
     int rc;
     if (output_stream) {
-        rc = ki_convert(&opt, &result);
+        rc = ki_convert_cfg(&opt, &cfg, &result);
         if (rc == 0 && fflush(stdout) != 0) {
             fprintf(stderr, "stdout write failed\n");
             rc = 3;
         }
     } else if (input_stream) {
-        rc = ki_convert_to_file(output_path, &opt, &result);
+        rc = ki_convert_to_file_cfg(output_path, &opt, &cfg, &result);
     } else {
-        rc = ki_convert_file(input_path, output_path, &opt, &result);
+        rc = ki_convert_file_cfg(input_path, output_path, &opt, &cfg, &result);
     }
     if (io.input != NULL && io.input != stdin) {
         fclose(io.input);
+    }
+    if (io.open_failed) {
+        fprintf(stderr, "cannot open input %s\n", input_path);
+        rc = 3;
     }
     if (installed_int) sigaction(SIGINT, &old_int, NULL);
     if (installed_term) sigaction(SIGTERM, &old_term, NULL);

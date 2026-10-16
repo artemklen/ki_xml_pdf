@@ -30,12 +30,6 @@
 #define PAGE_OBJS 3
 #define FLATE_CHUNK 16384
 #define MAX_OBJECTS 8000000
-#define PAGE_FONT_PT 10
-#define PAGE_LEADING 14
-#define PAGE_MARGIN 40
-#define PAGE_WIDTH 612
-#define PAGE_TOP 750
-#define PAGE_MAX_LINES 50
 
 static int offset_representable(PdfWriter *w, long off);
 
@@ -317,7 +311,7 @@ static int write_widths(FILE *fp, const FontFace *face) {
         if (face->gid[cp] == 0) {
             continue;
         }
-        int width = pdf_scale(face, face->adv[cp]);
+        int width = font_pdf_width(face, face->adv[cp]);
         if (fprintf(fp, "%u [%d]\n", face->gid[cp], width) < 0) {
             return -1;
         }
@@ -326,7 +320,7 @@ static int write_widths(FILE *fp, const FontFace *face) {
         if (face->punct_gid[i] == 0) {
             continue;
         }
-        int width = pdf_scale(face, face->punct_adv[i]);
+        int width = font_pdf_width(face, face->punct_adv[i]);
         if (fprintf(fp, "%u [%d]\n", face->punct_gid[i], width) < 0) {
             return -1;
         }
@@ -446,13 +440,11 @@ static int utf8_next(const char *s, size_t n, size_t *i, unsigned *cp) {
     return 1;
 }
 
-/* Trailing spaces and tabs are not measured: layout lets them hang past
-   the margin because they draw no ink. */
-static int line_too_wide(const FontFace *face, const char *s, size_t n) {
+/* Measures one line up to its end or newline. Trailing spaces and tabs add
+   no box or ink: layout lets them hang past the margin. */
+static int line_run(const FontFace *face, const char *s, size_t n, InkRun *run) {
     size_t i = 0;
-    long units = 0;
-    long inked = 0;
-    long limit = (long)(PAGE_WIDTH - 2 * PAGE_MARGIN) * face->units / PAGE_FONT_PT;
+    run_reset(run);
     while (i < n) {
         unsigned cp = 0;
         int rc = utf8_next(s, n, &i, &cp);
@@ -462,20 +454,14 @@ static int line_too_wide(const FontFace *face, const char *s, size_t n) {
         if (cp == '\n' || cp == '\r') {
             break;
         }
-        if (cp == '\t') {
-            cp = ' ';
-        }
         uint16_t gid = 0;
         uint16_t adv = 0;
-        if (font_lookup(face, cp, &gid, &adv) != 0) {
+        if (font_lookup(face, cp == '\t' ? ' ' : cp, &gid, &adv) != 0) {
             return -1;
         }
-        units += adv;
-        if (cp != ' ') {
-            inked = units;
-        }
+        run_add(run, face, cp, adv);
     }
-    return inked > limit ? 1 : 0;
+    return 0;
 }
 
 /* Poppler's layout extractor drops a space whose gap equals the glyph
@@ -523,17 +509,18 @@ static int append_actual_text(char *out, size_t cap, size_t *o, const char *s, s
     return 0;
 }
 
-/* Spaces past the right margin are trailing (line_too_wide rejects ink
-   there). They are left out of the glyph string so no glyph box extends
-   beyond the margin; ActualText still carries them. */
-static int append_hex_line(char *out, size_t cap, size_t *o, const FontFace *face, const char *s, size_t n) {
+/* Spaces past the right margin are trailing (pdf_add_page rejects a line
+   whose box or ink crosses it). They are left out of the glyph string so no
+   glyph box extends beyond the margin; ActualText still carries them. */
+static int append_hex_line(char *out, size_t cap, size_t *o, const PdfWriter *w, long long shift, const char *s,
+                           size_t n) {
+    const FontFace *face = &w->font;
     if (*o + 1 >= cap) {
         return -1;
     }
     out[(*o)++] = '<';
     size_t i = 0;
     long units = 0;
-    long limit = (long)(PAGE_WIDTH - 2 * PAGE_MARGIN) * face->units / PAGE_FONT_PT;
     while (i < n) {
         unsigned cp = 0;
         int rc = utf8_next(s, n, &i, &cp);
@@ -552,7 +539,7 @@ static int append_hex_line(char *out, size_t cap, size_t *o, const FontFace *fac
             return -1;
         }
         units += adv;
-        if (cp == ' ' && units > limit) {
+        if (cp == ' ' && geom_past_right(&w->frame, shift, units)) {
             continue;
         }
         if (*o + 5 >= cap) {
@@ -718,6 +705,13 @@ int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg) {
         pdf_free(w);
         return -1;
     }
+    Geometry legacy;
+    geom_default(&legacy);
+    if (geom_frame(&w->frame, cfg != NULL && cfg->geometry != NULL ? cfg->geometry : &legacy, &w->font) != 0) {
+        w->fail_kind = PDF_FAIL_GEOMETRY;
+        pdf_free(w);
+        return -1;
+    }
     struct PdfCap *cap = malloc(sizeof *cap);
     if (cap == NULL) {
         w->fail_kind = PDF_FAIL_LIMIT;
@@ -771,26 +765,29 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
         return -1;
     }
     /* Worst case per line: four hex digits per byte in both ActualText and
-       the glyph string, plus operators. */
-    size_t cap = 256 + (size_t)PAGE_MAX_LINES * (8 * PDF_LINE_BYTES + 64);
+       the glyph string, plus operators and a line move. */
+    size_t cap = 256 + (size_t)GEOM_MAX_LINES * (8 * PDF_LINE_BYTES + 128);
     char *stream = malloc(cap);
     if (stream == NULL) {
         return -1;
     }
-    int baseline = font_first_baseline(&w->font, 792, PAGE_MARGIN, PAGE_FONT_PT);
-    int max_lines = font_max_lines(&w->font, 792, PAGE_MARGIN, PAGE_FONT_PT, PAGE_LEADING);
-    char prefix[64];
-    int npre = sprintf(prefix, "BT\n/F1 %d Tf\n%d TL\n%d %d Td\n", PAGE_FONT_PT, PAGE_LEADING, PAGE_MARGIN,
-                       baseline);
+    const PageFrame *f = &w->frame;
+    char font_pt[32], lead[32], left[32], base[32];
+    if (geom_fmt(font_pt, sizeof font_pt, f->g.font) < 0 || geom_fmt(lead, sizeof lead, f->g.leading) < 0 ||
+        geom_fmt(base, sizeof base, f->baseline) < 0) {
+        free(stream);
+        return -1;
+    }
+    int npre = snprintf(stream, cap, "BT\n/F1 %s Tf\n%s TL\n", font_pt, lead);
     if (npre < 0 || (size_t)npre >= cap) {
         free(stream);
         return -1;
     }
     size_t o = (size_t)npre;
-    memcpy(stream, prefix, o);
     size_t i = 0;
     int lines = 0;
     int any = 0;
+    long long prev_shift = 0;
     while (i < len) {
         size_t start = i;
         while (i < len && text[i] != '\n') {
@@ -800,26 +797,37 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
         if (i < len && text[i] == '\n') {
             i++;
         }
-        int wide = line_too_wide(&w->font, text + start, n);
-        if (wide != 0) {
+        InkRun run;
+        if (line_run(&w->font, text + start, n, &run) != 0 || !geom_fits(f, &run)) {
             free(stream);
             return -1;
         }
-        if (lines >= max_lines || lines >= PAGE_MAX_LINES) {
+        if (lines >= f->max_lines || lines >= GEOM_MAX_LINES) {
             free(stream);
             return -1;
         }
-        if (any) {
-            if (o + 3 >= cap) {
-                free(stream);
-                return -1;
-            }
-            memcpy(stream + o, "T*\n", 3);
-            o += 3;
+        long long shift = geom_shift(f, &run);
+        int moved;
+        if (!any) {
+            moved = geom_fmt(left, sizeof left, f->g.left + shift) < 0
+                        ? -1
+                        : snprintf(stream + o, cap - o, "%s %s Td\n", left, base);
+        } else if (shift == prev_shift) {
+            moved = snprintf(stream + o, cap - o, "T*\n");
+        } else {
+            moved = geom_fmt(left, sizeof left, shift - prev_shift) < 0
+                        ? -1
+                        : snprintf(stream + o, cap - o, "%s -%s Td\n", left, lead);
         }
+        if (moved < 0 || (size_t)moved >= cap - o) {
+            free(stream);
+            return -1;
+        }
+        o += (size_t)moved;
+        prev_shift = shift;
         any = 1;
         if (append_actual_text(stream, cap, &o, text + start, n) != 0 ||
-            append_hex_line(stream, cap, &o, &w->font, text + start, n) != 0) {
+            append_hex_line(stream, cap, &o, w, shift, text + start, n) != 0) {
             free(stream);
             return -1;
         }
@@ -850,6 +858,10 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
     int cid = OBJ_FIRST + PAGE_OBJS * w->npages;
     int pid = cid + 2;
     int rc = -1;
+    char media_w[32], media_h[32];
+    if (geom_fmt(media_w, sizeof media_w, f->g.width) < 0 || geom_fmt(media_h, sizeof media_h, f->g.height) < 0) {
+        goto done;
+    }
     if (write_flate_obj(w, cid, stream, o, "") != 0) {
         goto done;
     }
@@ -857,10 +869,10 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
         goto done;
     }
     if (fprintf(w->fp,
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]\n"
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s]\n"
                 "/Contents %d 0 R\n"
                 "/Resources << /Font << /F1 %d 0 R >> >> >>\nendobj\n",
-                cid, OBJ_TYPE0) < 0) {
+                media_w, media_h, cid, OBJ_TYPE0) < 0) {
         goto done;
     }
     w->npages++;

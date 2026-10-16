@@ -9,7 +9,7 @@ VERSION_MINOR := $(word 2,$(subst ., ,$(VERSION)))
 DIST_VERSION = $(shell git show HEAD:include/ki_xml_pdf.h 2>/dev/null | sed -n 's/^\#define KI_XML_PDF_VERSION "\([0-9.]*\)"/\1/p')
 DIST_ARCHIVE = ki_xml_pdf-$(DIST_VERSION).tar.gz
 
-LIB_SRCS = src/xml_parse.c src/font.c src/page_sink.c src/pdf_write.c src/layout.c src/report.c src/convert.c
+LIB_SRCS = src/xml_parse.c src/font.c src/geometry.c src/page_sink.c src/pdf_write.c src/layout.c src/report.c src/convert.c
 LIB_OBJS = $(LIB_SRCS:.c=.o)
 
 PDFTOTEXT ?= pdftotext
@@ -40,7 +40,7 @@ libki_xml_pdf.so: $(LIB_OBJS) libki_xml_pdf.map
 xml2pdf: src/main.c libki_xml_pdf.a
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/main.c libki_xml_pdf.a $(KI_LIBS)
 
-test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c tests/test_flate.c tests/test_layout_wrap.c tests/pdf_inflate.c
+test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c tests/test_flate.c tests/test_layout_wrap.c tests/test_geometry.c tests/pdf_inflate.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_stream.c libki_xml_pdf.a $(KI_LIBS) -pthread $(TEST_WRAP)
 
 test: test_stream xml2pdf
@@ -56,6 +56,7 @@ check:
 	python3 tests/cli_pipeline.py
 	python3 tests/font_metrics_check.py
 	python3 tests/wrap_check.py
+	python3 tests/geometry_check.py
 	python3 tests/catalog_verify.py
 
 test-san:

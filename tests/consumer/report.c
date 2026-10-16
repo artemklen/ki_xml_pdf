@@ -31,7 +31,25 @@ int main(int argc, char **argv) {
     ki_options_init(&options);
     options.profile = KI_PROFILE_REPORT;
     int rc;
-    if (argc == 4) {
+    if (argc == 4 && strcmp(argv[3], "a4-landscape") == 0) {
+        KiConfig config;
+        if (ki_config_init(&config, sizeof config) != 0 || ki_config_init(&config, sizeof config - 1) != 2) {
+            fprintf(stderr, "consumer: ki_config_init size check failed\n");
+            return 1;
+        }
+        config.size = sizeof config + 8;
+        if (ki_convert_file_cfg(argv[1], argv[2], &options, &config, &result) != 2 ||
+            result.cause != KI_CAUSE_USAGE) {
+            fprintf(stderr, "consumer: wrong KiConfig size accepted\n");
+            return 1;
+        }
+        config.size = sizeof config;
+        config.page_size = KI_PAGE_A4;
+        config.orientation = KI_ORIENT_LANDSCAPE;
+        config.margin_left = 30.5;
+        config.font_size = 12;
+        rc = ki_convert_file_cfg(argv[1], argv[2], &options, &config, &result);
+    } else if (argc == 4) {
         if (strcmp(argv[3], "callback") != 0) return 2;
         FILE *input = fopen(argv[1], "rb");
         if (input == NULL) return 3;

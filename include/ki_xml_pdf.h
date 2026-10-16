@@ -143,6 +143,61 @@ KI_API int ki_convert(const KiOptions *opt, KiResult *result);
    The caller retains ownership of input/callback resources. */
 KI_API int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *result);
 
+/* Page geometry, added beside KiOptions so that KiOptions, KiResult and
+   KiEvent keep their 0.2 layout. Values are PostScript points (1/72 inch),
+   rounded to the nearest 0.001 pt; the PDF MediaBox and text placement use
+   the same rounded values. Letter is 612 x 792, A4 595.276 x 841.89 (210 x
+   297 mm); landscape swaps width and height of a named size. A custom size
+   sets page_width/page_height and stays as given (orientation must be
+   portrait); a named size requires both to be 0. Limits: page sides 3..14400,
+   margins 0..14400 with left + right < width and top + bottom < height, font
+   size 1..144. NaN and infinities are rejected. Leading is 1.4 x font size
+   (14 pt at 10 pt), rounded down to 0.001 pt. A page holds at most 50 lines.
+   Every glyph's ink, not only its advance, stays inside the margins: a line
+   whose first glyph extends left of its origin starts further right, and the
+   first baseline and the line count leave room for the font's ascent and
+   descent. An invalid value fails with KI_CAUSE_USAGE before any file is
+   opened or callback runs. A valid geometry with no room for one line, or
+   for some single glyph of the loaded font, fails with KI_CAUSE_USAGE after
+   the font loads and before any read, write or map callback; a file
+   destination is left as it was. */
+enum {
+    KI_PAGE_LETTER = 0,
+    KI_PAGE_A4 = 1,
+    KI_PAGE_CUSTOM = 2
+};
+
+enum {
+    KI_ORIENT_PORTRAIT = 0,
+    KI_ORIENT_LANDSCAPE = 1
+};
+
+typedef struct KiConfig {
+    size_t size;
+    int page_size;
+    int orientation;
+    double page_width;
+    double page_height;
+    double margin_top;
+    double margin_right;
+    double margin_bottom;
+    double margin_left;
+    double font_size;
+} KiConfig;
+
+/* Writes defaults (Letter portrait, 40 pt margins, 10 pt font) when size is
+   a KiConfig size this library knows, writing no more than size bytes, and
+   returns 0. Otherwise writes nothing and returns 2. Use
+   ki_config_init(&cfg, sizeof cfg). A conversion rejects any other
+   cfg->size as KI_CAUSE_USAGE. */
+KI_API int ki_config_init(KiConfig *cfg, size_t size);
+/* As ki_convert_file, ki_convert and ki_convert_to_file, with cfg's page
+   geometry. A NULL cfg is the default geometry, identical to the 0.2 calls. */
+KI_API int ki_convert_file_cfg(const char *xml_path, const char *pdf_path, const KiOptions *opt, const KiConfig *cfg,
+                               KiResult *result);
+KI_API int ki_convert_cfg(const KiOptions *opt, const KiConfig *cfg, KiResult *result);
+KI_API int ki_convert_to_file_cfg(const char *pdf_path, const KiOptions *opt, const KiConfig *cfg, KiResult *result);
+
 #ifdef __cplusplus
 }
 #endif

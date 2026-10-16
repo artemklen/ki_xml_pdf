@@ -2,6 +2,7 @@
 #define PDF_WRITE_H
 
 #include "font.h"
+#include "geometry.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -28,6 +29,7 @@
 #define PDF_FAIL_CANCEL 6
 #define PDF_FAIL_XREF 7
 #define PDF_FAIL_FLATE 8 /* zlib reported an error other than out of memory */
+#define PDF_FAIL_GEOMETRY 9 /* no line or glyph of the font fits the page */
 
 typedef struct PdfConfig {
     const char *font_path;
@@ -38,6 +40,8 @@ typedef struct PdfConfig {
     int debug_fail_page;
     int (*cancelled)(void *user);
     void *cancel_user;
+    /* NULL is the default Letter geometry. */
+    const Geometry *geometry;
 } PdfConfig;
 
 struct z_stream_s;
@@ -48,6 +52,8 @@ typedef struct PdfWriter {
     FILE *offsets;
     char *off_path;
     FontFace font;
+    /* Fitted after the font loads and before the header is written. */
+    PageFrame frame;
     int nobj;
     int npages;
     int hit_limit;

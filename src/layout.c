@@ -5,10 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static long line_limit(const FontFace *face) {
-    return (long)(612 - 80) * face->units / 10;
-}
-
 static int utf8_next(const char *s, size_t n, size_t *i, unsigned *cp, size_t *clen) {
     if (*i >= n) {
         return 0;
@@ -85,7 +81,7 @@ static int flush_page(Layout *lay) {
 
 /* Moves line[0, len) to the page and the pending word to the line start. */
 static int commit_line(Layout *lay) {
-    int max_lines = font_max_lines(&lay->pdf->font, 792, 40, 10, 14);
+    int max_lines = lay->pdf->frame.max_lines;
     if (max_lines > LAYOUT_LINES) {
         max_lines = LAYOUT_LINES;
     }
@@ -105,20 +101,46 @@ static int commit_line(Layout *lay) {
     lay->nlines++;
     memmove(lay->line, lay->line + lay->len, lay->wlen);
     lay->len = 0;
-    lay->units = 0;
+    run_reset(&lay->run);
     return 0;
 }
 
-/* Commits the first k bytes (width k_units) of the pending word as one full
-   line; the rest stays pending. The line must already be empty. */
-static int commit_word(Layout *lay, size_t k, long k_units) {
-    lay->len = k;
-    lay->units = k_units;
-    lay->wlen -= k;
-    lay->wunits -= k_units;
+/* Measures the pending word again after a cut moved it to a line start. */
+static int word_rescan(Layout *lay) {
+    const FontFace *face = &lay->pdf->font;
+    const char *s = lay->line + lay->len;
+    size_t i = 0;
+    run_reset(&lay->wrun);
+    run_reset(&lay->wbase_run);
     lay->wbase = 0;
-    lay->wbase_units = 0;
-    return commit_line(lay);
+    while (i < lay->wlen) {
+        size_t at = i;
+        unsigned cp = 0;
+        size_t clen = 0;
+        uint16_t gid = 0;
+        uint16_t adv = 0;
+        if (utf8_next(s, lay->wlen, &i, &cp, &clen) <= 0 || font_lookup(face, cp, &gid, &adv) != 0) {
+            return -1;
+        }
+        if (adv > 0) {
+            lay->wbase = at;
+            lay->wbase_run = lay->wrun;
+        }
+        run_add(&lay->wrun, face, cp, adv);
+    }
+    return 0;
+}
+
+/* Commits the first k bytes (extent k_run) of the pending word as one full
+   line; the rest stays pending. The line must already be empty. */
+static int commit_word(Layout *lay, size_t k, const InkRun *k_run) {
+    lay->run = *k_run;
+    lay->len = k;
+    lay->wlen -= k;
+    if (commit_line(lay) != 0) {
+        return -1;
+    }
+    return word_rescan(lay);
 }
 
 /* Puts the pending word on the current line, or on a new one when it does
@@ -127,31 +149,41 @@ static int place_word(Layout *lay) {
     if (lay->wlen == 0) {
         return 0;
     }
-    if (lay->len > 0 && lay->units + lay->wunits > line_limit(&lay->pdf->font) && commit_line(lay) != 0) {
-        return -1;
+    if (lay->len > 0) {
+        InkRun joined = lay->run;
+        run_join(&joined, &lay->wrun);
+        if (!geom_fits(&lay->pdf->frame, &joined) && commit_line(lay) != 0) {
+            return -1;
+        }
     }
+    run_join(&lay->run, &lay->wrun);
     lay->len += lay->wlen;
-    lay->units += lay->wunits;
     lay->wlen = 0;
-    lay->wunits = 0;
+    run_reset(&lay->wrun);
     lay->wbase = 0;
-    lay->wbase_units = 0;
+    run_reset(&lay->wbase_run);
     return 0;
 }
 
-/* Appends one code point to the pending word. A word wider than the line
-   or longer than LAYOUT_LINE - 1 bytes is cut, after anything earlier on the
-   line has been committed: before this code point when it has an advance,
-   otherwise before the base it would attach to. */
-static int word_append(Layout *lay, const char *b, size_t clen, long adv, long limit) {
-    if (adv > limit) {
-        return -1;
-    }
-    if (adv > 0 && lay->wunits + adv > limit) {
+/* Appends one code point to the pending word. A word whose advance box or
+   ink would cross the margins, or longer than LAYOUT_LINE - 1 bytes, is cut
+   after anything earlier on the line has been committed: before this code
+   point when it has an advance, otherwise before the base it would attach
+   to. */
+static int word_append(Layout *lay, const char *b, size_t clen, unsigned cp, unsigned adv) {
+    const PageFrame *f = &lay->pdf->frame;
+    InkRun glyph;
+    run_reset(&glyph);
+    run_add(&glyph, &lay->pdf->font, cp, adv);
+    InkRun next = lay->wrun;
+    run_join(&next, &glyph);
+    if (!geom_fits(f, &next)) {
         if (lay->len > 0 && commit_line(lay) != 0) {
             return -1;
         }
-        if (commit_word(lay, lay->wlen, lay->wunits) != 0) {
+        size_t k = adv > 0 ? lay->wlen : lay->wbase;
+        InkRun k_run = adv > 0 ? lay->wrun : lay->wbase_run;
+        if (k > 0 && commit_word(lay, k, &k_run) != 0) {
             return -1;
         }
     }
@@ -161,29 +193,35 @@ static int word_append(Layout *lay, const char *b, size_t clen, long adv, long l
         }
         if (lay->wlen + clen >= LAYOUT_LINE) {
             size_t k = adv > 0 ? lay->wlen : lay->wbase;
-            long k_units = adv > 0 ? lay->wunits : lay->wbase_units;
+            InkRun k_run = adv > 0 ? lay->wrun : lay->wbase_run;
             if (k == 0) {
                 lay->line_full = 1;
                 return -1;
             }
-            if (commit_word(lay, k, k_units) != 0) {
+            if (commit_word(lay, k, &k_run) != 0) {
                 return -1;
             }
         }
     }
+    next = lay->wrun;
+    run_join(&next, &glyph);
+    if (!geom_fits(f, &next)) {
+        lay->too_wide = 1;
+        return -1;
+    }
     if (adv > 0) {
         lay->wbase = lay->wlen;
-        lay->wbase_units = lay->wunits;
+        lay->wbase_run = lay->wrun;
     }
     memcpy(lay->line + lay->len + lay->wlen, b, clen);
     lay->wlen += clen;
-    lay->wunits += adv;
+    lay->wrun = next;
     return 0;
 }
 
 /* Space and tab end the pending word and stay on its line even past the
    width: they have no ink, and the next word is measured after them. */
-static int space_append(Layout *lay, const char *b, size_t clen, long adv) {
+static int space_append(Layout *lay, const char *b, size_t clen, unsigned adv) {
     if (place_word(lay) != 0) {
         return -1;
     }
@@ -192,7 +230,7 @@ static int space_append(Layout *lay, const char *b, size_t clen, long adv) {
     }
     memcpy(lay->line + lay->len, b, clen);
     lay->len += clen;
-    lay->units += adv;
+    run_add(&lay->run, &lay->pdf->font, ' ', adv);
     return 0;
 }
 
@@ -235,8 +273,8 @@ static int seq_need(unsigned char c) {
 int layout_text(Layout *lay, const char *s, size_t n) {
     lay->bad_cp = 0;
     lay->line_full = 0;
+    lay->too_wide = 0;
     size_t i = 0;
-    long limit = line_limit(&lay->pdf->font);
     while (lay->hold_n > 0 || i < n) {
         if (lay->hold_n < 4 && i < n) {
             int need = lay->hold_n == 0 ? seq_need((unsigned char)s[i]) : seq_need(lay->hold[0]);
@@ -297,7 +335,7 @@ int layout_text(Layout *lay, const char *s, size_t n) {
             return -1;
         }
         const char *b = chunk + (at - clen);
-        rc = look == ' ' ? space_append(lay, b, clen, (long)adv) : word_append(lay, b, clen, (long)adv, limit);
+        rc = look == ' ' ? space_append(lay, b, clen, adv) : word_append(lay, b, clen, look, adv);
         if (rc != 0) {
             return -1;
         }

@@ -2,6 +2,7 @@
 
 #include "convert.h"
 
+#include "geometry.h"
 #include "ki_xml_pdf.h"
 #include "layout.h"
 #include "pdf_write.h"
@@ -32,6 +33,7 @@ void xml2pdf_debug_fail_after_bytes(long n) {
 }
 
 #define LINE_FULL_MSG "layout: line over 1023 bytes"
+#define TOO_WIDE_MSG "layout: glyph cluster wider than the line"
 
 static int text_is_space(const char *s, size_t n) {
     for (size_t i = 0; i < n; i++) {
@@ -284,9 +286,9 @@ int ki_doc_text(KiDoc *doc, const char *s, size_t n) {
     if (rc != 0 && doc->lay->bad_cp != 0) {
         doc->cause = KI_CAUSE_FONT;
         snprintf(doc->error, sizeof doc->error, "font: U+%04X", doc->lay->bad_cp);
-    } else if (rc != 0 && doc->lay->line_full) {
+    } else if (rc != 0 && (doc->lay->line_full || doc->lay->too_wide)) {
         doc->cause = KI_CAUSE_RESOURCE;
-        snprintf(doc->error, sizeof doc->error, "%s", LINE_FULL_MSG);
+        snprintf(doc->error, sizeof doc->error, "%s", doc->lay->line_full ? LINE_FULL_MSG : TOO_WIDE_MSG);
     }
     return rc;
 }
@@ -324,6 +326,11 @@ static int fail_from_pdf(PdfWriter *pdf, int *cause, const char **msg) {
         *msg = "font: cannot load";
         return XML2PDF_ERR_XML;
     }
+    if (pdf->fail_kind == PDF_FAIL_GEOMETRY) {
+        *cause = KI_CAUSE_USAGE;
+        *msg = "page geometry: no line fits this font inside the margins";
+        return XML2PDF_ERR_USAGE;
+    }
     if (pdf->fail_kind == PDF_FAIL_XREF) {
         *cause = KI_CAUSE_RESOURCE;
         *msg = "resource limit: PDF exceeds classic xref offsets";
@@ -351,7 +358,7 @@ static int fail_from_pdf(PdfWriter *pdf, int *cause, const char **msg) {
 }
 
 static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_path, const KiOptions *opt,
-                           KiResult *result);
+                           const Geometry *geom, KiResult *result);
 
 static int reject_options(const KiOptions *opt, KiResult *result) {
     if (opt == NULL) {
@@ -369,7 +376,43 @@ static int reject_options(const KiOptions *opt, KiResult *result) {
     return 0;
 }
 
-static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *opt,
+/* Fills geom from cfg (defaults when NULL). Static checks only: whether a
+   line fits is known once the font is loaded. */
+static int reject_config(const KiConfig *cfg, const KiOptions *opt, Geometry *geom, KiResult *result) {
+    geom_default(geom);
+    if (cfg == NULL) {
+        return 0;
+    }
+    if (cfg->size != sizeof(KiConfig)) {
+        set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, "config size mismatch");
+        say(opt, "config size mismatch");
+        return -1;
+    }
+    const double margin[4] = {cfg->margin_top, cfg->margin_right, cfg->margin_bottom, cfg->margin_left};
+    const char *why = NULL;
+    if (geom_from_points(geom, cfg->page_size, cfg->orientation, cfg->page_width, cfg->page_height, margin,
+                         cfg->font_size, &why) != 0) {
+        set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, why);
+        say(opt, why);
+        return -1;
+    }
+    return 0;
+}
+
+int ki_config_init(KiConfig *cfg, size_t size) {
+    if (cfg == NULL || size != sizeof(KiConfig)) {
+        return XML2PDF_ERR_USAGE;
+    }
+    memset(cfg, 0, sizeof *cfg);
+    cfg->size = sizeof *cfg;
+    cfg->page_size = KI_PAGE_LETTER;
+    cfg->orientation = KI_ORIENT_PORTRAIT;
+    cfg->margin_top = cfg->margin_right = cfg->margin_bottom = cfg->margin_left = 40.0;
+    cfg->font_size = 10.0;
+    return 0;
+}
+
+static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *opt, const Geometry *geom,
                                KiResult *result) {
     int rc = XML2PDF_ERR_IO;
     int cause = KI_CAUSE_IO;
@@ -401,7 +444,7 @@ static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *
         goto open_fail;
     }
     setvbuf(out, NULL, _IOFBF, 4096);
-    return convert_streams(in, out, tmp_path, pdf_path, opt, result);
+    return convert_streams(in, out, tmp_path, pdf_path, opt, geom, result);
 
 open_fail:
     set_result(result, rc, cause, msg);
@@ -419,10 +462,16 @@ open_fail:
 }
 
 int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions *opt, KiResult *result) {
+    return ki_convert_file_cfg(xml_path, pdf_path, opt, NULL, result);
+}
+
+int ki_convert_file_cfg(const char *xml_path, const char *pdf_path, const KiOptions *opt, const KiConfig *cfg,
+                        KiResult *result) {
     if (result != NULL) {
         memset(result, 0, sizeof *result);
     }
-    if (reject_options(opt, result) != 0) {
+    Geometry geom;
+    if (reject_options(opt, result) != 0 || reject_config(cfg, opt, &geom, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
     if (xml_path == NULL || pdf_path == NULL) {
@@ -451,14 +500,19 @@ int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions 
         fclose(in);
         return XML2PDF_ERR_IO;
     }
-    return convert_file_stream(in, pdf_path, opt, result);
+    return convert_file_stream(in, pdf_path, opt, &geom, result);
 }
 
 int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *result) {
+    return ki_convert_to_file_cfg(pdf_path, opt, NULL, result);
+}
+
+int ki_convert_to_file_cfg(const char *pdf_path, const KiOptions *opt, const KiConfig *cfg, KiResult *result) {
     if (result != NULL) {
         memset(result, 0, sizeof *result);
     }
-    if (reject_options(opt, result) != 0) {
+    Geometry geom;
+    if (reject_options(opt, result) != 0 || reject_config(cfg, opt, &geom, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
     if (pdf_path == NULL || opt == NULL || opt->read_bytes == NULL) {
@@ -466,11 +520,11 @@ int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *res
         set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, msg);
         return XML2PDF_ERR_USAGE;
     }
-    return convert_file_stream(NULL, pdf_path, opt, result);
+    return convert_file_stream(NULL, pdf_path, opt, &geom, result);
 }
 
 static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_path, const KiOptions *opt,
-                           KiResult *result) {
+                           const Geometry *geom, KiResult *result) {
     int rc = XML2PDF_ERR_XML;
     int cause = KI_CAUSE_XML;
     int published = 0;
@@ -514,6 +568,7 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
         cfg.cancel_user = opt->cancel_user;
     }
     cfg.debug_fail_page = fail_at_page;
+    cfg.geometry = geom;
     if (pdf_begin_cfg(&pdf, out, &cfg) != 0) {
         pdf_ready = 1;
         const char *why = NULL;
@@ -615,10 +670,10 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
                         cause = KI_CAUSE_FONT;
                         snprintf(glyph_msg, sizeof glyph_msg, "font: U+%04X", lay.bad_cp);
                         why = glyph_msg;
-                    } else if (lay.line_full) {
+                    } else if (lay.line_full || lay.too_wide) {
                         rc = XML2PDF_ERR_RESOURCE;
                         cause = KI_CAUSE_RESOURCE;
-                        why = LINE_FULL_MSG;
+                        why = lay.line_full ? LINE_FULL_MSG : TOO_WIDE_MSG;
                     } else {
                         rc = XML2PDF_ERR_XML;
                         cause = KI_CAUSE_XML;
@@ -834,10 +889,15 @@ static int sink_close(void *cookie) {
 }
 
 int ki_convert(const KiOptions *opt, KiResult *result) {
+    return ki_convert_cfg(opt, NULL, result);
+}
+
+int ki_convert_cfg(const KiOptions *opt, const KiConfig *cfg, KiResult *result) {
     if (result != NULL) {
         memset(result, 0, sizeof *result);
     }
-    if (reject_options(opt, result) != 0) {
+    Geometry geom;
+    if (reject_options(opt, result) != 0 || reject_config(cfg, opt, &geom, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
     if (opt == NULL || opt->read_bytes == NULL || opt->write_bytes == NULL) {
@@ -880,7 +940,7 @@ int ki_convert(const KiOptions *opt, KiResult *result) {
     /* Reuse the file converter's body by pointing it at this stream.
        There is no destination path, so nothing is renamed into place.
        convert_streams always closes the stream, so the sink outlives it. */
-    int rc = convert_streams(NULL, out, NULL, NULL, opt, result);
+    int rc = convert_streams(NULL, out, NULL, NULL, opt, &geom, result);
     if (result != NULL) {
         result->output_bytes = sink->accepted;
     }
