@@ -161,7 +161,7 @@ int main(void) {
 | Function | Input | Output and failure behavior |
 | --- | --- | --- |
 | `ki_convert_file(xml_path, pdf_path, options, result)` | File path; ignores read/write callbacks | Atomic file publication; preserves the previous destination on failure |
-| `ki_convert(options, result)` | `read_bytes` callback | `write_bytes` callback; previously accepted bytes remain on failure |
+| `ki_convert(options, result)` | `read_bytes` callback | `write_bytes` callback; previously accepted bytes remain on failure and `output_bytes` counts exactly those bytes |
 | `ki_convert_to_file(pdf_path, options, result)` | `read_bytes` callback; ignores `write_bytes` | Atomic file publication, including input from a pipe or application stream |
 
 A read callback returns 0 only at EOF, a positive byte count for data, and a negative value for an error. A positive short read is not EOF. A write callback must accept the entire requested count or return an error. The caller owns callback resources and closes them; the library does not close caller streams or free caller state.

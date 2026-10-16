@@ -2352,6 +2352,58 @@ static int test_library_contract(void) {
     return 0;
 }
 
+static int short_write_half(void *user, const char *src, int n) {
+    MemIo *out = user;
+    if (out->fail_at > 0 && out->calls + 1 >= out->fail_at && n > 1) {
+        out->calls++;
+        out->len += (size_t)(n / 2);
+        return n / 2;
+    }
+    return mem_write(user, src, n);
+}
+
+static int test_callback_accepted_bytes(void) {
+    const char *xml = "<doc><p>Quota one</p><p>Quota two</p></doc>";
+    MemIo io;
+    KiOptions opt;
+    KiResult result;
+    memset(&io, 0, sizeof io);
+    io.s = xml;
+    io.n = strlen(xml);
+    ki_options_init(&opt);
+    opt.read_bytes = mem_read;
+    opt.write_bytes = mem_write;
+    opt.io_user = &io;
+    CHECK(ki_convert(&opt, &result) == 0);
+    CHECK(result.cause == KI_CAUSE_NONE);
+    CHECK(io.calls > 1 && result.output_bytes == (long)io.len);
+    long full = result.output_bytes;
+    int last = io.calls;
+    free(io.buf);
+
+    int stops[] = {1, 2, last};
+    for (size_t k = 0; k < sizeof stops / sizeof stops[0]; k++) {
+        for (int shorted = 0; shorted < 2; shorted++) {
+            memset(&io, 0, sizeof io);
+            io.s = xml;
+            io.n = strlen(xml);
+            io.fail_at = stops[k];
+            opt.write_bytes = shorted ? short_write_half : mem_write;
+            memset(&result, 0x5a, sizeof result);
+            CHECK(ki_convert(&opt, &result) == XML2PDF_ERR_IO);
+            CHECK(result.status == XML2PDF_ERR_IO && result.cause == KI_CAUSE_IO);
+            CHECK(result.output_bytes == (long)io.len);
+            CHECK(result.output_bytes < full);
+            if (stops[k] == 1 && !shorted) {
+                CHECK(result.output_bytes == 0);
+            }
+            free(io.buf);
+        }
+    }
+    opt.write_bytes = mem_write;
+    return 0;
+}
+
 static int unused_read(void *user, char *dst, int max) {
     (void)dst;
     (void)max;
@@ -3604,6 +3656,7 @@ int main(void) {
         {"library_contract", test_library_contract},
         {"callback_usage_result", test_callback_usage_result},
         {"callback_to_file", test_callback_to_file},
+        {"callback_accepted_bytes", test_callback_accepted_bytes},
         {"report_v1", test_report_v1},
         {"font_bounds", test_font_bounds},
         {"font_names", test_font_names},

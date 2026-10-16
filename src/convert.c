@@ -793,8 +793,11 @@ done:
 typedef struct {
     int (*write_bytes)(void *user, const char *src, int n);
     void *user;
+    long accepted;
 } ByteSink;
 
+/* The writer counts bytes as it hands them to stdio, but stdio buffers
+   them; only what the callback accepted is the delivered output. */
 static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
     ByteSink *sink = cookie;
     if (n > 2147483647u) {
@@ -802,6 +805,9 @@ static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
         return -1;
     }
     int wr = sink->write_bytes(sink->user, buf, (int)n);
+    if (wr > 0 && (size_t)wr <= n) {
+        sink->accepted += wr;
+    }
     if (wr < 0 || (size_t)wr != n) {
         errno = EIO;
         return -1;
@@ -810,7 +816,7 @@ static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
 }
 
 static int sink_close(void *cookie) {
-    free(cookie);
+    (void)cookie;
     return 0;
 }
 
@@ -842,6 +848,7 @@ int ki_convert(const KiOptions *opt, KiResult *result) {
     }
     sink->write_bytes = opt->write_bytes;
     sink->user = opt->io_user;
+    sink->accepted = 0;
     cookie_io_functions_t fn;
     memset(&fn, 0, sizeof fn);
     fn.write = sink_write;
@@ -858,8 +865,14 @@ int ki_convert(const KiOptions *opt, KiResult *result) {
         return XML2PDF_ERR_IO;
     }
     /* Reuse the file converter's body by pointing it at this stream.
-       There is no destination path, so nothing is renamed into place. */
-    return convert_streams(NULL, out, NULL, NULL, opt, result);
+       There is no destination path, so nothing is renamed into place.
+       convert_streams always closes the stream, so the sink outlives it. */
+    int rc = convert_streams(NULL, out, NULL, NULL, opt, result);
+    if (result != NULL) {
+        result->output_bytes = sink->accepted;
+    }
+    free(sink);
+    return rc;
 }
 
 static void log_stderr(void *user, const char *msg) {
