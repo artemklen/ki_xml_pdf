@@ -14,7 +14,7 @@ ASan and UBSan do not detect data races, and no thread sanitizer run is claimed.
 
 ## Gates on d95a5c1
 
-`gates/run_gates.sh` is the same 20-command script as for 48bdef2, run sequentially in a fresh clone checked out at `d95a5c1`. Every command exited 0 (`gates/summary.tsv`), and every log starts with `HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a`. `<corrective-root>` is the external directory of this run on the measuring host.
+`gates/run_gates.sh` is the same 20-command script as for 48bdef2, run sequentially in a fresh clone checked out at `d95a5c1`. Every command exited 0 (`gates/summary.tsv`), and the second line of every log is `### HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a`. `<corrective-root>` is the external directory of this run on the measuring host.
 
 | Gate | Result | Log |
 | --- | --- | --- |
@@ -27,14 +27,14 @@ ASan and UBSan do not detect data races, and no thread sanitizer run is claimed.
 | `make distcheck` and five negative controls | archive ok; each control failed as required | `14-…`, `15-…` |
 | CMake build and CTest, resource unit tests, 1 GiB selection proof, install/pkg-config/ELF | ok | `17-…` to `20-…` |
 
-The distcheck archive `ki_xml_pdf-0.3.0.tar.gz` built from `d95a5c1` was 886,958 bytes with SHA-256 `f3c9b5e6a22696d49bce9cbe911d009f769cfdea3eeb520bc9ebb2e0b619280e`. No `/tmp/ki-it-*` file remained after the run.
+The distcheck archive `ki_xml_pdf-0.3.0.tar.gz` built from `d95a5c1` was 886,958 bytes with SHA-256 `f3c9b5e6a22696d49bce9cbe911d009f769cfdea3eeb520bc9ebb2e0b619280e`. After the run, `ls /tmp/ki-it-*` on the host found no file (an observation, not a committed log).
 
 ## Negative controls
 
 Both new checks were shown to fail against a deliberately broken copy of the tests (`negative/`, built by the correction work in a separate clone):
 
-- `race-mutation.diff` moves the counter update out of the lock and adds `sched_yield()` between its read and write. `race.log`: `round 0: 250 deflate calls, serial references made 251`, `FAILED integration_contexts`.
-- `cleanup-mutation.diff` removes the cleanup after `it_contexts()`. `cleanup.log`: `FAIL … !job->owns_in && !job->owns_out`, `FAILED integration_cleanup`.
+- `race-mutation.diff` moves the counter update out of the lock and adds `sched_yield()` between its read and write. `race.txt`: `round 0: 250 deflate calls, serial references made 251`, `FAILED integration_contexts`.
+- `cleanup-mutation.diff` removes the cleanup after `it_contexts()`. `cleanup.txt`: `FAIL … !job->owns_in && !job->owns_out`, `FAILED integration_cleanup`.
 
 ## Reused evidence
 
