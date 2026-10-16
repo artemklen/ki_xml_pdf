@@ -1,0 +1,8 @@
+### 18-resource-units: python3 tests/resource_baseline_test.py && python3 tests/large_proof.py --self-test
+### HEAD 1193cdc847f1dba06e6b345a1c8775f534ce89f8
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 0.012s
+
+OK
+large_proof self-test ok

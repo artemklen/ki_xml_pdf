@@ -1,0 +1,85 @@
+### 20-pkgconfig-static: rm -rf <final-root>/scratch/prefix && make -j2 install PREFIX=<final-root>/scratch/prefix && PKG_CONFIG_LIBDIR=<final-root>/scratch/prefix/lib/pkgconfig pkg-config --static --libs ki_xml_pdf && PKG_CONFIG_LIBDIR=<final-root>/scratch/prefix/lib/pkgconfig pkg-config --modversion ki_xml_pdf && sed -n 1,3p <final-root>/scratch/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake && grep -n VERSION <final-root>/scratch/prefix/include/ki_xml_pdf.h | head -3 && <final-root>/scratch/prefix/bin/xml2pdf --version && readelf -d <final-root>/scratch/prefix/lib/libki_xml_pdf.so | grep -E 'SONAME|NEEDED' && readelf --dyn-syms -W <final-root>/scratch/prefix/lib/libki_xml_pdf.so | grep -E 'KI_0_[23]' | awk '{print $8}' | sort && ls -la <final-root>/scratch/prefix/bin <final-root>/scratch/prefix/include <final-root>/scratch/prefix/lib <final-root>/scratch/prefix/share/ki_xml_pdf <final-root>/scratch/prefix/lib/cmake/ki_xml_pdf <final-root>/scratch/prefix/lib/pkgconfig
+### HEAD 1193cdc847f1dba06e6b345a1c8775f534ce89f8
+printf '%s\n' '<final-root>/scratch/prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<final-root>/scratch/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"<final-root>/scratch/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+mkdir -p <final-root>/scratch/prefix/bin <final-root>/scratch/prefix/lib <final-root>/scratch/prefix/include \
+	<final-root>/scratch/prefix/share/ki_xml_pdf
+cp xml2pdf <final-root>/scratch/prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so <final-root>/scratch/prefix/lib/
+cp include/ki_xml_pdf.h <final-root>/scratch/prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE <final-root>/scratch/prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so <final-root>/scratch/prefix/lib/libki_xml_pdf.so.0
+mkdir -p "<final-root>/scratch/prefix/lib/cmake/ki_xml_pdf" "<final-root>/scratch/prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "<final-root>/scratch/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "<final-root>/scratch/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "<final-root>/scratch/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|<final-root>/scratch/prefix|g' \
+	-e 's|@KI_LIBDIR@|<final-root>/scratch/prefix/lib|g' -e 's|@KI_INCLUDEDIR@|<final-root>/scratch/prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "<final-root>/scratch/prefix/lib/pkgconfig/ki_xml_pdf.pc"
+-L<final-root>/scratch/prefix/lib -lki_xml_pdf -lz 
+0.3.0
+set(PACKAGE_VERSION "0.3.0")
+set(PACKAGE_VERSION_COMPATIBLE FALSE)
+if(PACKAGE_FIND_VERSION VERSION_EQUAL PACKAGE_VERSION)
+43:#define KI_XML_PDF_VERSION "0.3.0"
+xml2pdf 0.3.0 records-v1
+ 0x0000000000000001 (NEEDED)             Shared library: [libz.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x000000000000000e (SONAME)             Library soname: [libki_xml_pdf.so.0]
+KI_0_2
+KI_0_3
+ki_config_init@@KI_0_3
+ki_convert_cfg@@KI_0_3
+ki_convert_file_cfg@@KI_0_3
+ki_convert_to_file@@KI_0_2
+ki_convert_to_file_cfg@@KI_0_3
+<final-root>/scratch/prefix/bin:
+total 304
+drwxrwxr-x 2 artem artem   4096 Oct 16 19:34 .
+drwxrwxr-x 6 artem artem   4096 Oct 16 19:34 ..
+-rwxrwxr-x 1 artem artem 302152 Oct 16 19:34 xml2pdf
+
+<final-root>/scratch/prefix/include:
+total 20
+drwxrwxr-x 2 artem artem  4096 Oct 16 19:34 .
+drwxrwxr-x 6 artem artem  4096 Oct 16 19:34 ..
+-rw-rw-r-- 1 artem artem 10005 Oct 16 19:34 ki_xml_pdf.h
+
+<final-root>/scratch/prefix/lib:
+total 804
+drwxrwxr-x 4 artem artem   4096 Oct 16 19:34 .
+drwxrwxr-x 6 artem artem   4096 Oct 16 19:34 ..
+drwxrwxr-x 3 artem artem   4096 Oct 16 19:34 cmake
+-rw-rw-r-- 1 artem artem 506008 Oct 16 19:34 libki_xml_pdf.a
+-rwxrwxr-x 1 artem artem 296168 Oct 16 19:34 libki_xml_pdf.so
+lrwxrwxrwx 1 artem artem     16 Oct 16 19:34 libki_xml_pdf.so.0 -> libki_xml_pdf.so
+drwxrwxr-x 2 artem artem   4096 Oct 16 19:34 pkgconfig
+
+<final-root>/scratch/prefix/lib/cmake/ki_xml_pdf:
+total 20
+drwxrwxr-x 2 artem artem 4096 Oct 16 19:34 .
+drwxrwxr-x 3 artem artem 4096 Oct 16 19:34 ..
+-rw-rw-r-- 1 artem artem  690 Oct 16 19:34 ki_xml_pdfConfig.cmake
+-rw-rw-r-- 1 artem artem  569 Oct 16 19:34 ki_xml_pdfConfigVersion.cmake
+-rw-rw-r-- 1 artem artem  720 Oct 16 19:34 ki_xml_pdfTargets.cmake
+
+<final-root>/scratch/prefix/lib/pkgconfig:
+total 12
+drwxrwxr-x 2 artem artem 4096 Oct 16 19:34 .
+drwxrwxr-x 4 artem artem 4096 Oct 16 19:34 ..
+-rw-rw-r-- 1 artem artem  409 Oct 16 19:34 ki_xml_pdf.pc
+
+<final-root>/scratch/prefix/share/ki_xml_pdf:
+total 760
+drwxrwxr-x 2 artem artem   4096 Oct 16 19:34 .
+drwxrwxr-x 3 artem artem   4096 Oct 16 19:34 ..
+-rw-rw-r-- 1 artem artem   3859 Oct 16 19:34 DejaVuSans.copyright
+-rw-rw-r-- 1 artem artem 759720 Oct 16 19:34 DejaVuSans.ttf
+-rw-rw-r-- 1 artem artem   1067 Oct 16 19:34 LICENSE

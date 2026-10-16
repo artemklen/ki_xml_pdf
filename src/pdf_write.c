@@ -630,7 +630,9 @@ static ssize_t cap_write(void *cookie, const char *buf, size_t n) {
     if (account_bytes(w, n) != 0) {
         return -1;
     }
-    if (fwrite(buf, 1, n, cap->raw) != n) {
+    /* fwrite can report n after an earlier buffered flush of raw failed and
+       its bytes were dropped; the sticky error flag is the only trace. */
+    if (fwrite(buf, 1, n, cap->raw) != n || ferror(cap->raw)) {
         w->fail_kind = PDF_FAIL_IO;
         return -1;
     }

@@ -200,7 +200,7 @@ int main(void) {
 | `ki_convert_to_file(pdf_path, options, result)` | `read_bytes` callback; ignores `write_bytes` | Atomic file publication, including input from a pipe or application stream |
 | `ki_convert_file_cfg`, `ki_convert_cfg`, `ki_convert_to_file_cfg` | As the call without `_cfg`, plus a `const KiConfig *` before `result` | Same, with the configured page geometry and optional `/Info`; `NULL` is the default geometry without `/Info` |
 
-A read callback returns 0 only at EOF, a positive byte count for data, and a negative value for an error. A positive short read is not EOF. A write callback must accept the entire requested count or return an error. The caller owns callback resources and closes them; the library does not close caller streams or free caller state.
+A read callback returns 0 only at EOF, a positive byte count for data, and a negative value for an error. A positive short read is not EOF. A write callback must accept the entire requested count or return an error. The first negative, short, zero or over-count return fails the conversion with `KI_CAUSE_IO`, even if later calls would succeed, and the callback is not called again. The caller owns callback resources and closes them; the library does not close caller streams or free caller state.
 
 Page geometry lives in a separate `KiConfig`, so `KiOptions`, `KiResult` and `KiEvent` keep their 0.2 layout and the 0.2 functions keep their exports and behavior. Initialize it with `ki_config_init(&cfg, sizeof cfg)` and set `page_size` (`KI_PAGE_LETTER`, `KI_PAGE_A4`, `KI_PAGE_CUSTOM`), `orientation` (`KI_ORIENT_PORTRAIT`, `KI_ORIENT_LANDSCAPE`), `page_width`/`page_height` (custom sizes only), `margin_top`/`margin_right`/`margin_bottom`/`margin_left` and `font_size`, in points with the limits listed in [page geometry](#page-geometry). `KiConfig` also carries the optional `/Info` fields `title`, `producer` and `creation_date` (`const char *`, `NULL` by default and then not written), with the rules of [document information](#document-information); `KI_INFO_TEXT_MAX` is the 1024-byte limit. The library copies them at the start of the call. A `size` other than `sizeof(KiConfig)` or `KI_CONFIG_SIZE_GEOMETRY` (a geometry-only config that ends before the `/Info` fields), or an invalid value, fails with `KI_CAUSE_USAGE` (`page geometry: ...` or `metadata: ...`) before any file is opened or callback runs. This program writes `input.xml` as A4 landscape with 36 pt margins, 12 pt type and a title:
 
@@ -296,12 +296,12 @@ An independent streaming oracle checked every rendered record against the fixtur
 
 ### Final measurements on 0.3.0
 
-The [OSR-25 run](docs/evidence/osr-25-integration-48bdef2/README.md) repeated both series with the same runner, fixtures, options and font on the integrated 0.3.0 source `48bdef2`, on the same host. All nine cases passed the oracle and every resource gate:
+The [final OSR-25 run](docs/evidence/osr-25-callback-1193cdc/README.md) repeated both series with the same runner, fixtures, options and font on the 0.3.0 source `1193cdc`, which includes the callback write fix, on the same host. All nine cases passed the oracle and every resource gate:
 
-- **Full output**: converter peak RSS 2752–2952 KiB. With Flate streams the 64 MiB inputs produced 115,552 pages / 112,864,984 bytes (`records-v1`) and 39,033 pages / 48,620,561 bytes (`report-v1`); the 16 MiB `report-v1` PDF is 12,545,307 bytes, 14.4% of the 86,884,343-byte baseline. Converter time grew with compression, for example 4.27 → 11.54 s for the 64 MiB `records-v1` input.
-- **Selection** of 1000 records from 16, 256 and 1024 MiB: converter peak RSS 2764–2848 KiB, 41 pages and about 461 KB of PDF each time.
+- **Full output**: converter peak RSS 2804–2976 KiB. With Flate streams the 64 MiB inputs produced 115,552 pages / 112,864,984 bytes (`records-v1`) and 39,033 pages / 48,620,561 bytes (`report-v1`); the 16 MiB `report-v1` PDF is 12,545,307 bytes, 14.4% of the 86,884,343-byte baseline. Converter time grew with compression, for example 4.27 → 11.52 s for the 64 MiB `records-v1` input.
+- **Selection** of 1000 records from 16, 256 and 1024 MiB: converter peak RSS 2764–2892 KiB, 41 pages and about 461 KB of PDF each time.
 
-The baseline stays unchanged. Full output of a 1 GiB input was again not measured.
+Every PDF is byte-identical to the earlier [run on `48bdef2`](docs/evidence/osr-25-integration-48bdef2/README.md), which is kept as a historical record. The baseline stays unchanged. Full output of a 1 GiB input was again not measured.
 
 Layout consists of sequential text blocks. Tables, global sorting, XSL-FO, UTF-16, additional operating systems, and automatic support for unknown schemas are outside the current contract. Adoption and comparisons with other converters have not been measured.
 

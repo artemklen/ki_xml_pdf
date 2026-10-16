@@ -1,0 +1,159 @@
+### 15-distcheck-negative: if make distcheck CC=false; then echo 'failing compiler accepted'; exit 1; fi; if make distcheck CXX=false; then echo 'failing C++ compiler accepted'; exit 1; fi; if make distcheck PDFTOTEXT=/bin/false; then echo 'failing reader accepted'; exit 1; fi; printf 'not the oracle\n' > <final-root>/scratch/bad-oracle.txt; if make distcheck DISTCHECK_ORACLE=<final-root>/scratch/bad-oracle.txt; then echo 'bad oracle accepted'; exit 1; fi; if make distcheck DISTCHECK_BREAK=license; then echo 'missing license accepted'; exit 1; fi; echo 'all five negative controls failed as required'
+### HEAD 1193cdc847f1dba06e6b345a1c8775f534ce89f8
+test -n "0.3.0"
+git archive --format=tar.gz --prefix=ki_xml_pdf-0.3.0/ -o ki_xml_pdf-0.3.0.tar.gz HEAD
+sha256sum ki_xml_pdf-0.3.0.tar.gz
+bc12c9e593916a02bd70556cd597f1b353a4fe57d58a42908b9c13843ca3729d  ki_xml_pdf-0.3.0.tar.gz
+CC="false" CXX="g++" PDFTOTEXT="pdftotext" \
+	DISTCHECK_ORACLE="" DISTCHECK_BREAK="" \
+	bash tests/distcheck.sh ki_xml_pdf-0.3.0.tar.gz
+make[1]: Entering directory '/tmp/ki-xml-pdf-dist.OMt5vw/ki_xml_pdf-0.3.0'
+false -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.OMt5vw/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+make[1]: *** [Makefile:30: src/xml_parse.o] Error 1
+make[1]: Leaving directory '/tmp/ki-xml-pdf-dist.OMt5vw/ki_xml_pdf-0.3.0'
+make: *** [Makefile:106: distcheck] Error 2
+test -n "0.3.0"
+git archive --format=tar.gz --prefix=ki_xml_pdf-0.3.0/ -o ki_xml_pdf-0.3.0.tar.gz HEAD
+sha256sum ki_xml_pdf-0.3.0.tar.gz
+bc12c9e593916a02bd70556cd597f1b353a4fe57d58a42908b9c13843ca3729d  ki_xml_pdf-0.3.0.tar.gz
+CC="cc" CXX="false" PDFTOTEXT="pdftotext" \
+	DISTCHECK_ORACLE="" DISTCHECK_BREAK="" \
+	bash tests/distcheck.sh ki_xml_pdf-0.3.0.tar.gz
+make[1]: Entering directory '/tmp/ki-xml-pdf-dist.Dmmq15/ki_xml_pdf-0.3.0'
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/tmp/ki-xml-pdf-dist.Dmmq15/prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-xml-pdf-dist.Dmmq15/prefix/bin /tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib /tmp/ki-xml-pdf-dist.Dmmq15/prefix/include \
+	/tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-xml-pdf-dist.Dmmq15/prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-xml-pdf-dist.Dmmq15/prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-xml-pdf-dist.Dmmq15/prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-xml-pdf-dist.Dmmq15/prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-xml-pdf-dist.Dmmq15/prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-xml-pdf-dist.Dmmq15/prefix/lib/pkgconfig/ki_xml_pdf.pc"
+make[1]: Leaving directory '/tmp/ki-xml-pdf-dist.Dmmq15/ki_xml_pdf-0.3.0'
+make: *** [Makefile:106: distcheck] Error 1
+test -n "0.3.0"
+git archive --format=tar.gz --prefix=ki_xml_pdf-0.3.0/ -o ki_xml_pdf-0.3.0.tar.gz HEAD
+sha256sum ki_xml_pdf-0.3.0.tar.gz
+bc12c9e593916a02bd70556cd597f1b353a4fe57d58a42908b9c13843ca3729d  ki_xml_pdf-0.3.0.tar.gz
+CC="cc" CXX="g++" PDFTOTEXT="/bin/false" \
+	DISTCHECK_ORACLE="" DISTCHECK_BREAK="" \
+	bash tests/distcheck.sh ki_xml_pdf-0.3.0.tar.gz
+make[1]: Entering directory '/tmp/ki-xml-pdf-dist.oQENSh/ki_xml_pdf-0.3.0'
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/tmp/ki-xml-pdf-dist.oQENSh/prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-xml-pdf-dist.oQENSh/prefix/bin /tmp/ki-xml-pdf-dist.oQENSh/prefix/lib /tmp/ki-xml-pdf-dist.oQENSh/prefix/include \
+	/tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-xml-pdf-dist.oQENSh/prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-xml-pdf-dist.oQENSh/prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-xml-pdf-dist.oQENSh/prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-xml-pdf-dist.oQENSh/prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-xml-pdf-dist.oQENSh/prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-xml-pdf-dist.oQENSh/prefix/lib/pkgconfig/ki_xml_pdf.pc"
+make[1]: Leaving directory '/tmp/ki-xml-pdf-dist.oQENSh/ki_xml_pdf-0.3.0'
+pages=1
+pages=1
+pages=1
+pages=1
+pages=1 total=2 selected=2 skipped=0
+distcheck: standalone report PDF differs from oracle
+make: *** [Makefile:106: distcheck] Error 1
+test -n "0.3.0"
+git archive --format=tar.gz --prefix=ki_xml_pdf-0.3.0/ -o ki_xml_pdf-0.3.0.tar.gz HEAD
+sha256sum ki_xml_pdf-0.3.0.tar.gz
+bc12c9e593916a02bd70556cd597f1b353a4fe57d58a42908b9c13843ca3729d  ki_xml_pdf-0.3.0.tar.gz
+CC="cc" CXX="g++" PDFTOTEXT="pdftotext" \
+	DISTCHECK_ORACLE="<final-root>/scratch/bad-oracle.txt" DISTCHECK_BREAK="" \
+	bash tests/distcheck.sh ki_xml_pdf-0.3.0.tar.gz
+make[1]: Entering directory '/tmp/ki-xml-pdf-dist.DFdfnS/ki_xml_pdf-0.3.0'
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/tmp/ki-xml-pdf-dist.DFdfnS/prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-xml-pdf-dist.DFdfnS/prefix/bin /tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib /tmp/ki-xml-pdf-dist.DFdfnS/prefix/include \
+	/tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-xml-pdf-dist.DFdfnS/prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-xml-pdf-dist.DFdfnS/prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-xml-pdf-dist.DFdfnS/prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-xml-pdf-dist.DFdfnS/prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-xml-pdf-dist.DFdfnS/prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-xml-pdf-dist.DFdfnS/prefix/lib/pkgconfig/ki_xml_pdf.pc"
+make[1]: Leaving directory '/tmp/ki-xml-pdf-dist.DFdfnS/ki_xml_pdf-0.3.0'
+pages=1
+pages=1
+pages=1
+pages=1
+pages=1 total=2 selected=2 skipped=0
+distcheck: standalone report PDF differs from oracle
+make: *** [Makefile:106: distcheck] Error 1
+test -n "0.3.0"
+git archive --format=tar.gz --prefix=ki_xml_pdf-0.3.0/ -o ki_xml_pdf-0.3.0.tar.gz HEAD
+sha256sum ki_xml_pdf-0.3.0.tar.gz
+bc12c9e593916a02bd70556cd597f1b353a4fe57d58a42908b9c13843ca3729d  ki_xml_pdf-0.3.0.tar.gz
+CC="cc" CXX="g++" PDFTOTEXT="pdftotext" \
+	DISTCHECK_ORACLE="" DISTCHECK_BREAK="license" \
+	bash tests/distcheck.sh ki_xml_pdf-0.3.0.tar.gz
+distcheck: missing source file LICENSE
+make: *** [Makefile:106: distcheck] Error 1
+all five negative controls failed as required

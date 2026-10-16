@@ -1,0 +1,6 @@
+{
+  "scratch": "<final-root>/resource-scratch",
+  "fs_type": "ext2/ext3",
+  "free_bytes": 245451587584,
+  "budget_bytes": 6510608384
+}
