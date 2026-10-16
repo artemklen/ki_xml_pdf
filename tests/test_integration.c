@@ -133,8 +133,12 @@ static int it_prepare(ItJob *job, const ItSpec *s, int k) {
     snprintf(job->in_path, sizeof job->in_path, "/tmp/ki-it-in-%d-XXXXXX", k);
     snprintf(job->out_path, sizeof job->out_path, "/tmp/ki-it-out-%d-XXXXXX", k);
     int fi = mkstemp(job->in_path);
-    int fo = mkstemp(job->out_path);
-    if (fi < 0 || fo < 0) {
+    int fo = fi < 0 ? -1 : mkstemp(job->out_path);
+    if (fo < 0) {
+        if (fi >= 0) {
+            close(fi);
+            unlink(job->in_path);
+        }
         return -1;
     }
     size_t n = strlen(s->xml);
@@ -157,9 +161,36 @@ static void it_options(ItJob *job, KiOptions *opt, GmIo *g, const char *xml) {
     opt->record_limit = s->record_limit;
 }
 
+/* Threaded rounds hold every job here until all have started, so the
+   conversions overlap instead of depending on thread start-up timing. */
+static pthread_mutex_t it_gate_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t it_gate_cond = PTHREAD_COND_INITIALIZER;
+static int it_gate_waiting = -1; /* -1: no gate (serial references) */
+
+static void it_gate(void) {
+    pthread_mutex_lock(&it_gate_lock);
+    if (it_gate_waiting >= 0) {
+        if (++it_gate_waiting >= IT_JOBS) {
+            pthread_cond_broadcast(&it_gate_cond);
+        }
+        while (it_gate_waiting >= 0 && it_gate_waiting < IT_JOBS) {
+            pthread_cond_wait(&it_gate_cond, &it_gate_lock);
+        }
+    }
+    pthread_mutex_unlock(&it_gate_lock);
+}
+
+static void it_gate_set(int waiting) {
+    pthread_mutex_lock(&it_gate_lock);
+    it_gate_waiting = waiting;
+    pthread_cond_broadcast(&it_gate_cond);
+    pthread_mutex_unlock(&it_gate_lock);
+}
+
 static void *it_run(void *arg) {
     ItJob *job = arg;
     const ItSpec *s = job->spec;
+    it_gate();
     KiConfig cfg;
     it_config(s, &cfg);
     KiOptions opt;
@@ -221,7 +252,8 @@ static int it_same(const ItJob *a, const ItJob *b) {
            a->first.pages == b->first.pages && a->first.objects == b->first.objects &&
            a->first.output_bytes == b->first.output_bytes && a->r.output_bytes == b->r.output_bytes &&
            a->g.maps == b->g.maps && a->g.reads == b->g.reads && na == nb && (na == 0 || memcmp(pa, pb, na) == 0) &&
-           a->again_rc == b->again_rc && a->again.io.len == b->again.io.len &&
+           a->again_rc == b->again_rc && a->again.maps == b->again.maps && a->again.reads == b->again.reads &&
+           a->again.io.len == b->again.io.len &&
            (a->again.io.len == 0 || memcmp(a->again.io.buf, b->again.io.buf, a->again.io.len) == 0);
 }
 
@@ -283,7 +315,8 @@ static int it_check_reference(const ItJob *job) {
         snprintf(media, sizeof media, "%s",
                  s->orientation == KI_ORIENT_LANDSCAPE ? "/MediaBox [0 0 841.89 595.276]" : "/MediaBox [0 0 595.276 841.89]");
     } else {
-        snprintf(media, sizeof media, "/MediaBox [0 0 612 792]");
+        snprintf(media, sizeof media, "%s",
+                 s->orientation == KI_ORIENT_LANDSCAPE ? "/MediaBox [0 0 792 612]" : "/MediaBox [0 0 612 792]");
     }
     CHECK(gm_count_in(&view, media) == job->first.pages);
     CHECK(gm_count_in(&view, "/Info ") == (s->title != NULL || s->date != NULL));
@@ -351,12 +384,19 @@ static int test_integration_contexts(void) {
         for (int i = 0; i < IT_JOBS; i++) {
             CHECK(it_prepare(&run[i], &it_specs[i], i) == 0);
         }
-        for (int i = 0; i < IT_JOBS; i++) {
-            CHECK(pthread_create(&t[i], NULL, it_run, &run[i]) == 0);
+        it_gate_set(0);
+        int started = 0;
+        while (started < IT_JOBS && pthread_create(&t[started], NULL, it_run, &run[started]) == 0) {
+            started++;
         }
-        for (int i = 0; i < IT_JOBS; i++) {
-            CHECK(pthread_join(t[i], NULL) == 0);
+        if (started < IT_JOBS) {
+            it_gate_set(-1);
         }
+        for (int i = 0; i < started; i++) {
+            pthread_join(t[i], NULL);
+        }
+        it_gate_set(-1);
+        CHECK(started == IT_JOBS);
         for (int i = 0; i < IT_JOBS; i++) {
             if (!it_same(&run[i], &ref[i])) {
                 fprintf(stderr, "round %d: %s differs from its serial reference\n", round, it_specs[i].name);

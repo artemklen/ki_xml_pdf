@@ -21,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc g++ make cmake pkg-config zlib1g-dev binutils poppler-utils python3 time
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make cmake pkg-config zlib1g-dev binutils poppler-utils python3 time fonts-dejavu-core
       - name: summary
         run: |
           git rev-parse HEAD

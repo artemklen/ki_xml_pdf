@@ -155,6 +155,8 @@ target_link_libraries(report-client PRIVATE ki_xml_pdf::ki_xml_pdf)
 target_link_libraries(consume-client PRIVATE ki_xml_pdf::ki_xml_pdf)
 ```
 
+Before 1.0 the package version file accepts only the same minor version, so `find_package(ki_xml_pdf 0.2)` does not select 0.3.0. Request `0.3` or no version; programs already built against 0.2.0 keep running with the new shared library.
+
 Build and run both languages with the default shared target, then choose the installed static variant:
 
 ```sh
