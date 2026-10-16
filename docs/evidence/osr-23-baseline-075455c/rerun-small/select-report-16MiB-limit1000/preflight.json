@@ -1,0 +1,6 @@
+{
+  "scratch": "<evidence-root>/scratch/rerun",
+  "fs_type": "ext2/ext3",
+  "free_bytes": 247170412544,
+  "budget_bytes": 4647288832
+}

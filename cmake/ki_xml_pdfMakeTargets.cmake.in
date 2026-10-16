@@ -3,7 +3,8 @@ if(NOT TARGET ki_xml_pdf::static)
     add_library(ki_xml_pdf::static STATIC IMPORTED)
     set_target_properties(ki_xml_pdf::static PROPERTIES
         IMPORTED_LOCATION "${_ki_prefix}/lib/libki_xml_pdf.a"
-        INTERFACE_INCLUDE_DIRECTORIES "${_ki_prefix}/include")
+        INTERFACE_INCLUDE_DIRECTORIES "${_ki_prefix}/include"
+        INTERFACE_LINK_LIBRARIES "$<LINK_ONLY:ZLIB::ZLIB>")
     add_library(ki_xml_pdf::shared SHARED IMPORTED)
     set_target_properties(ki_xml_pdf::shared PROPERTIES
         IMPORTED_LOCATION "${_ki_prefix}/lib/libki_xml_pdf.so"

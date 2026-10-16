@@ -1,0 +1,6 @@
+{
+  "scratch": "<osr25-root>/resource-scratch",
+  "fs_type": "ext2/ext3",
+  "free_bytes": 245824847872,
+  "budget_bytes": 6576668672
+}

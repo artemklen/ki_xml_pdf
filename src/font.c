@@ -23,8 +23,14 @@ static int s16(const unsigned char *p) {
     return v;
 }
 
+/* True when [off, off + need) lies inside a buffer of len bytes, without
+   computing off + need. */
+static int span_ok(size_t len, size_t off, size_t need) {
+    return off <= len && need <= len - off;
+}
+
 static int find_table(const unsigned char *data, size_t len, const char tag[4], size_t *off, size_t *tlen) {
-    if (len < 12) {
+    if (!span_ok(len, 0, 12)) {
         return -1;
     }
     unsigned n = ru16(data + 4);
@@ -38,7 +44,7 @@ static int find_table(const unsigned char *data, size_t len, const char tag[4], 
         }
         size_t o = ru32(e + 8);
         size_t nlen = ru32(e + 12);
-        if (o > len || nlen > len - o) {
+        if (!span_ok(len, o, nlen)) {
             return -1;
         }
         *off = o;
@@ -49,7 +55,7 @@ static int find_table(const unsigned char *data, size_t len, const char tag[4], 
 }
 
 static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
-    if (len < 14) {
+    if (!span_ok(len, 0, 14)) {
         return 0;
     }
     unsigned seg = ru16(cmap + 6) / 2;
@@ -57,10 +63,10 @@ static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
         return 0;
     }
     size_t end_at = 14;
-    size_t start_at = end_at + 2 * seg + 2;
-    size_t delta_at = start_at + 2 * seg;
-    size_t range_at = delta_at + 2 * seg;
-    if (range_at + 2 * seg > len) {
+    size_t start_at = end_at + 2 * (size_t)seg + 2;
+    size_t delta_at = start_at + 2 * (size_t)seg;
+    size_t range_at = delta_at + 2 * (size_t)seg;
+    if (!span_ok(len, range_at, 2 * (size_t)seg)) {
         return 0;
     }
     for (unsigned i = 0; i < seg; i++) {
@@ -81,7 +87,7 @@ static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
             return 0;
         }
         size_t pos = range_at + 2 * (size_t)i + roff + (size_t)(cp - start) * 2;
-        if (pos < range_at || pos + 2 > len) {
+        if (!span_ok(len, pos, 2)) {
             return 0;
         }
         unsigned g = ru16(cmap + pos);
@@ -94,18 +100,18 @@ static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
 }
 
 static unsigned advance_of(const unsigned char *hmtx, size_t hlen, unsigned num_h, unsigned gid) {
-    if (num_h == 0 || hlen < 2) {
+    if (num_h == 0) {
         return 0;
     }
     size_t at = (size_t)(gid < num_h ? gid : num_h - 1) * 4;
-    if (at + 2 > hlen) {
+    if (!span_ok(hlen, at, 2)) {
         return 0;
     }
     return ru16(hmtx + at);
 }
 
 static const unsigned char *format4(const unsigned char *cmap, size_t len, size_t *out_len) {
-    if (len < 4) {
+    if (!span_ok(len, 0, 4)) {
         return NULL;
     }
     unsigned num = ru16(cmap + 2);
@@ -116,21 +122,25 @@ static const unsigned char *format4(const unsigned char *cmap, size_t len, size_
     size_t best_len = 0;
     for (unsigned i = 0; i < num; i++) {
         size_t rec = 4 + (size_t)i * 8;
-        if (rec + 8 > len) {
+        if (!span_ok(len, rec, 8)) {
             return NULL;
         }
         unsigned plat = ru16(cmap + rec);
         unsigned enc = ru16(cmap + rec + 2);
+        if (plat != 3 || enc != 1) {
+            continue;
+        }
         size_t rel = ru32(cmap + rec + 4);
-        if (rel + 2 > len) {
+        /* format and length must both be present before either is read. */
+        if (!span_ok(len, rel, 4)) {
             continue;
         }
         unsigned fmt = ru16(cmap + rel);
-        if (fmt != 4 || plat != 3 || enc != 1) {
+        if (fmt != 4) {
             continue;
         }
         unsigned sublen = ru16(cmap + rel + 2);
-        if (sublen < 14 || sublen > len || rel > len - sublen) {
+        if (sublen < 14 || !span_ok(len, rel, sublen)) {
             return NULL;
         }
         best = cmap + rel;
@@ -143,20 +153,171 @@ static const unsigned char *format4(const unsigned char *cmap, size_t len, size_
     return best;
 }
 
-static void remember(FontFace *face, unsigned cp, unsigned gid, unsigned adv) {
-    if (gid == 0 || adv == 0) {
+typedef struct {
+    int on;
+    int x0, y0, x1, y1;
+} GlyphBox;
+
+typedef struct {
+    const unsigned char *glyf;
+    size_t glyf_len;
+    const unsigned char *loca;
+    size_t loca_len;
+    int long_loca;
+} Outlines;
+
+/* -1 when the loca entries or the glyph header lie outside their tables or
+   the header box is inverted. An empty glyph has no ink. */
+static int glyph_box(const Outlines *o, unsigned gid, GlyphBox *box) {
+    memset(box, 0, sizeof *box);
+    size_t width = o->long_loca ? 4 : 2;
+    size_t at = (size_t)gid * width;
+    if (!span_ok(o->loca_len, at, 2 * width)) {
+        return -1;
+    }
+    size_t start = o->long_loca ? ru32(o->loca + at) : (size_t)ru16(o->loca + at) * 2;
+    size_t end = o->long_loca ? ru32(o->loca + at + 4) : (size_t)ru16(o->loca + at + 2) * 2;
+    if (start > end || end > o->glyf_len) {
+        return -1;
+    }
+    if (start == end) {
+        return 0;
+    }
+    if (end - start < 10) {
+        return -1;
+    }
+    const unsigned char *g = o->glyf + start;
+    box->x0 = s16(g + 2);
+    box->y0 = s16(g + 4);
+    box->x1 = s16(g + 6);
+    box->y1 = s16(g + 8);
+    if (box->x0 > box->x1 || box->y0 > box->y1) {
+        return -1;
+    }
+    box->on = 1;
+    return 0;
+}
+
+static void remember(FontFace *face, unsigned cp, unsigned gid, unsigned adv, const GlyphBox *box) {
+    if (gid == 0) {
         return;
+    }
+    int on = face->outlines ? box->on : 1;
+    int lo = face->outlines ? box->x0 : 0;
+    int hi = face->outlines ? box->x1 : (int)(adv > 0x7FFF ? 0x7FFF : adv);
+    if (face->outlines && box->on) {
+        if (box->y1 > face->ink_top) {
+            face->ink_top = box->y1;
+        }
+        if (box->y0 < face->ink_bottom) {
+            face->ink_bottom = box->y0;
+        }
     }
     if (cp < FONT_BMP_MAX) {
         face->gid[cp] = (uint16_t)gid;
         face->adv[cp] = (uint16_t)adv;
+        face->ink_on[cp] = (unsigned char)on;
+        face->ink_lo[cp] = (int16_t)lo;
+        face->ink_hi[cp] = (int16_t)hi;
         return;
     }
     if (cp >= FONT_PUNCT_BASE && cp < FONT_PUNCT_BASE + FONT_PUNCT_COUNT) {
         unsigned i = cp - FONT_PUNCT_BASE;
         face->punct_gid[i] = (uint16_t)gid;
         face->punct_adv[i] = (uint16_t)adv;
+        face->punct_ink_on[i] = (unsigned char)on;
+        face->punct_ink_lo[i] = (int16_t)lo;
+        face->punct_ink_hi[i] = (int16_t)hi;
     }
+}
+
+/* Maps cp, bounds-checks its outline and records it. -1 on a malformed
+   outline entry for a glyph the repertoire uses. */
+static int add_glyph(FontFace *face, const unsigned char *sub, size_t sublen, unsigned num_glyphs,
+                     const unsigned char *hmtx, size_t hmtx_len, unsigned num_h, const Outlines *o, unsigned cp) {
+    unsigned gid = glyph_of(sub, sublen, cp);
+    if (gid >= num_glyphs) {
+        gid = 0;
+    }
+    GlyphBox box;
+    memset(&box, 0, sizeof box);
+    if (gid != 0 && face->outlines && glyph_box(o, gid, &box) != 0) {
+        return -1;
+    }
+    remember(face, cp, gid, advance_of(hmtx, hmtx_len, num_h, gid), &box);
+    return 0;
+}
+
+/* Decodes one PostScript-name record into out. Only printable ASCII names of
+   1..FONT_NAME_MAX characters qualify; the PDF writer escapes delimiters. */
+static int ps_name(const unsigned char *s, size_t n, int wide, char *out) {
+    size_t chars = wide ? n / 2 : n;
+    if ((wide && n % 2 != 0) || chars == 0 || chars > FONT_NAME_MAX) {
+        return -1;
+    }
+    for (size_t i = 0; i < chars; i++) {
+        unsigned c = wide ? ru16(s + 2 * i) : s[i];
+        if (c < 0x20 || c > 0x7E) {
+            return -1;
+        }
+        out[i] = (char)c;
+    }
+    out[chars] = '\0';
+    return 0;
+}
+
+/* -1 when the table or any record lies outside its bounds. Otherwise name
+   holds nameID 6, preferring Windows Unicode en-US, then Macintosh Roman,
+   then any other Windows record; an unusable name leaves it empty. */
+static int read_name(const unsigned char *t, size_t len, char *name) {
+    name[0] = '\0';
+    if (!span_ok(len, 0, 6)) {
+        return -1;
+    }
+    unsigned count = ru16(t + 2);
+    size_t store = ru16(t + 4);
+    if (!span_ok(len, 6, (size_t)count * 12) || store > len) {
+        return -1;
+    }
+    int best = 0;
+    for (unsigned i = 0; i < count; i++) {
+        const unsigned char *r = t + 6 + (size_t)i * 12;
+        unsigned plat = ru16(r), enc = ru16(r + 2), lang = ru16(r + 4), id = ru16(r + 6);
+        size_t n = ru16(r + 8), off = ru16(r + 10);
+        if (!span_ok(len - store, off, n)) {
+            return -1;
+        }
+        if (id != 6) {
+            continue;
+        }
+        int rank = 0;
+        int wide = 0;
+        if (plat == 3 && enc == 1 && lang == 0x409) {
+            rank = 3;
+            wide = 1;
+        } else if (plat == 1 && enc == 0) {
+            rank = 2;
+        } else if (plat == 3 && (enc == 0 || enc == 1)) {
+            rank = 1;
+            wide = 1;
+        }
+        char cand[FONT_NAME_MAX + 1];
+        if (rank > best && ps_name(t + store + off, n, wide, cand) == 0) {
+            memcpy(name, cand, sizeof cand);
+            best = rank;
+        }
+    }
+    return 0;
+}
+
+/* FNV-1a over the whole file, so equal bytes always get the same fallback. */
+static void fallback_name(FontFace *face, const unsigned char *data, size_t len) {
+    uint32_t h = 2166136261u;
+    for (size_t i = 0; i < len; i++) {
+        h = (h ^ data[i]) * 16777619u;
+    }
+    snprintf(face->name, sizeof face->name, "KiFont-%08X", (unsigned)h);
+    face->name_fallback = 1;
 }
 
 int font_load(FontFace *face, const char *path) {
@@ -213,17 +374,64 @@ int font_load(FontFace *face, const char *path) {
     face->ascent = s16(data + hhea_off + 4);
     face->descent = s16(data + hhea_off + 6);
     unsigned num_h = ru16(data + hhea_off + 34);
+    if (num_h == 0 || hmtx_len / 4 < num_h) {
+        free(data);
+        return -1;
+    }
     const unsigned char *hmtx = data + hmtx_off;
+    /* maxp is optional for the loader; when present a GID at or past
+       numGlyphs is a missing glyph, not a present one. */
+    unsigned num_glyphs = 0x10000;
+    size_t maxp_off = 0, maxp_len = 0;
+    if (find_table(data, (size_t)sz, "maxp", &maxp_off, &maxp_len) == 0) {
+        if (maxp_len < 6 || ru16(data + maxp_off + 4) == 0) {
+            free(data);
+            return -1;
+        }
+        num_glyphs = ru16(data + maxp_off + 4);
+    }
+    size_t name_off = 0, name_len = 0;
+    if (find_table(data, (size_t)sz, "name", &name_off, &name_len) == 0 &&
+        read_name(data + name_off, name_len, face->name) != 0) {
+        free(data);
+        return -1;
+    }
+    if (face->name[0] == '\0') {
+        fallback_name(face, data, (size_t)sz);
+    }
 
-    for (unsigned cp = 0; cp < FONT_BMP_MAX; cp++) {
-        unsigned gid = glyph_of(sub, sublen, cp);
-        remember(face, cp, gid, advance_of(hmtx, hmtx_len, num_h, gid));
+    /* glyf and loca come together or not at all; with both, every
+       repertoire glyph's loca range and header must lie inside them. */
+    Outlines outl;
+    memset(&outl, 0, sizeof outl);
+    size_t glyf_off = 0, glyf_len = 0, loca_off = 0, loca_len = 0;
+    int has_glyf = find_table(data, (size_t)sz, "glyf", &glyf_off, &glyf_len) == 0;
+    int has_loca = find_table(data, (size_t)sz, "loca", &loca_off, &loca_len) == 0;
+    if (has_glyf != has_loca) {
+        free(data);
+        return -1;
     }
-    for (unsigned cp = FONT_PUNCT_BASE; cp < FONT_PUNCT_BASE + FONT_PUNCT_COUNT; cp++) {
-        unsigned gid = glyph_of(sub, sublen, cp);
-        remember(face, cp, gid, advance_of(hmtx, hmtx_len, num_h, gid));
+    if (has_glyf) {
+        int fmt = s16(data + hoff + 50);
+        if (fmt != 0 && fmt != 1) {
+            free(data);
+            return -1;
+        }
+        outl.glyf = data + glyf_off;
+        outl.glyf_len = glyf_len;
+        outl.loca = data + loca_off;
+        outl.loca_len = loca_len;
+        outl.long_loca = fmt == 1;
+        face->outlines = 1;
     }
-    if (face->gid[0x41] == 0 || face->gid[0x20] == 0) {
+    int bad = 0;
+    for (unsigned cp = 0; cp < FONT_BMP_MAX && !bad; cp++) {
+        bad = add_glyph(face, sub, sublen, num_glyphs, hmtx, hmtx_len, num_h, &outl, cp);
+    }
+    for (unsigned cp = FONT_PUNCT_BASE; cp < FONT_PUNCT_BASE + FONT_PUNCT_COUNT && !bad; cp++) {
+        bad = add_glyph(face, sub, sublen, num_glyphs, hmtx, hmtx_len, num_h, &outl, cp);
+    }
+    if (bad || face->gid[0x41] == 0 || face->gid[0x20] == 0) {
         free(data);
         return -1;
     }
@@ -249,7 +457,7 @@ int font_lookup(const FontFace *face, unsigned cp, uint16_t *gid, uint16_t *adv)
         g = face->punct_gid[i];
         a = face->punct_adv[i];
     }
-    if (g == 0 || a == 0) {
+    if (g == 0) {
         return -1;
     }
     *gid = g;
@@ -257,46 +465,48 @@ int font_lookup(const FontFace *face, unsigned cp, uint16_t *gid, uint16_t *adv)
     return 0;
 }
 
-static int ink_ascent(const FontFace *face) {
+int font_pdf_width(const FontFace *face, unsigned adv) {
+    return (int)((long)adv * 1000 / face->units);
+}
+
+int font_ink(const FontFace *face, unsigned cp, int *lo, int *hi) {
+    if (cp < FONT_BMP_MAX) {
+        if (face->gid[cp] == 0 || !face->ink_on[cp]) {
+            return 0;
+        }
+        *lo = face->ink_lo[cp];
+        *hi = face->ink_hi[cp];
+        return 1;
+    }
+    if (cp >= FONT_PUNCT_BASE && cp < FONT_PUNCT_BASE + FONT_PUNCT_COUNT) {
+        unsigned i = cp - FONT_PUNCT_BASE;
+        if (face->punct_gid[i] == 0 || !face->punct_ink_on[i]) {
+            return 0;
+        }
+        *lo = face->punct_ink_lo[i];
+        *hi = face->punct_ink_hi[i];
+        return 1;
+    }
+    return 0;
+}
+
+void font_ink_vertical(const FontFace *face, int *ascent, int *descent) {
     int a = face->ascent > 0 ? face->ascent : 0;
     if (face->bbox[3] > a) {
         a = face->bbox[3];
     }
-    return a > 0 ? a : face->units;
-}
-
-static int ink_descent(const FontFace *face) {
+    if (face->ink_top > a) {
+        a = face->ink_top;
+    }
     int d = face->descent < 0 ? -face->descent : 0;
-    if (face->bbox[1] < 0 && -face->bbox[1] > d) {
+    if (-face->bbox[1] > d) {
         d = -face->bbox[1];
     }
-    return d;
-}
-
-int font_first_baseline(const FontFace *face, int page_h, int margin, int pt) {
-    int ascent = ink_ascent(face) * pt / face->units;
-    if (ascent < 1) {
-        ascent = pt;
+    if (-face->ink_bottom > d) {
+        d = -face->ink_bottom;
     }
-    int baseline = page_h - margin - ascent;
-    if (baseline < margin) {
-        return margin;
-    }
-    return baseline;
-}
-
-int font_max_lines(const FontFace *face, int page_h, int margin, int pt, int leading) {
-    int ascent = ink_ascent(face) * pt / face->units;
-    if (ascent < 1) {
-        ascent = pt;
-    }
-    int descent = ink_descent(face) * pt / face->units;
-    int baseline = page_h - margin - ascent;
-    int bottom = margin + descent;
-    if (leading <= 0 || baseline < bottom) {
-        return 1;
-    }
-    return (baseline - bottom) / leading + 1;
+    *ascent = a > 0 ? a : face->units;
+    *descent = d;
 }
 
 static int exe_rel(const char *suffix, char *out, size_t cap) {

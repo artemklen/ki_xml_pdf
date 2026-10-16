@@ -1,0 +1,126 @@
+{
+  "base": "docs/evidence/osr-23-baseline-075455c/baseline",
+  "other": "<osr9-root>/flate-3acf0cb",
+  "environment_differences": {
+    "measured_source_sha": [
+      "075455cc930a1f5e79a9ae4811e82b5c95af06c4",
+      "3acf0cb86833bfd44462543afefe77d3bf971f86"
+    ],
+    "binary_sha256": [
+      "875cd641607798d5aef53611b3968e9af2635a663f8b0547e01d67d4e527beaa",
+      "1fcb5e5e1dbc5435cca1d35b295c0ed86dda2712cfb6d9f79e1d3c6ffda5b949"
+    ],
+    "harness_sha": [
+      "67ce2640bb0695cbe4b163fdd7f494140a2106fe",
+      "3acf0cb86833bfd44462543afefe77d3bf971f86"
+    ]
+  },
+  "runs": {
+    "full-records-16MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          180555585,
+          29296558
+        ],
+        "spool_offset_bytes": [
+          480048,
+          720048
+        ],
+        "objects": [
+          60005,
+          90005
+        ],
+        "pdf_sha256": [
+          "cb093fd407d13f5a164ed3aed3e53305da7a938d29a4d5c02155afb9306ac062",
+          "e3458efeffca2f5f270138311fb178cab3772d8cf97eb629e4b21294346c0302"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2420,
+          2804
+        ],
+        "converter_elapsed_s": [
+          1.07,
+          2.57
+        ],
+        "generator_rss_kib": [
+          23388,
+          23224
+        ],
+        "reader_rss_kib": [
+          69200,
+          70272
+        ],
+        "reader_elapsed_s": [
+          20.85,
+          22.91
+        ],
+        "oracle_rss_kib": [
+          16872,
+          16196
+        ]
+      }
+    },
+    "full-report-16MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          86884343,
+          12501989
+        ],
+        "spool_offset_bytes": [
+          157744,
+          236592
+        ],
+        "objects": [
+          19717,
+          29573
+        ],
+        "pdf_sha256": [
+          "0096d80527116729c27a9b1d4d77124ccb862cebe420f9f3fc12bbd08b4ebb64",
+          "52751a8e8f683d8066e1d5aaf5914f20125b7fe59de0dec86821525267fa9771"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2524,
+          2804
+        ],
+        "converter_elapsed_s": [
+          0.73,
+          1.44
+        ],
+        "generator_rss_kib": [
+          21188,
+          21008
+        ],
+        "reader_rss_kib": [
+          34588,
+          34452
+        ],
+        "reader_elapsed_s": [
+          7.25,
+          7.94
+        ],
+        "oracle_rss_kib": [
+          16892,
+          16292
+        ]
+      }
+    }
+  },
+  "only_in_base": [
+    "full-records-1MiB",
+    "full-records-64MiB",
+    "full-report-1MiB",
+    "full-report-64MiB",
+    "select-report-1024MiB-limit1000",
+    "select-report-16MiB-limit1000",
+    "select-report-256MiB-limit1000"
+  ],
+  "only_in_other": [],
+  "problems": [],
+  "ok": true
+}

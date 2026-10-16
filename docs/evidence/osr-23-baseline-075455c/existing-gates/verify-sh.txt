@@ -1,0 +1,36 @@
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a
+make: 'test_stream' is up to date.
+pages=21 streams=21 bytes=1485197
+pages=21 streams=21 bytes=1485197
+cli runs match
+large_xml 16777313
+xml2pdf: pages=41944 objects=83895 offset_bytes=671168
+xml2pdf: pages=21 objects=49 offset_bytes=400
+large_exit 0
+small_exit 0
+large_input_bytes 16777313
+small_input_bytes 80197
+large_pdf_bytes 173535332
+large_rss_kbytes 2352
+small_rss_kbytes 2360
+large_rss_bytes 2408448
+small_rss_bytes 2416640
+half_input_bytes 8388656
+rss_cap_bytes 6610944
+large_pages 41944
+small_pages 21
+has_FIRST_MARKER_UNIQUE 1
+has_LAST_MARKER_UNIQUE 1
+first_page_has_FIRST 1
+first_page_lacks_LAST 1
+later_page_has_LAST 1
+last_page_tail 1
+rss_under_half_input 1
+xml2pdf: pages=1 objects=9 offset_bytes=80
+wide line stays inside the margin
+xml2pdf: pages=1 objects=9 offset_bytes=80
+cyrillic readers agree; unsupported character rejected
+poppler page1 and last page match
+verify ok scratch=<evidence-root>/existing-gates-075455c/verify-scratch

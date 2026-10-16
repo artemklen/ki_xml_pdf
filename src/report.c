@@ -47,15 +47,16 @@ static int bad_attr(const KiEvent *ev, int allow_space) {
     return 0;
 }
 
+/* ki_doc_fail appends the current event's line, column and byte. */
 static int fail_rule(Report *r, KiDoc *doc, const char *rule) {
-    char buf[160];
-    snprintf(buf, sizeof buf, "%s at byte %zu", rule, r->at);
-    return ki_doc_fail(doc, buf);
+    (void)r;
+    return ki_doc_fail(doc, rule);
 }
 
 static int fail_attr(Report *r, KiDoc *doc, const char *element, const char *attr) {
     char buf[160];
-    snprintf(buf, sizeof buf, "profile: unknown attribute %s on %s at byte %zu", attr, element, r->at);
+    (void)r;
+    snprintf(buf, sizeof buf, "profile: unknown attribute %s on %s", attr, element);
     return ki_doc_fail(doc, buf);
 }
 
@@ -231,7 +232,6 @@ static int end_report(Report *r, KiDoc *doc) {
 }
 
 int report_map(Report *r, KiDoc *doc, const KiEvent *ev) {
-    r->at = ev->byte_offset;
     if (ev->kind == KI_EV_START) {
         if (strcmp(ev->name, "report") == 0) {
             return start_report(r, doc, ev);

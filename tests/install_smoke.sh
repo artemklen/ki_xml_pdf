@@ -17,11 +17,11 @@ fi
 make -C "$root" clean
 make -C "$root" CC="$cc" CXX="$cxx" PREFIX="$prefix" install
 "$cc" -std=c99 -Wall -I"$prefix/include" -o "$prefix/host" \
-    "$root/examples/consume.c" "$prefix/lib/libki_xml_pdf.a"
+    "$root/examples/consume.c" "$prefix/lib/libki_xml_pdf.a" -lz
 "$cc" -std=c99 -Wall -I"$prefix/include" -o "$prefix/host-so" \
     "$root/examples/consume.c" -L"$prefix/lib" -lki_xml_pdf -Wl,-rpath,"$prefix/lib"
 "$cxx" -Wall -I"$prefix/include" -o "$prefix/hostcpp" \
-    "$root/examples/consume.cpp" "$prefix/lib/libki_xml_pdf.a"
+    "$root/examples/consume.cpp" "$prefix/lib/libki_xml_pdf.a" -lz
 "$cxx" -Wall -I"$prefix/include" -o "$prefix/hostso" \
     "$root/examples/consume.cpp" -L"$prefix/lib" -lki_xml_pdf -Wl,-rpath,"$prefix/lib"
 cd /

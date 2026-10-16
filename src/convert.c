@@ -2,6 +2,8 @@
 
 #include "convert.h"
 
+#include "geometry.h"
+#include "info.h"
 #include "ki_xml_pdf.h"
 #include "layout.h"
 #include "pdf_write.h"
@@ -30,6 +32,9 @@ void xml2pdf_debug_fail_before_publish(int on) {
 void xml2pdf_debug_fail_after_bytes(long n) {
     fail_after_bytes = n;
 }
+
+#define LINE_FULL_MSG "layout: line over 1023 bytes"
+#define TOO_WIDE_MSG "layout: glyph cluster wider than the line"
 
 static int text_is_space(const char *s, size_t n) {
     for (size_t i = 0; i < n; i++) {
@@ -100,7 +105,7 @@ static int map_event(Layout *lay, MapState *st, const XmlEvent *ev) {
             }
         }
         int preserve = ev->from_cdata || (st->depth > 0 && st->preserve[st->depth - 1]);
-        if (only_ws && has_break && lay->len == 0 && !preserve) {
+        if (only_ws && has_break && layout_line_empty(lay) && !preserve) {
             return 0;
         }
         return layout_text(lay, ev->text, ev->text_len);
@@ -252,6 +257,9 @@ struct KiDoc {
     Layout *lay;
     char error[160];
     int cause;
+    size_t line;
+    size_t column;
+    size_t byte;
 };
 
 void ki_options_init(KiOptions *opt) {
@@ -265,7 +273,8 @@ void ki_options_init(KiOptions *opt) {
 int ki_doc_fail(KiDoc *doc, const char *rule) {
     if (doc != NULL) {
         doc->cause = KI_CAUSE_PROFILE;
-        snprintf(doc->error, sizeof doc->error, "%s", rule != NULL ? rule : "mapping failed");
+        xml_format_pos(doc->error, sizeof doc->error, rule != NULL ? rule : "mapping failed", doc->line, doc->column,
+                       doc->byte);
     }
     return -1;
 }
@@ -278,6 +287,9 @@ int ki_doc_text(KiDoc *doc, const char *s, size_t n) {
     if (rc != 0 && doc->lay->bad_cp != 0) {
         doc->cause = KI_CAUSE_FONT;
         snprintf(doc->error, sizeof doc->error, "font: U+%04X", doc->lay->bad_cp);
+    } else if (rc != 0 && (doc->lay->line_full || doc->lay->too_wide)) {
+        doc->cause = KI_CAUSE_RESOURCE;
+        snprintf(doc->error, sizeof doc->error, "%s", doc->lay->line_full ? LINE_FULL_MSG : TOO_WIDE_MSG);
     }
     return rc;
 }
@@ -305,20 +317,36 @@ static void set_result(KiResult *result, int status, int cause, const char *msg)
 }
 
 static int fail_from_pdf(PdfWriter *pdf, int *cause, const char **msg) {
-    if (pdf->fail_kind == 6) {
+    if (pdf->fail_kind == PDF_FAIL_CANCEL) {
         *cause = KI_CAUSE_CANCEL;
         *msg = "cancelled";
         return XML2PDF_ERR_RESOURCE;
     }
-    if (pdf->fail_kind == 3) {
+    if (pdf->fail_kind == PDF_FAIL_FONT) {
         *cause = KI_CAUSE_FONT;
         *msg = "font: cannot load";
         return XML2PDF_ERR_XML;
     }
-    if (pdf->fail_kind == 1 || pdf->fail_kind == 4 || pdf->fail_kind == 5 || pdf->hit_limit) {
+    if (pdf->fail_kind == PDF_FAIL_GEOMETRY) {
+        *cause = KI_CAUSE_USAGE;
+        *msg = "page geometry: no line fits this font inside the margins";
+        return XML2PDF_ERR_USAGE;
+    }
+    if (pdf->fail_kind == PDF_FAIL_XREF) {
+        *cause = KI_CAUSE_RESOURCE;
+        *msg = "resource limit: PDF exceeds classic xref offsets";
+        return XML2PDF_ERR_RESOURCE;
+    }
+    if (pdf->fail_kind == PDF_FAIL_LIMIT || pdf->fail_kind == PDF_FAIL_QUOTA || pdf->fail_kind == PDF_FAIL_SPOOL ||
+        pdf->hit_limit) {
         *cause = KI_CAUSE_RESOURCE;
         *msg = "resource limit";
         return XML2PDF_ERR_RESOURCE;
+    }
+    if (pdf->fail_kind == PDF_FAIL_FLATE) {
+        *cause = KI_CAUSE_IO;
+        *msg = "pdf compression failed";
+        return XML2PDF_ERR_IO;
     }
     if (pdf->fail_errno == ENAMETOOLONG) {
         *cause = KI_CAUSE_IO;
@@ -330,8 +358,14 @@ static int fail_from_pdf(PdfWriter *pdf, int *cause, const char **msg) {
     return XML2PDF_ERR_IO;
 }
 
+/* Validated copies of a KiConfig, owned by the entry point's frame. */
+typedef struct Setup {
+    Geometry geom;
+    PdfInfo info;
+} Setup;
+
 static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_path, const KiOptions *opt,
-                           KiResult *result);
+                           const Setup *setup, KiResult *result);
 
 static int reject_options(const KiOptions *opt, KiResult *result) {
     if (opt == NULL) {
@@ -349,7 +383,50 @@ static int reject_options(const KiOptions *opt, KiResult *result) {
     return 0;
 }
 
-static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *opt,
+/* Fills setup from cfg (defaults when NULL). Static checks only: whether a
+   line fits is known once the font is loaded. */
+static int reject_config(const KiConfig *cfg, const KiOptions *opt, Setup *setup, KiResult *result) {
+    geom_default(&setup->geom);
+    info_clear(&setup->info);
+    if (cfg == NULL) {
+        return 0;
+    }
+    if (cfg->size != sizeof(KiConfig) && cfg->size != KI_CONFIG_SIZE_GEOMETRY) {
+        set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, "config size mismatch");
+        say(opt, "config size mismatch");
+        return -1;
+    }
+    const double margin[4] = {cfg->margin_top, cfg->margin_right, cfg->margin_bottom, cfg->margin_left};
+    const char *why = NULL;
+    int bad = geom_from_points(&setup->geom, cfg->page_size, cfg->orientation, cfg->page_width, cfg->page_height,
+                               margin, cfg->font_size, &why) != 0;
+    if (!bad && cfg->size == sizeof(KiConfig)) {
+        bad = info_set(&setup->info, cfg->title, cfg->producer, cfg->creation_date, &why) != 0;
+    }
+    if (bad) {
+        set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, why);
+        say(opt, why);
+        return -1;
+    }
+    return 0;
+}
+
+int ki_config_init(KiConfig *cfg, size_t size) {
+    if (cfg == NULL || (size != sizeof(KiConfig) && size != KI_CONFIG_SIZE_GEOMETRY)) {
+        return XML2PDF_ERR_USAGE;
+    }
+    KiConfig def;
+    memset(&def, 0, sizeof def);
+    def.size = size;
+    def.page_size = KI_PAGE_LETTER;
+    def.orientation = KI_ORIENT_PORTRAIT;
+    def.margin_top = def.margin_right = def.margin_bottom = def.margin_left = 40.0;
+    def.font_size = 10.0;
+    memcpy(cfg, &def, size);
+    return 0;
+}
+
+static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *opt, const Setup *setup,
                                KiResult *result) {
     int rc = XML2PDF_ERR_IO;
     int cause = KI_CAUSE_IO;
@@ -381,7 +458,7 @@ static int convert_file_stream(FILE *in, const char *pdf_path, const KiOptions *
         goto open_fail;
     }
     setvbuf(out, NULL, _IOFBF, 4096);
-    return convert_streams(in, out, tmp_path, pdf_path, opt, result);
+    return convert_streams(in, out, tmp_path, pdf_path, opt, setup, result);
 
 open_fail:
     set_result(result, rc, cause, msg);
@@ -399,10 +476,16 @@ open_fail:
 }
 
 int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions *opt, KiResult *result) {
+    return ki_convert_file_cfg(xml_path, pdf_path, opt, NULL, result);
+}
+
+int ki_convert_file_cfg(const char *xml_path, const char *pdf_path, const KiOptions *opt, const KiConfig *cfg,
+                        KiResult *result) {
     if (result != NULL) {
         memset(result, 0, sizeof *result);
     }
-    if (reject_options(opt, result) != 0) {
+    Setup setup;
+    if (reject_options(opt, result) != 0 || reject_config(cfg, opt, &setup, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
     if (xml_path == NULL || pdf_path == NULL) {
@@ -431,14 +514,19 @@ int ki_convert_file(const char *xml_path, const char *pdf_path, const KiOptions 
         fclose(in);
         return XML2PDF_ERR_IO;
     }
-    return convert_file_stream(in, pdf_path, opt, result);
+    return convert_file_stream(in, pdf_path, opt, &setup, result);
 }
 
 int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *result) {
+    return ki_convert_to_file_cfg(pdf_path, opt, NULL, result);
+}
+
+int ki_convert_to_file_cfg(const char *pdf_path, const KiOptions *opt, const KiConfig *cfg, KiResult *result) {
     if (result != NULL) {
         memset(result, 0, sizeof *result);
     }
-    if (reject_options(opt, result) != 0) {
+    Setup setup;
+    if (reject_options(opt, result) != 0 || reject_config(cfg, opt, &setup, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
     if (pdf_path == NULL || opt == NULL || opt->read_bytes == NULL) {
@@ -446,11 +534,11 @@ int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *res
         set_result(result, XML2PDF_ERR_USAGE, KI_CAUSE_USAGE, msg);
         return XML2PDF_ERR_USAGE;
     }
-    return convert_file_stream(NULL, pdf_path, opt, result);
+    return convert_file_stream(NULL, pdf_path, opt, &setup, result);
 }
 
 static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_path, const KiOptions *opt,
-                           KiResult *result) {
+                           const Setup *setup, KiResult *result) {
     int rc = XML2PDF_ERR_XML;
     int cause = KI_CAUSE_XML;
     int published = 0;
@@ -494,6 +582,8 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
         cfg.cancel_user = opt->cancel_user;
     }
     cfg.debug_fail_page = fail_at_page;
+    cfg.geometry = &setup->geom;
+    cfg.info = &setup->info;
     if (pdf_begin_cfg(&pdf, out, &cfg) != 0) {
         pdf_ready = 1;
         const char *why = NULL;
@@ -539,10 +629,16 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
                 rc = XML2PDF_ERR_IO;
                 cause = KI_CAUSE_IO;
                 snprintf(msg, sizeof msg, "read error");
+            } else if (parser.pos_full) {
+                rc = XML2PDF_ERR_RESOURCE;
+                cause = KI_CAUSE_RESOURCE;
+                xml_format_pos(msg, sizeof msg, "resource limit: input position", ev.line, ev.column, ev.byte_offset);
             } else {
+                char why[sizeof msg];
                 rc = XML2PDF_ERR_XML;
                 cause = KI_CAUSE_XML;
-                snprintf(msg, sizeof msg, "xml: %.*s", 140, ev.error);
+                snprintf(why, sizeof why, "xml: %.150s", parser.errmsg);
+                xml_format_pos(msg, sizeof msg, why, ev.line, ev.column, ev.byte_offset);
             }
             say(opt, msg);
             failed = 1;
@@ -564,6 +660,9 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
         kev.text_len = ev.text_len;
         kev.from_cdata = ev.from_cdata;
         kev.byte_offset = ev.byte_offset;
+        doc.line = ev.line;
+        doc.column = ev.column;
+        doc.byte = ev.byte_offset;
         int mapped;
         if (opt != NULL && opt->map != NULL) {
             mapped = opt->map(opt->map_user, &doc, &kev);
@@ -575,8 +674,8 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
         if (mapped != 0) {
             const char *why = NULL;
             if (doc.error[0] != '\0') {
-                rc = XML2PDF_ERR_XML;
                 cause = doc.cause != 0 ? doc.cause : KI_CAUSE_PROFILE;
+                rc = cause == KI_CAUSE_RESOURCE ? XML2PDF_ERR_RESOURCE : XML2PDF_ERR_XML;
                 why = doc.error;
             } else {
                 rc = fail_from_pdf(&pdf, &cause, &why);
@@ -586,6 +685,10 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
                         cause = KI_CAUSE_FONT;
                         snprintf(glyph_msg, sizeof glyph_msg, "font: U+%04X", lay.bad_cp);
                         why = glyph_msg;
+                    } else if (lay.line_full || lay.too_wide) {
+                        rc = XML2PDF_ERR_RESOURCE;
+                        cause = KI_CAUSE_RESOURCE;
+                        why = lay.line_full ? LINE_FULL_MSG : TOO_WIDE_MSG;
                     } else {
                         rc = XML2PDF_ERR_XML;
                         cause = KI_CAUSE_XML;
@@ -645,7 +748,6 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
     if (pdf_ready) {
         pages = pdf_page_count(&pdf);
         objects = pdf_object_count(&pdf);
-        written = pdf.written;
         spool = pdf.spool_bytes;
         if (!failed && opt != NULL && opt->cancelled != NULL && opt->cancelled(opt->cancel_user)) {
             rc = XML2PDF_ERR_RESOURCE;
@@ -661,7 +763,10 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
             say(opt, msg);
             failed = 1;
         }
+        /* Closing the writer stream can still pass buffered bytes through
+           the accounting layer after a failure; count them too. */
         pdf_free(&pdf);
+        written = pdf.written;
         pdf_ready = 0;
     }
     if (!failed && out != NULL) {
@@ -735,6 +840,11 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
     }
 
 done:
+    if (pdf_ready) {
+        pdf_free(&pdf);
+        written = pdf.written;
+        pdf_ready = 0;
+    }
     if (result != NULL) {
         result->status = published ? XML2PDF_OK : rc;
         result->cause = cause;
@@ -749,9 +859,6 @@ done:
             result->report_selected = report_state.selected;
             result->report_skipped = report_state.total - report_state.selected;
         }
-    }
-    if (pdf_ready) {
-        pdf_free(&pdf);
     }
     if (out != NULL) {
         fclose(out);
@@ -769,8 +876,11 @@ done:
 typedef struct {
     int (*write_bytes)(void *user, const char *src, int n);
     void *user;
+    long accepted;
 } ByteSink;
 
+/* The writer counts bytes as it hands them to stdio, but stdio buffers
+   them; only what the callback accepted is the delivered output. */
 static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
     ByteSink *sink = cookie;
     if (n > 2147483647u) {
@@ -778,6 +888,9 @@ static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
         return -1;
     }
     int wr = sink->write_bytes(sink->user, buf, (int)n);
+    if (wr > 0 && (size_t)wr <= n) {
+        sink->accepted += wr;
+    }
     if (wr < 0 || (size_t)wr != n) {
         errno = EIO;
         return -1;
@@ -786,15 +899,20 @@ static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
 }
 
 static int sink_close(void *cookie) {
-    free(cookie);
+    (void)cookie;
     return 0;
 }
 
 int ki_convert(const KiOptions *opt, KiResult *result) {
+    return ki_convert_cfg(opt, NULL, result);
+}
+
+int ki_convert_cfg(const KiOptions *opt, const KiConfig *cfg, KiResult *result) {
     if (result != NULL) {
         memset(result, 0, sizeof *result);
     }
-    if (reject_options(opt, result) != 0) {
+    Setup setup;
+    if (reject_options(opt, result) != 0 || reject_config(cfg, opt, &setup, result) != 0) {
         return XML2PDF_ERR_USAGE;
     }
     if (opt == NULL || opt->read_bytes == NULL || opt->write_bytes == NULL) {
@@ -818,6 +936,7 @@ int ki_convert(const KiOptions *opt, KiResult *result) {
     }
     sink->write_bytes = opt->write_bytes;
     sink->user = opt->io_user;
+    sink->accepted = 0;
     cookie_io_functions_t fn;
     memset(&fn, 0, sizeof fn);
     fn.write = sink_write;
@@ -834,8 +953,14 @@ int ki_convert(const KiOptions *opt, KiResult *result) {
         return XML2PDF_ERR_IO;
     }
     /* Reuse the file converter's body by pointing it at this stream.
-       There is no destination path, so nothing is renamed into place. */
-    return convert_streams(NULL, out, NULL, NULL, opt, result);
+       There is no destination path, so nothing is renamed into place.
+       convert_streams always closes the stream, so the sink outlives it. */
+    int rc = convert_streams(NULL, out, NULL, NULL, opt, &setup, result);
+    if (result != NULL) {
+        result->output_bytes = sink->accepted;
+    }
+    free(sink);
+    return rc;
 }
 
 static void log_stderr(void *user, const char *msg) {

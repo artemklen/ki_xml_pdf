@@ -17,3 +17,4 @@ examples/catalog
 /build*/
 *.so.*
 .factory/
+__pycache__/

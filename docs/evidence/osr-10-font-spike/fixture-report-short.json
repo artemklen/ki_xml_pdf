@@ -1,0 +1,1 @@
+{"recipe": "osr23-v1", "profile": "report-v1", "target_bytes": 4096, "input_bytes": 4132, "records": 67, "omitted_record": 0, "tail": "valid", "sha256": "e4b4e777f0490359ec60e4f689807f0989853b542fbf5ee8cfaef84212828a4a", "path": "<scratch>/report-short.xml"}

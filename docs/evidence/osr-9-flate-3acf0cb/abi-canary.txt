@@ -1,0 +1,3 @@
+entry ki_convert_to_file rc=0 mapper_calls=5
+canary cpp ok
+abi canaries ok libdir=<osr9-root>/prefix/lib

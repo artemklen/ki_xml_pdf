@@ -51,8 +51,10 @@ grep -Fxq "xml2pdf $version records-v1" "$SCRATCH/version.txt"
 
 ./test_stream >"$SCRATCH/unit.log" 2>&1
 groups=$(grep -c '^ok ' "$SCRATCH/unit.log" || true)
-if [[ "$groups" -ne 16 ]]; then
-    echo "expected 16 unit groups, got $groups" >&2
+# Every entry of the test table in main() must report ok.
+want_groups=$(grep -cE '^        \{"[a-z0-9_]+", test_[a-z0-9_]+\},$' tests/test_stream.c || true)
+if [[ "$want_groups" -lt 16 || "$groups" -ne "$want_groups" ]] || ! grep -qx 'all tests passed' "$SCRATCH/unit.log"; then
+    echo "expected $want_groups unit groups (at least 16), got $groups" >&2
     exit 1
 fi
 
@@ -62,20 +64,12 @@ import sys
 path, report = sys.argv[1], sys.argv[2]
 data = open(path, "rb").read()
 
+sys.path.insert(0, "tests")
+import pdf_streams
+
 def streams(buf):
-    out = []
-    i = 0
-    while True:
-        j = buf.find(b"stream\n", i)
-        if j < 0:
-            break
-        start = j + 7
-        k = buf.find(b"endstream", start)
-        if k < 0:
-            break
-        out.append(buf[start:k])
-        i = k + 9
-    return out
+    # Decodes FlateDecode and rejects wrong lengths or damaged streams.
+    return [decoded for _, _, _, decoded in pdf_streams.streams(buf)]
 
 def gid_map(buf):
     mapping = {}
@@ -283,6 +277,7 @@ set -e
 
 python3 - << PY
 import re
+import sys
 from pathlib import Path
 scratch = Path("$SCRATCH")
 large_rc = int("$large_rc")
@@ -318,20 +313,12 @@ def page_count(buf):
         start = after
     return count
 
+sys.path.insert(0, "tests")
+import pdf_streams
+
 def streams(buf):
-    out = []
-    i = 0
-    while True:
-        j = buf.find(b"stream\n", i)
-        if j < 0:
-            break
-        start = j + 7
-        k = buf.find(b"endstream", start)
-        if k < 0:
-            break
-        out.append(buf[start:k])
-        i = k + 9
-    return out
+    # Decodes FlateDecode and rejects wrong lengths or damaged streams.
+    return [decoded for _, _, _, decoded in pdf_streams.streams(buf)]
 
 def gid_map(buf):
     mapping = {}
@@ -380,22 +367,12 @@ mp = gid_map(data)
 first = b""
 last_raw = b""
 seen_page = 0
-i = 0
-while True:
-    j = data.find(b"stream\n", i)
-    if j < 0:
-        break
-    start = j + 7
-    k = data.find(b"endstream", start)
-    if k < 0:
-        break
-    chunk = data[start:k]
+for chunk in streams(data):
     if b"BT\n" in chunk:
         if seen_page == 0:
             first = decode_page(chunk, mp)
         last_raw = chunk
         seen_page += 1
-    i = k + 9
 last = decode_page(last_raw, mp) if last_raw else b""
 has_first = b"FIRST_MARKER_UNIQUE" in first
 has_last = b"LAST_MARKER_UNIQUE" in last

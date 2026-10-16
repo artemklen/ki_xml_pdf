@@ -1,0 +1,75 @@
+large_exit 0
+small_exit 0
+large_input_bytes 16777313
+small_input_bytes 80197
+large_pdf_bytes 173535332
+large_rss_kbytes 2352
+small_rss_kbytes 2360
+large_rss_bytes 2408448
+small_rss_bytes 2416640
+half_input_bytes 8388656
+rss_cap_bytes 6610944
+large_pages 41944
+small_pages 21
+has_FIRST_MARKER_UNIQUE 1
+has_LAST_MARKER_UNIQUE 1
+first_page_has_FIRST 1
+first_page_lacks_LAST 1
+later_page_has_LAST 1
+last_page_tail 1
+rss_under_half_input 1
+rss_within_small_plus_4mib 1
+pdf_larger_than_rss 1
+pass 1
+--- time large ---
+	Command being timed: "./xml2pdf <evidence-root>/existing-gates-075455c/verify-scratch/large.xml <evidence-root>/existing-gates-075455c/verify-scratch/large.pdf"
+	User time (seconds): 0.74
+	System time (seconds): 0.06
+	Percent of CPU this job got: 93%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.86
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 2352
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 305
+	Voluntary context switches: 198
+	Involuntary context switches: 5
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 338944
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+--- time small ---
+	Command being timed: "./xml2pdf tests/fixture.xml <evidence-root>/existing-gates-075455c/verify-scratch/small.pdf"
+	User time (seconds): 0.00
+	System time (seconds): 0.00
+	Percent of CPU this job got: 41%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.01
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 2360
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 311
+	Voluntary context switches: 26
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 2904
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+rss_scope converter_process_only
+removed_large_xml_bytes 16777313
+removed_large_pdf_bytes 173535332
+scratch <evidence-root>/existing-gates-075455c/verify-scratch

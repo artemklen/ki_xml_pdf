@@ -1,0 +1,187 @@
+{
+  "binary": "<evidence-root>/src-075455c/xml2pdf",
+  "binary_sha256": "875cd641607798d5aef53611b3968e9af2635a663f8b0547e01d67d4e527beaa",
+  "font": "<evidence-root>/src-075455c/fonts/DejaVuSans.ttf",
+  "font_sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e",
+  "controls": [
+    {
+      "control": "oracle-positive",
+      "expectation": "unmodified reader stream passes with every record checked",
+      "passed": true,
+      "observed": {
+        "converter_exit": 0,
+        "records": 4649,
+        "verdict": {
+          "ok": true,
+          "lines_checked": 9302,
+          "records_checked": 4649,
+          "page_breaks": 187,
+          "error": "",
+          "oracle_exit": 0,
+          "mutated_lines": 0
+        },
+        "fixture_sha256": "5bc2ecc37cb687904fbf1d1f32fe8fc5bcbbb886573bdc65df53fa858919e9ea"
+      }
+    },
+    {
+      "control": "oracle-missing-interior-record",
+      "expectation": "reader stream without record 2324 fails",
+      "passed": true,
+      "observed": {
+        "verdict": {
+          "ok": false,
+          "lines_checked": 4647,
+          "records_checked": 2323,
+          "page_breaks": 92,
+          "error": "logical line 4648: expected 'Запись 2324', got 'Запись 2325'",
+          "oracle_exit": 1,
+          "mutated_lines": 2
+        }
+      }
+    },
+    {
+      "control": "oracle-corrupt-interior-record",
+      "expectation": "reader stream with one changed digit in record 2325 fails",
+      "passed": true,
+      "observed": {
+        "verdict": {
+          "ok": false,
+          "lines_checked": 4650,
+          "records_checked": 2324,
+          "page_breaks": 93,
+          "error": "logical line 4651: expected 'v: v2325.0629693', got 'v: v2325.0629690'",
+          "oracle_exit": 1,
+          "mutated_lines": 1
+        }
+      }
+    },
+    {
+      "control": "oracle-fixture-omits-record",
+      "expectation": "a fixture lacking record 1234 converts, and the oracle (recipe still expects it) fails",
+      "passed": true,
+      "observed": {
+        "converter_exit": 0,
+        "verdict": {
+          "ok": false,
+          "lines_checked": 3701,
+          "records_checked": 1233,
+          "page_breaks": 74,
+          "error": "logical line 3702: expected 'n: 1234', got 'n: 1235'",
+          "oracle_exit": 1,
+          "mutated_lines": 0
+        },
+        "fixture_sha256": "dcab45dc4504e77d09ba80589f864e254c200ca0b52eabbfdf7a3796a50889bb"
+      }
+    },
+    {
+      "control": "tail-valid",
+      "expectation": "valid tail succeeds; counters total/1000/total-1000 match",
+      "passed": true,
+      "observed": {
+        "converter_exit": 0,
+        "stderr": "xml2pdf: pages=41 objects=89 offset_bytes=720",
+        "records": 15981,
+        "input_bytes": 1048578,
+        "fixture_sha256": "290cf62618e6f0bb1cb62f4b916ef32391a0a9f08a0d494f2e3cd30a5fd956ee",
+        "destination_kept": false,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 <evidence-root>/scratch/controls/tail-valid.xml <evidence-root>/scratch/controls/tail-valid.pdf",
+        "verdict": {
+          "ok": true,
+          "lines_checked": 2004,
+          "records_checked": 1000,
+          "page_breaks": 41,
+          "error": "",
+          "oracle_exit": 0,
+          "mutated_lines": 0
+        }
+      }
+    },
+    {
+      "control": "tail-malformed-xml",
+      "expectation": "malformed XML after the selected records fails as XML; destination kept",
+      "passed": true,
+      "observed": {
+        "converter_exit": 1,
+        "stderr": "xml: end tag mismatch",
+        "records": 15981,
+        "input_bytes": 1048631,
+        "fixture_sha256": "5335abe4c85e5eab74fb21eb72f890b39bcb49bf4b5fbe1f82d47fc94a154d89",
+        "destination_kept": true,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 <evidence-root>/scratch/controls/tail-malformed.xml <evidence-root>/scratch/controls/tail-malformed.pdf"
+      }
+    },
+    {
+      "control": "tail-profile-invalid",
+      "expectation": "well-formed but profile-invalid record after the selection fails; destination kept",
+      "passed": true,
+      "observed": {
+        "converter_exit": 1,
+        "stderr": "profile: unknown element at byte 1048592",
+        "records": 15981,
+        "input_bytes": 1048612,
+        "fixture_sha256": "e17d603bc2f29ea4288af8f122e6bc448945ccc98e755c26b1d7054ae9f6bc7f",
+        "destination_kept": true,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --profile report-v1 --record-limit 1000 <evidence-root>/scratch/controls/tail-profile-invalid.xml <evidence-root>/scratch/controls/tail-profile-invalid.pdf"
+      }
+    },
+    {
+      "control": "quota-pages",
+      "expectation": "--max-pages 1 fails with exit 4 (resource); destination kept",
+      "passed": true,
+      "observed": {
+        "converter_exit": 4,
+        "stderr": "resource limit",
+        "destination_kept": true,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --max-pages 1 <evidence-root>/scratch/controls/quota.xml <evidence-root>/scratch/controls/quota-pages.pdf",
+        "fixture_sha256": "6677d737795b0ffe3527f459aa9f2b74db892c148d5bf068828679782a169b27"
+      }
+    },
+    {
+      "control": "quota-output-bytes",
+      "expectation": "--max-output-bytes 4096 fails with exit 4 (resource); destination kept",
+      "passed": true,
+      "observed": {
+        "converter_exit": 4,
+        "stderr": "resource limit",
+        "destination_kept": true,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --max-output-bytes 4096 <evidence-root>/scratch/controls/quota.xml <evidence-root>/scratch/controls/quota-output-bytes.pdf",
+        "fixture_sha256": "6677d737795b0ffe3527f459aa9f2b74db892c148d5bf068828679782a169b27"
+      }
+    },
+    {
+      "control": "quota-spool-bytes",
+      "expectation": "--max-spool-bytes 16 fails with exit 4 (resource); destination kept",
+      "passed": true,
+      "observed": {
+        "converter_exit": 4,
+        "stderr": "resource limit",
+        "destination_kept": true,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/src-075455c/fonts/DejaVuSans.ttf --max-spool-bytes 16 <evidence-root>/scratch/controls/quota.xml <evidence-root>/scratch/controls/quota-spool-bytes.pdf",
+        "fixture_sha256": "6677d737795b0ffe3527f459aa9f2b74db892c148d5bf068828679782a169b27"
+      }
+    },
+    {
+      "control": "font-at-8MiB-cap",
+      "expectation": "8388608-byte font (DejaVu + zero padding) gives exit 0",
+      "passed": true,
+      "observed": {
+        "converter_exit": 0,
+        "stderr": "xml2pdf: pages=405 objects=817 offset_bytes=6544",
+        "font_bytes": 8388608,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/scratch/controls/font-at-8MiB-cap.ttf <evidence-root>/scratch/controls/quota.xml <evidence-root>/scratch/controls/font-at-8MiB-cap.pdf"
+      }
+    },
+    {
+      "control": "font-over-8MiB-cap",
+      "expectation": "8388609-byte font (DejaVu + zero padding) gives exit 1",
+      "passed": true,
+      "observed": {
+        "converter_exit": 1,
+        "stderr": "font: cannot load",
+        "font_bytes": 8388609,
+        "command": "<evidence-root>/src-075455c/xml2pdf --font <evidence-root>/scratch/controls/font-over-8MiB-cap.ttf <evidence-root>/scratch/controls/quota.xml <evidence-root>/scratch/controls/font-over-8MiB-cap.pdf"
+      }
+    }
+  ],
+  "all_passed": true
+}

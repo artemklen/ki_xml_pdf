@@ -1,0 +1,447 @@
+{
+  "base": "<repo>/docs/evidence/osr-23-baseline-075455c/baseline",
+  "other": "<osr25-root>/resource-48bdef2",
+  "environment_differences": {
+    "measured_source_sha": [
+      "075455cc930a1f5e79a9ae4811e82b5c95af06c4",
+      "48bdef2fd01dfff8b85e0cdd77af55d4c9593531"
+    ],
+    "binary_sha256": [
+      "875cd641607798d5aef53611b3968e9af2635a663f8b0547e01d67d4e527beaa",
+      "3ebb6b1703ee6dda2e6d2f970f0ff283815819725ecf9ef4ef1d740de00d606c"
+    ],
+    "harness_sha": [
+      "67ce2640bb0695cbe4b163fdd7f494140a2106fe",
+      "48bdef2fd01dfff8b85e0cdd77af55d4c9593531"
+    ]
+  },
+  "runs": {
+    "full-records-1MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          12216261,
+          2332511
+        ],
+        "spool_offset_bytes": [
+          32192,
+          48264
+        ],
+        "objects": [
+          4023,
+          6032
+        ],
+        "pdf_sha256": [
+          "e6a926b6bf288d8af8e0014d2acee241a48cf039f04819fa72e24f736493c0c1",
+          "1b5d4cf59e89663a11644e67d99eeda49d5fc93d587eba1c52328cfc1e0121d3"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2396,
+          2952
+        ],
+        "converter_elapsed_s": [
+          0.12,
+          0.22
+        ],
+        "generator_rss_kib": [
+          23192,
+          23112
+        ],
+        "reader_rss_kib": [
+          21560,
+          21552
+        ],
+        "reader_elapsed_s": [
+          1.41,
+          1.53
+        ],
+        "oracle_rss_kib": [
+          16840,
+          16404
+        ]
+      }
+    },
+    "full-records-16MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          180555585,
+          29422443
+        ],
+        "spool_offset_bytes": [
+          480048,
+          720048
+        ],
+        "objects": [
+          60005,
+          90005
+        ],
+        "pdf_sha256": [
+          "cb093fd407d13f5a164ed3aed3e53305da7a938d29a4d5c02155afb9306ac062",
+          "30d6830b7d404d6913e986bae94ec3e48fbc5de35039db6761b43555ce430431"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2420,
+          2752
+        ],
+        "converter_elapsed_s": [
+          1.07,
+          2.91
+        ],
+        "generator_rss_kib": [
+          23388,
+          23264
+        ],
+        "reader_rss_kib": [
+          69200,
+          71656
+        ],
+        "reader_elapsed_s": [
+          20.85,
+          23.01
+        ],
+        "oracle_rss_kib": [
+          16872,
+          16480
+        ]
+      }
+    },
+    "full-records-64MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          713436448,
+          112864984
+        ],
+        "spool_offset_bytes": [
+          1848896,
+          2773320
+        ],
+        "objects": [
+          231111,
+          346664
+        ],
+        "pdf_sha256": [
+          "90397bf80874bfb282ca7169dffca51b3e52556df9dbf7bf20822da06c89b57e",
+          "a90f85f08a2c2720f524fb59059fc0b22a567ff1a24d764f1acfa6c375541745"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2396,
+          2880
+        ],
+        "converter_elapsed_s": [
+          4.27,
+          11.54
+        ],
+        "generator_rss_kib": [
+          23364,
+          23168
+        ],
+        "reader_rss_kib": [
+          218808,
+          223572
+        ],
+        "reader_elapsed_s": [
+          81.1,
+          88.51
+        ],
+        "oracle_rss_kib": [
+          16944,
+          16664
+        ]
+      }
+    },
+    "full-report-1MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          6052147,
+          1192452
+        ],
+        "spool_offset_bytes": [
+          10304,
+          15432
+        ],
+        "objects": [
+          1287,
+          1928
+        ],
+        "pdf_sha256": [
+          "7b65c0cfa2aa21a23823c21f2b1b743f14662342371e2116580f3d7afb5610ba",
+          "a064785bf48adc418a7885a4186fb4806438c4d894bb6f995543e878397001fa"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2340,
+          2952
+        ],
+        "converter_elapsed_s": [
+          0.07,
+          0.14
+        ],
+        "generator_rss_kib": [
+          20940,
+          20824
+        ],
+        "reader_rss_kib": [
+          19384,
+          19412
+        ],
+        "reader_elapsed_s": [
+          0.48,
+          0.52
+        ],
+        "oracle_rss_kib": [
+          16948,
+          16444
+        ]
+      }
+    },
+    "full-report-16MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          86884343,
+          12545307
+        ],
+        "spool_offset_bytes": [
+          157744,
+          236592
+        ],
+        "objects": [
+          19717,
+          29573
+        ],
+        "pdf_sha256": [
+          "0096d80527116729c27a9b1d4d77124ccb862cebe420f9f3fc12bbd08b4ebb64",
+          "734eb23f37255da45de6b7e2733697cc2c83f9e3b4fc6d39b1648bb5374004d5"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2524,
+          2880
+        ],
+        "converter_elapsed_s": [
+          0.73,
+          1.63
+        ],
+        "generator_rss_kib": [
+          21188,
+          21000
+        ],
+        "reader_rss_kib": [
+          34588,
+          34588
+        ],
+        "reader_elapsed_s": [
+          7.25,
+          7.94
+        ],
+        "oracle_rss_kib": [
+          16892,
+          16408
+        ]
+      }
+    },
+    "full-report-64MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          347124499,
+          48620561
+        ],
+        "spool_offset_bytes": [
+          624592,
+          936864
+        ],
+        "objects": [
+          78073,
+          117107
+        ],
+        "pdf_sha256": [
+          "19238d5d212baa4cf9c00cb6f683f77babed9af5cf652768211af99b53c5614e",
+          "550a8e3aefbaa41bf55cf58e5292c622ae511e50bb68d6e7bc0d77789e6b49d5"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2480,
+          2880
+        ],
+        "converter_elapsed_s": [
+          2.93,
+          6.38
+        ],
+        "generator_rss_kib": [
+          21156,
+          21060
+        ],
+        "reader_rss_kib": [
+          84992,
+          86892
+        ],
+        "reader_elapsed_s": [
+          28.65,
+          31.36
+        ],
+        "oracle_rss_kib": [
+          16788,
+          16432
+        ]
+      }
+    },
+    "select-report-16MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          1095465,
+          460952
+        ],
+        "spool_offset_bytes": [
+          720,
+          1056
+        ],
+        "objects": [
+          89,
+          131
+        ],
+        "pdf_sha256": [
+          "602a67adc3615618e0a1f18723c74e626c3612bd8f796f0685abc2a1a097d339",
+          "21716ffcb0d386f850c6093a3d09e12a6e46eb6f3821c890f44ef017f49bd1f8"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2536,
+          2824
+        ],
+        "converter_elapsed_s": [
+          0.15,
+          0.17
+        ],
+        "generator_rss_kib": [
+          21176,
+          20960
+        ],
+        "reader_rss_kib": [
+          18176,
+          18260
+        ],
+        "reader_elapsed_s": [
+          0.03,
+          0.04
+        ],
+        "oracle_rss_kib": [
+          16972,
+          16496
+        ]
+      }
+    },
+    "select-report-256MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          1095481,
+          460949
+        ],
+        "spool_offset_bytes": [
+          720,
+          1056
+        ],
+        "objects": [
+          89,
+          131
+        ],
+        "pdf_sha256": [
+          "e72a4c5abdb1a928cc76663a36ff34b8eb9d6294f8cf54a85f8cc895031bda48",
+          "59f4bcc43a66b54447cec326e944c2a358a0ad3710e2965e457cf12d54fd7e98"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2340,
+          2764
+        ],
+        "converter_elapsed_s": [
+          1.78,
+          1.93
+        ],
+        "generator_rss_kib": [
+          21188,
+          21044
+        ],
+        "reader_rss_kib": [
+          18228,
+          18224
+        ],
+        "reader_elapsed_s": [
+          0.03,
+          0.04
+        ],
+        "oracle_rss_kib": [
+          16872,
+          16324
+        ]
+      }
+    },
+    "select-report-1024MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_bytes": [
+          1095497,
+          460955
+        ],
+        "spool_offset_bytes": [
+          720,
+          1056
+        ],
+        "objects": [
+          89,
+          131
+        ],
+        "pdf_sha256": [
+          "6a055eaacc852c32da000d5dd31ec8ffdd6714c3ed1b792b0feabd1bb036a0f2",
+          "c511075e9537aae005c191c3644b6b273551e38fe3ed49d0008fa6f0f90b46fa"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2456,
+          2848
+        ],
+        "converter_elapsed_s": [
+          6.96,
+          7.43
+        ],
+        "generator_rss_kib": [
+          21136,
+          21008
+        ],
+        "reader_rss_kib": [
+          18172,
+          18272
+        ],
+        "reader_elapsed_s": [
+          0.04,
+          0.03
+        ],
+        "oracle_rss_kib": [
+          16900,
+          16600
+        ]
+      }
+    }
+  },
+  "only_in_base": [],
+  "only_in_other": [],
+  "problems": [],
+  "ok": true
+}

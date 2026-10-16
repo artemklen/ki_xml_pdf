@@ -16,3 +16,11 @@ KI_0_2 {
   global:
     ki_convert_to_file;
 } KI_0_1;
+
+KI_0_3 {
+  global:
+    ki_config_init;
+    ki_convert_cfg;
+    ki_convert_file_cfg;
+    ki_convert_to_file_cfg;
+} KI_0_2;

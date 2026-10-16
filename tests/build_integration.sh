@@ -5,7 +5,7 @@ root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cc=${CC:-cc}
 cxx=${CXX:-c++}
 pdftext=${PDFTOTEXT:-pdftotext}
-for tool in "$cc" "$cxx" "$pdftext" cmake pkg-config make python3 readelf; do
+for tool in "$cc" "$cxx" "$pdftext" pdfinfo cmake pkg-config make python3 readelf; do
     command -v "$tool" >/dev/null
 done
 work=$(mktemp -d "${TMPDIR:-/tmp}/ki-build-integration.XXXXXX")
@@ -52,6 +52,12 @@ check_stage() {
     done
     readelf -d "$staged/lib/libki_xml_pdf.so" | \
         grep -F 'Library soname: [libki_xml_pdf.so.0]' >/dev/null
+    readelf -d "$staged/lib/libki_xml_pdf.so" | grep -F 'Shared library: [libz.so.1]' >/dev/null || \
+        fail "shared library does not record its zlib dependency"
+    PKG_CONFIG_LIBDIR="$staged/lib/pkgconfig" pkg-config --static --libs ki_xml_pdf | grep -qw -- -lz || \
+        fail "pkg-config --static omits zlib"
+    grep -Fq 'find_dependency(ZLIB)' "$staged/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake" || \
+        fail "CMake package does not find zlib"
     local installed_version installed_prefix
     installed_version=$(PKG_CONFIG_LIBDIR="$staged/lib/pkgconfig" pkg-config --modversion ki_xml_pdf)
     installed_prefix=$(PKG_CONFIG_LIBDIR="$staged/lib/pkgconfig" pkg-config --variable=prefix ki_xml_pdf)
@@ -146,6 +152,20 @@ for method in make cmake; do
                 ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
                     "$foreign/report-v1.xml" "$foreign/$name-callback.pdf" callback )
                 oracle "$foreign/$name-callback.pdf"
+                ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
+                    "$foreign/report-v1.xml" "$foreign/$name-a4.pdf" a4-landscape )
+                oracle "$foreign/$name-a4.pdf"
+                pdfinfo -box "$foreign/$name-a4.pdf" | \
+                    grep -E '^MediaBox: +0\.00 +0\.00 +841\.89 +595\.28$' >/dev/null || \
+                    fail "$name A4 landscape MediaBox differs"
+                ( cd "$foreign" && env -u KI_XML_PDF_FONT "$binary" \
+                    "$foreign/report-v1.xml" "$foreign/$name-info.pdf" info )
+                oracle "$foreign/$name-info.pdf"
+                info=$(pdfinfo -enc UTF-8 -rawdates "$foreign/$name-info.pdf")
+                grep -Fx 'Title:           Отчёт (1)' <<< "$info" >/dev/null &&
+                    grep -Fx 'Producer:        consumer' <<< "$info" >/dev/null &&
+                    grep -Fx "CreationDate:    D:20261016123456+03'00'" <<< "$info" >/dev/null || \
+                    fail "$name /Info differs"
                 echo "matrix PASS $name"
                 rows=$((rows + 1))
             done

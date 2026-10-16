@@ -166,6 +166,39 @@ def main():
             check_preserved(directory, spool, destination)
             passed_case(f"{label} preserves OLD and cleans temporary files")
 
+        # Diagnostics name the consumed position: line 2 after CRLF, the
+        # column counting "Ж" once, the raw byte offset counting the BOM.
+        coordinates = [
+            ("xml-coordinates", [], "\ufeff<r>\r\n Ж<a b='1' b".encode() + b"='2'/></r>",
+             b"xml: duplicate attribute at line 2, column 13, byte 21\n"),
+            ("profile-coordinates", ["--profile", "report-v1"],
+             '<report version="1" title="T">\n<record><field name="n">a</field></record>\n<bogus/>'
+             '</report>'.encode(), b"profile: unknown element at line 3, column 9, byte 82\n"),
+            # Malformed UTF-8 inside a tag is reported after the tag's '>'.
+            ("utf8-attribute-coordinates", [], b"<r a='\x80abc'/>",
+             b"xml: illegal character at line 1, column 14, byte 13\n"),
+            ("utf8-text-coordinates", [], b"<r>a\x80b</r>",
+             b"xml: illegal character at line 1, column 6, byte 5\n"),
+            # A text reference is checked whole, after its ';'.
+            ("utf8-named-reference-coordinates", [], b"<r>\xc3&amp;</r>",
+             b"xml: illegal character at line 1, column 10, byte 9\n"),
+            ("utf8-numeric-reference-coordinates", [], b"<r>\xc3&#38;</r>",
+             b"xml: illegal character at line 1, column 10, byte 9\n"),
+        ]
+        for label, options, data, message in coordinates:
+            directory, spool, destination = case_dir(label)
+            destination.write_bytes(OLD)
+            for stdin in (False, True):
+                source = directory / "input.xml"
+                source.write_bytes(data)
+                result = run([*options, "--temp-dir", spool, "-" if stdin else source, destination],
+                             data=data if stdin else None)
+                check_status(result, 1, label)
+                require(result.stderr == message, f"{label}: stderr {result.stderr!r}, expected {message!r}")
+                source.unlink()
+                check_preserved(directory, spool, destination)
+            passed_case(f"{label} reports line, column and byte")
+
         directory, spool, destination = case_dir("signal-cancel")
         destination.write_bytes(OLD)
         process = subprocess.Popen(

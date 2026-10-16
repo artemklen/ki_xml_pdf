@@ -1,0 +1,26 @@
+== against preserved 0.2.0 library
+	libki_xml_pdf.so.0 => <evidence-root>/old-0.2-prefix/lib/libki_xml_pdf.so.0 (0x00007f316adda000)
+header 0.2.0 sizeof KiOptions=144 KiResult=224 KiEvent=184
+ok ki_options_init writes only KiOptions
+ok ki_convert size mismatch: USAGE, zero metrics, no callback
+ok ki_convert negative quota: USAGE before callbacks
+ok ki_convert NULL options: USAGE
+ok ki_convert_file invalid selection: USAGE, nothing created
+ok ki_convert_to_file without read_bytes: USAGE, nothing created
+ok ki_convert unknown profile: USAGE before callbacks
+ok KiOptions guard bytes intact after all calls
+early probe ok failures=0
+rc=0
+== against new 0.3.0 library
+	libki_xml_pdf.so.0 => ../scratch/prefix/lib/libki_xml_pdf.so.0 (0x00007f11c6644000)
+header 0.2.0 sizeof KiOptions=144 KiResult=224 KiEvent=184
+ok ki_options_init writes only KiOptions
+ok ki_convert size mismatch: USAGE, zero metrics, no callback
+ok ki_convert negative quota: USAGE before callbacks
+ok ki_convert NULL options: USAGE
+ok ki_convert_file invalid selection: USAGE, nothing created
+ok ki_convert_to_file without read_bytes: USAGE, nothing created
+ok ki_convert unknown profile: USAGE before callbacks
+ok KiOptions guard bytes intact after all calls
+early probe ok failures=0
+rc=0

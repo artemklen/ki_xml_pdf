@@ -18,8 +18,9 @@ endif()
 
 include(GNUInstallDirs)
 include(CTest)
+find_package(ZLIB REQUIRED)
 option(BUILD_SHARED_LIBS "Select the shared library for the default package target" ON)
-set(KI_CORE_SOURCES src/xml_parse.c src/font.c src/page_sink.c src/pdf_write.c
+set(KI_CORE_SOURCES src/xml_parse.c src/font.c src/geometry.c src/info.c src/page_sink.c src/pdf_write.c
                     src/layout.c src/report.c src/convert.c)
 set(KI_FONT_PATH "${CMAKE_INSTALL_FULL_DATADIR}/ki_xml_pdf/DejaVuSans.ttf")
 
@@ -38,6 +39,10 @@ add_library(ki_xml_pdf_static STATIC ${KI_CORE_SOURCES})
 add_library(ki_xml_pdf_shared SHARED ${KI_CORE_SOURCES})
 ki_core_settings(ki_xml_pdf_static)
 ki_core_settings(ki_xml_pdf_shared)
+# Exported static targets carry $<LINK_ONLY:ZLIB::ZLIB>; the shared library
+# records libz as a NEEDED entry.
+target_link_libraries(ki_xml_pdf_static PRIVATE ZLIB::ZLIB)
+target_link_libraries(ki_xml_pdf_shared PRIVATE ZLIB::ZLIB)
 set_target_properties(ki_xml_pdf_static PROPERTIES OUTPUT_NAME ki_xml_pdf EXPORT_NAME static)
 set_target_properties(ki_xml_pdf_shared PROPERTIES OUTPUT_NAME ki_xml_pdf EXPORT_NAME shared
                       VERSION "${PROJECT_VERSION}" SOVERSION 0
@@ -74,8 +79,9 @@ if(BUILD_TESTING)
     # Internal parser tests need symbols deliberately hidden from the shared ABI.
     add_executable(test_stream tests/test_stream.c ${KI_CORE_SOURCES})
     ki_core_settings(test_stream)
-    target_link_libraries(test_stream PRIVATE Threads::Threads)
-    target_link_options(test_stream PRIVATE "LINKER:--wrap=fsync")
+    target_link_libraries(test_stream PRIVATE Threads::Threads ZLIB::ZLIB)
+    target_link_options(test_stream PRIVATE "LINKER:--wrap=fsync" "LINKER:--wrap=deflate"
+                        "LINKER:--wrap=deflateInit2_")
     add_test(NAME stream COMMAND test_stream)
     set_tests_properties(stream PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -89,6 +95,27 @@ if(BUILD_TESTING)
         --binary "$<TARGET_FILE:xml2pdf>"
         --fixture "${CMAKE_CURRENT_SOURCE_DIR}/examples/report-v1.xml"
         --oracle "${CMAKE_CURRENT_SOURCE_DIR}/examples/report-v1.expected.txt")
+    add_test(NAME pdf_offsets COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/pdf_offsets.py"
+        --binary "$<TARGET_FILE:xml2pdf>"
+        --fixture "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixture.xml")
+    set_tests_properties(pdf_offsets PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME pdf_streams COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/pdf_streams.py"
+        --binary "$<TARGET_FILE:xml2pdf>"
+        --font "${CMAKE_CURRENT_SOURCE_DIR}/fonts/DejaVuSans.ttf")
+    add_test(NAME wrap_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
+    add_test(NAME geometry_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/geometry_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
+    add_test(NAME info_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/info_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
+    add_test(NAME integration_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/integration_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
 endif()
 
 set(KI_DEFAULT_SHARED "${BUILD_SHARED_LIBS}")

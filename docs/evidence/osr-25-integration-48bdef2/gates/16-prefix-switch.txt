@@ -1,0 +1,103 @@
+### 16-prefix-switch: bash tests/prefix_switch.sh
+### HEAD 48bdef2fd01dfff8b85e0cdd77af55d4c9593531
+make: Entering directory '<osr25-root>/checkout'
+rm -f xml2pdf test_stream test_stream_san libki_xml_pdf.a libki_xml_pdf.so examples/consume examples/consume_cpp examples/report examples/catalog
+rm -f src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o src/xml_parse.d src/font.d src/geometry.d src/info.d src/page_sink.d src/pdf_write.d src/layout.d src/report.d src/convert.d src/.font_prefix src/.font_prefix.new
+make: Leaving directory '<osr25-root>/checkout'
+make: Entering directory '<osr25-root>/checkout'
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+make: Leaving directory '<osr25-root>/checkout'
+make: Entering directory '<osr25-root>/checkout'
+printf '%s\n' '/tmp/ki-prefix-b.koiZJn' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-prefix-b.koiZJn/bin /tmp/ki-prefix-b.koiZJn/lib /tmp/ki-prefix-b.koiZJn/include \
+	/tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-prefix-b.koiZJn/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-prefix-b.koiZJn/lib/
+cp include/ki_xml_pdf.h /tmp/ki-prefix-b.koiZJn/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-prefix-b.koiZJn/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf" "/tmp/ki-prefix-b.koiZJn/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-prefix-b.koiZJn|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-prefix-b.koiZJn/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-prefix-b.koiZJn/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-prefix-b.koiZJn/lib/pkgconfig/ki_xml_pdf.pc"
+make: Leaving directory '<osr25-root>/checkout'
+pages=1
+pages=1
+pages=1
+consume: font: cannot load
+make: Entering directory '<osr25-root>/checkout'
+printf '%s\n' '/tmp/ki-prefix-a.0ZtRxr' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-prefix-a.0ZtRxr/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-prefix-a.0ZtRxr/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-prefix-a.0ZtRxr/bin /tmp/ki-prefix-a.0ZtRxr/lib /tmp/ki-prefix-a.0ZtRxr/include \
+	/tmp/ki-prefix-a.0ZtRxr/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-prefix-a.0ZtRxr/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-prefix-a.0ZtRxr/lib/
+cp include/ki_xml_pdf.h /tmp/ki-prefix-a.0ZtRxr/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-prefix-a.0ZtRxr/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-prefix-a.0ZtRxr/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-prefix-a.0ZtRxr/lib/cmake/ki_xml_pdf" "/tmp/ki-prefix-a.0ZtRxr/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-prefix-a.0ZtRxr/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-prefix-a.0ZtRxr/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-prefix-a.0ZtRxr/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-prefix-a.0ZtRxr|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-prefix-a.0ZtRxr/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-prefix-a.0ZtRxr/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-prefix-a.0ZtRxr/lib/pkgconfig/ki_xml_pdf.pc"
+make: Leaving directory '<osr25-root>/checkout'
+pages=1
+make: Entering directory '<osr25-root>/checkout'
+printf '%s\n' '/tmp/ki-prefix-b.koiZJn' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-prefix-b.koiZJn/bin /tmp/ki-prefix-b.koiZJn/lib /tmp/ki-prefix-b.koiZJn/include \
+	/tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-prefix-b.koiZJn/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-prefix-b.koiZJn/lib/
+cp include/ki_xml_pdf.h /tmp/ki-prefix-b.koiZJn/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-prefix-b.koiZJn/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-prefix-b.koiZJn/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf" "/tmp/ki-prefix-b.koiZJn/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-prefix-b.koiZJn/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-prefix-b.koiZJn|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-prefix-b.koiZJn/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-prefix-b.koiZJn/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-prefix-b.koiZJn/lib/pkgconfig/ki_xml_pdf.pc"
+make: Leaving directory '<osr25-root>/checkout'
+pages=1
+prefix_switch ok

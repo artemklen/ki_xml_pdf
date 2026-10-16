@@ -1,0 +1,11 @@
+0000000000000000 A KI_0_1
+0000000000000000 A KI_0_2
+000000000000aea0 T ki_convert@@KI_0_1
+000000000000a850 T ki_convert_file@@KI_0_1
+000000000000add0 T ki_convert_to_file@@KI_0_2
+000000000000a830 T ki_doc_break@@KI_0_1
+000000000000a760 T ki_doc_fail@@KI_0_1
+000000000000a7b0 T ki_doc_text@@KI_0_1
+000000000000a720 T ki_options_init@@KI_0_1
+000000000000b140 T xml2pdf_convert@@KI_0_1
+000000000000b0c0 T xml2pdf_convert_cap@@KI_0_1

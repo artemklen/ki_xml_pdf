@@ -23,11 +23,24 @@ extern "C" {
    64 objects while the PDF is finished, and again after fsync and close
    before rename. After a successful rename, cancel does not roll the file
    back. A character outside the font repertoire is KI_CAUSE_FONT with the
-   U+ code point, not an XML syntax error. Profile failures name the rule
-   and the input byte offset. ki_convert leaves bytes already accepted by
-   write_bytes in place when it fails. */
+   U+ code point, not an XML syntax error. A zero-advance glyph (combining
+   mark) is present. Text wraps at spaces and tabs; a longer word is cut at
+   a code point boundary. One base with zero-advance marks over 1023 UTF-8
+   bytes cannot be cut and is KI_CAUSE_RESOURCE. XML and profile failures, including ki_doc_fail, end
+   with "at line L, column C, byte B": the consumed position, line/column
+   1-based in Unicode scalars, byte 0-based in raw input bytes (BOM
+   included, CR/LF/CRLF one line break, a long rule shortened at a UTF-8
+   boundary). Malformed UTF-8 is reported at the position consumed when the
+   parser next checks it, not necessarily right after the bad byte: after
+   each byte in text, CDATA, comments, PI data and DOCTYPE bodies, after a
+   whole text reference (so <r>\xC3&amp;</r> is line 1, column 10, byte 9),
+   after the closing '>' in tags (names, attribute values), before '<' or
+   at end of input for a cut-off sequence; a syntax or reference error
+   found first in the same construct is reported instead. Other causes carry no
+   position. ki_convert leaves bytes
+   already accepted by write_bytes in place when it fails. */
 
-#define KI_XML_PDF_VERSION "0.2.0"
+#define KI_XML_PDF_VERSION "0.3.0"
 #define KI_XML_PDF_PROFILE_RECORDS "records-v1"
 #define KI_XML_PDF_PROFILE_REPORT "report-v1"
 #define KI_XML_PDF_PROFILE KI_XML_PDF_PROFILE_RECORDS
@@ -136,6 +149,84 @@ KI_API int ki_convert(const KiOptions *opt, KiResult *result);
    The previous destination is preserved on failure and the temp is removed.
    The caller retains ownership of input/callback resources. */
 KI_API int ki_convert_to_file(const char *pdf_path, const KiOptions *opt, KiResult *result);
+
+/* Page geometry, added beside KiOptions so that KiOptions, KiResult and
+   KiEvent keep their 0.2 layout. Values are PostScript points (1/72 inch),
+   rounded to the nearest 0.001 pt; the PDF MediaBox and text placement use
+   the same rounded values. Letter is 612 x 792, A4 595.276 x 841.89 (210 x
+   297 mm); landscape swaps width and height of a named size. A custom size
+   sets page_width/page_height and stays as given (orientation must be
+   portrait); a named size requires both to be 0. Limits: page sides 3..14400,
+   margins 0..14400 with left + right < width and top + bottom < height, font
+   size 1..144. NaN and infinities are rejected. Leading is 1.4 x font size
+   (14 pt at 10 pt), rounded down to 0.001 pt. A page holds at most 50 lines.
+   Every glyph's ink, not only its advance, stays inside the margins: a line
+   whose first glyph extends left of its origin starts further right, and the
+   first baseline and the line count leave room for the font's ascent and
+   descent. An invalid value fails with KI_CAUSE_USAGE before any file is
+   opened or callback runs. A valid geometry with no room for one line, or
+   for some single glyph of the loaded font, fails with KI_CAUSE_USAGE after
+   the font loads and before any read, write or map callback; a file
+   destination is left as it was. */
+enum {
+    KI_PAGE_LETTER = 0,
+    KI_PAGE_A4 = 1,
+    KI_PAGE_CUSTOM = 2
+};
+
+enum {
+    KI_ORIENT_PORTRAIT = 0,
+    KI_ORIENT_LANDSCAPE = 1
+};
+
+typedef struct KiConfig {
+    size_t size;
+    int page_size;
+    int orientation;
+    double page_width;
+    double page_height;
+    double margin_top;
+    double margin_right;
+    double margin_bottom;
+    double margin_left;
+    double font_size;
+    /* Optional document information (/Info), each NULL by default and then
+       not written. title and producer are UTF-8, 1..KI_INFO_TEXT_MAX bytes,
+       any Unicode scalar value except control characters other than tab, LF
+       and CR; they are stored as UTF-16BE PDF text strings and do not need
+       glyphs in the body font. creation_date is exactly
+       YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DDTHH:MM:SS+HH:MM (or -HH:MM), a valid
+       Gregorian date and time with seconds 00..59 and an offset up to 23:59;
+       it is written as given, as D:YYYYMMDDHHmmSSZ or D:...+HH'mm'. The
+       library never adds a date, ModDate, XMP, trailer ID or PDF/A claim.
+       An invalid value fails with KI_CAUSE_USAGE before any file is opened
+       or callback runs. The values are copied at the start of the call.
+       A config whose size is KI_CONFIG_SIZE_GEOMETRY ends before these
+       fields and has no /Info. */
+    const char *title;
+    const char *producer;
+    const char *creation_date;
+} KiConfig;
+
+#define KI_INFO_TEXT_MAX 1024
+/* Size of the geometry-only KiConfig, before the /Info fields. */
+#define KI_CONFIG_SIZE_GEOMETRY offsetof(KiConfig, title)
+
+/* Writes defaults (Letter portrait, 40 pt margins, 10 pt font, no /Info)
+   when size is a KiConfig size this library knows (sizeof(KiConfig) or
+   KI_CONFIG_SIZE_GEOMETRY), writing no more than size bytes, and returns 0.
+   Otherwise writes nothing and returns 2. Use ki_config_init(&cfg,
+   sizeof cfg). A conversion rejects any other cfg->size as
+   KI_CAUSE_USAGE. */
+KI_API int ki_config_init(KiConfig *cfg, size_t size);
+/* As ki_convert_file, ki_convert and ki_convert_to_file, with cfg's page
+   geometry and optional /Info. A NULL cfg is the default geometry without
+   /Info, identical to the 0.2 calls. /Info bytes count against
+   max_output_bytes like any other output. */
+KI_API int ki_convert_file_cfg(const char *xml_path, const char *pdf_path, const KiOptions *opt, const KiConfig *cfg,
+                               KiResult *result);
+KI_API int ki_convert_cfg(const KiOptions *opt, const KiConfig *cfg, KiResult *result);
+KI_API int ki_convert_to_file_cfg(const char *pdf_path, const KiOptions *opt, const KiConfig *cfg, KiResult *result);
 
 #ifdef __cplusplus
 }

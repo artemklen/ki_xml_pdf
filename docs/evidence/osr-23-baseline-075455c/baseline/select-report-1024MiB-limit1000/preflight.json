@@ -1,0 +1,6 @@
+{
+  "scratch": "<evidence-root>/scratch/baseline",
+  "fs_type": "ext2/ext3",
+  "free_bytes": 247171887104,
+  "budget_bytes": 5704253440
+}

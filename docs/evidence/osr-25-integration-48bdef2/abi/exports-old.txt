@@ -1,0 +1,11 @@
+KI_0_1
+KI_0_2
+ki_convert@@KI_0_1
+ki_convert_file@@KI_0_1
+ki_convert_to_file@@KI_0_2
+ki_doc_break@@KI_0_1
+ki_doc_fail@@KI_0_1
+ki_doc_text@@KI_0_1
+ki_options_init@@KI_0_1
+xml2pdf_convert@@KI_0_1
+xml2pdf_convert_cap@@KI_0_1

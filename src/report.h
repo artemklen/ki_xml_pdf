@@ -17,7 +17,6 @@ typedef struct Report {
     unsigned long long selected;
     unsigned long long offset;
     unsigned long long limit;
-    size_t at;
     char pending_name[256];
 } Report;
 

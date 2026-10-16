@@ -1,0 +1,1 @@
+distcheck ok: version=0.2.0 clean archive; 16 installed C/C++ rows; 4 catalog variants; installed CLI pipelines

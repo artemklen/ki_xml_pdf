@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 export CC=${CC:-cc} CXX=${CXX:-c++}
 pdftext=${PDFTOTEXT:-pdftotext}
-for tool in "$CC" "$CXX" "$pdftext" bash cmake pkg-config make python3 readelf; do
+for tool in "$CC" "$CXX" "$pdftext" pdfinfo bash cmake pkg-config make python3 readelf; do
     command -v "$tool" >/dev/null || { echo "docs_smoke: missing tool: $tool" >&2; exit 1; }
 done
 "$pdftext" -v >/dev/null 2>&1 || { echo "docs_smoke: PDFTOTEXT cannot run: $pdftext" >&2; exit 1; }
@@ -91,9 +91,11 @@ for name, (document, first_line) in commands.items():
     body = re.sub(r"^cc ", '"$CC" ', body, flags=re.M)
     body = re.sub(r"^c\+\+ ", '"$CXX" ', body, flags=re.M)
     (blocks / f"{name}.sh").write_text(body)
-for language, filename in (("cmake", "CMakeLists.txt"), ("c", "api.c")):
-    candidates = [body for kind, body in readme if kind == language]
-    assert len(candidates) == 1, f"documented {language} snippet missing or ambiguous"
+snippets = (("cmake", "CMakeLists.txt", lambda body: True), ("c", "api.c", lambda body: "KiConfig" not in body),
+            ("c", "geometry.c", lambda body: "KiConfig" in body))
+for language, filename, wanted in snippets:
+    candidates = [body for kind, body in readme if kind == language and wanted(body)]
+    assert len(candidates) == 1, f"documented {language} snippet {filename} missing or ambiguous"
     (blocks / filename).write_text(candidates[0])
 print(f"docs_smoke: syntax PASS ({shell_count} shell blocks); local links/anchors PASS ({link_count})")
 PY
@@ -188,6 +190,14 @@ cp report-v1.xml input.xml
 "$CC" api.c $(pkg-config --cflags --libs ki_xml_pdf) -o api-client
 ./api-client
 oracle "$consumer_dir/report.pdf" "$report_oracle"
+cp "$blocks/geometry.c" .
+"$CC" geometry.c $(pkg-config --cflags --libs ki_xml_pdf) -o geometry-client
+./geometry-client
+oracle "$consumer_dir/a4.pdf" "$report_oracle"
+pdfinfo -box "$consumer_dir/a4.pdf" | grep -E '^MediaBox: +0\.00 +0\.00 +841\.89 +595\.28$' >/dev/null || {
+    echo "documented geometry client: A4 landscape MediaBox differs" >&2
+    exit 1
+}
 "$work/cmake-prefix/bin/xml2pdf" --profile report-v1 report-v1.xml installed-cmake.pdf
 oracle "$consumer_dir/installed-cmake.pdf" "$report_oracle"
 cd "$source_dir"

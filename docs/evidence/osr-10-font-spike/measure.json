@@ -1,0 +1,327 @@
+{
+ "pdf": "report-short.pdf",
+ "pdf_sha256": "bf6c639c4670007b397b686f37ef04754920e7ca354ed2d3a56a94b7e3c71a32",
+ "pdf_bytes": 415944,
+ "font_object": 6,
+ "font_sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e",
+ "font_flate_bytes": 382174,
+ "font_share": 0.918811,
+ "used_gids_in_pages": 48,
+ "table_bytes": {
+  "FFTM": 28,
+  "GDEF": 658,
+  "GPOS": 40586,
+  "GSUB": 5598,
+  "MATH": 1598,
+  "OS/2": 86,
+  "cmap": 7056,
+  "cvt ": 510,
+  "fpgm": 171,
+  "gasp": 12,
+  "glyf": 557508,
+  "head": 54,
+  "hhea": 36,
+  "hmtx": 24982,
+  "kern": 16380,
+  "loca": 25016,
+  "maxp": 32,
+  "name": 15624,
+  "post": 62052,
+  "prep": 1384
+ },
+ "table_flate_bytes": {
+  "FFTM": 26,
+  "GDEF": 477,
+  "GPOS": 13184,
+  "GSUB": 3097,
+  "MATH": 758,
+  "OS/2": 91,
+  "cmap": 4922,
+  "cvt ": 405,
+  "fpgm": 128,
+  "gasp": 20,
+  "glyf": 291417,
+  "head": 52,
+  "hhea": 33,
+  "hmtx": 9272,
+  "kern": 6935,
+  "loca": 15382,
+  "maxp": 38,
+  "name": 3816,
+  "post": 28000,
+  "prep": 891
+ },
+ "variants": {
+  "full": {
+   "font_bytes": 759720,
+   "font_flate_bytes": 382174,
+   "glyphs": 6253
+  },
+  "usage/keep-tables": {
+   "font_bytes": 209424,
+   "font_flate_bytes": 80158,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 113928,
+   "saving_bytes": 302016,
+   "saving_share_of_pdf": 0.726098
+  },
+  "usage/drop-layout": {
+   "font_bytes": 146088,
+   "font_flate_bytes": 55170,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 88940,
+   "saving_bytes": 327004,
+   "saving_share_of_pdf": 0.786173
+  },
+  "usage/pdf-min": {
+   "font_bytes": 59560,
+   "font_flate_bytes": 16904,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 50674,
+   "saving_bytes": 365270,
+   "saving_share_of_pdf": 0.878171
+  },
+  "repertoire/keep-tables": {
+   "font_bytes": 316712,
+   "font_flate_bytes": 150597,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 184367,
+   "saving_bytes": 231577,
+   "saving_share_of_pdf": 0.55675
+  },
+  "repertoire/drop-layout": {
+   "font_bytes": 253376,
+   "font_flate_bytes": 125843,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 159613,
+   "saving_bytes": 256331,
+   "saving_share_of_pdf": 0.616263
+  },
+  "repertoire/pdf-min": {
+   "font_bytes": 166848,
+   "font_flate_bytes": 87353,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 121123,
+   "saving_bytes": 294821,
+   "saving_share_of_pdf": 0.7088
+  }
+ }
+}
+{
+ "pdf": "report-1MiB.pdf",
+ "pdf_sha256": "a67bb35acd94a958216d95128859a39408990fac2aecdb7879ae547787490ae0",
+ "pdf_bytes": 1189642,
+ "font_object": 6,
+ "font_sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e",
+ "font_flate_bytes": 382174,
+ "font_share": 0.321251,
+ "used_gids_in_pages": 48,
+ "table_bytes": {
+  "FFTM": 28,
+  "GDEF": 658,
+  "GPOS": 40586,
+  "GSUB": 5598,
+  "MATH": 1598,
+  "OS/2": 86,
+  "cmap": 7056,
+  "cvt ": 510,
+  "fpgm": 171,
+  "gasp": 12,
+  "glyf": 557508,
+  "head": 54,
+  "hhea": 36,
+  "hmtx": 24982,
+  "kern": 16380,
+  "loca": 25016,
+  "maxp": 32,
+  "name": 15624,
+  "post": 62052,
+  "prep": 1384
+ },
+ "table_flate_bytes": {
+  "FFTM": 26,
+  "GDEF": 477,
+  "GPOS": 13184,
+  "GSUB": 3097,
+  "MATH": 758,
+  "OS/2": 91,
+  "cmap": 4922,
+  "cvt ": 405,
+  "fpgm": 128,
+  "gasp": 20,
+  "glyf": 291417,
+  "head": 52,
+  "hhea": 33,
+  "hmtx": 9272,
+  "kern": 6935,
+  "loca": 15382,
+  "maxp": 38,
+  "name": 3816,
+  "post": 28000,
+  "prep": 891
+ },
+ "variants": {
+  "full": {
+   "font_bytes": 759720,
+   "font_flate_bytes": 382174,
+   "glyphs": 6253
+  },
+  "usage/keep-tables": {
+   "font_bytes": 209424,
+   "font_flate_bytes": 80158,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 887626,
+   "saving_bytes": 302016,
+   "saving_share_of_pdf": 0.253871
+  },
+  "usage/drop-layout": {
+   "font_bytes": 146088,
+   "font_flate_bytes": 55170,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 862638,
+   "saving_bytes": 327004,
+   "saving_share_of_pdf": 0.274876
+  },
+  "usage/pdf-min": {
+   "font_bytes": 59560,
+   "font_flate_bytes": 16904,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 824372,
+   "saving_bytes": 365270,
+   "saving_share_of_pdf": 0.307042
+  },
+  "repertoire/keep-tables": {
+   "font_bytes": 316712,
+   "font_flate_bytes": 150597,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 958065,
+   "saving_bytes": 231577,
+   "saving_share_of_pdf": 0.194661
+  },
+  "repertoire/drop-layout": {
+   "font_bytes": 253376,
+   "font_flate_bytes": 125843,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 933311,
+   "saving_bytes": 256331,
+   "saving_share_of_pdf": 0.215469
+  },
+  "repertoire/pdf-min": {
+   "font_bytes": 166848,
+   "font_flate_bytes": 87353,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 894821,
+   "saving_bytes": 294821,
+   "saving_share_of_pdf": 0.247823
+  }
+ }
+}
+{
+ "pdf": "report-16MiB.pdf",
+ "pdf_sha256": "52751a8e8f683d8066e1d5aaf5914f20125b7fe59de0dec86821525267fa9771",
+ "pdf_bytes": 12501989,
+ "font_object": 6,
+ "font_sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e",
+ "font_flate_bytes": 382174,
+ "font_share": 0.030569,
+ "used_gids_in_pages": 48,
+ "table_bytes": {
+  "FFTM": 28,
+  "GDEF": 658,
+  "GPOS": 40586,
+  "GSUB": 5598,
+  "MATH": 1598,
+  "OS/2": 86,
+  "cmap": 7056,
+  "cvt ": 510,
+  "fpgm": 171,
+  "gasp": 12,
+  "glyf": 557508,
+  "head": 54,
+  "hhea": 36,
+  "hmtx": 24982,
+  "kern": 16380,
+  "loca": 25016,
+  "maxp": 32,
+  "name": 15624,
+  "post": 62052,
+  "prep": 1384
+ },
+ "table_flate_bytes": {
+  "FFTM": 26,
+  "GDEF": 477,
+  "GPOS": 13184,
+  "GSUB": 3097,
+  "MATH": 758,
+  "OS/2": 91,
+  "cmap": 4922,
+  "cvt ": 405,
+  "fpgm": 128,
+  "gasp": 20,
+  "glyf": 291417,
+  "head": 52,
+  "hhea": 33,
+  "hmtx": 9272,
+  "kern": 6935,
+  "loca": 15382,
+  "maxp": 38,
+  "name": 3816,
+  "post": 28000,
+  "prep": 891
+ },
+ "variants": {
+  "full": {
+   "font_bytes": 759720,
+   "font_flate_bytes": 382174,
+   "glyphs": 6253
+  },
+  "usage/keep-tables": {
+   "font_bytes": 209424,
+   "font_flate_bytes": 80158,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 12199973,
+   "saving_bytes": 302016,
+   "saving_share_of_pdf": 0.024157
+  },
+  "usage/drop-layout": {
+   "font_bytes": 146088,
+   "font_flate_bytes": 55170,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 12174985,
+   "saving_bytes": 327004,
+   "saving_share_of_pdf": 0.026156
+  },
+  "usage/pdf-min": {
+   "font_bytes": 59560,
+   "font_flate_bytes": 16904,
+   "glyphs": 53,
+   "pdf_bytes_estimate": 12136719,
+   "saving_bytes": 365270,
+   "saving_share_of_pdf": 0.029217
+  },
+  "repertoire/keep-tables": {
+   "font_bytes": 316712,
+   "font_flate_bytes": 150597,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 12270412,
+   "saving_bytes": 231577,
+   "saving_share_of_pdf": 0.018523
+  },
+  "repertoire/drop-layout": {
+   "font_bytes": 253376,
+   "font_flate_bytes": 125843,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 12245658,
+   "saving_bytes": 256331,
+   "saving_share_of_pdf": 0.020503
+  },
+  "repertoire/pdf-min": {
+   "font_bytes": 166848,
+   "font_flate_bytes": 87353,
+   "glyphs": 1225,
+   "pdf_bytes_estimate": 12207168,
+   "saving_bytes": 294821,
+   "saving_share_of_pdf": 0.023582
+  }
+ }
+}

@@ -31,11 +31,11 @@ catalog_prefix="$HOME/.local"
 make install PREFIX="$catalog_prefix"
 cc -std=c99 -Wall -Wextra -I"$catalog_prefix/include" \
   examples/catalog_driver.c examples/catalog_map.c \
-  "$catalog_prefix/lib/libki_xml_pdf.a" -o catalog
+  "$catalog_prefix/lib/libki_xml_pdf.a" -lz -o catalog
 ./catalog examples/catalog.xml catalog.pdf
 ```
 
-For a shared library, replace the archive argument with
+For a shared library, replace the archive and `-lz` arguments with
 `-L"$catalog_prefix/lib" -lki_xml_pdf` and make that directory available
 to the runtime linker. The installed font must remain at the configured prefix.
 A relocated installation can set `KiOptions.font_path` explicitly.
@@ -94,7 +94,8 @@ event pointer does not extend its lifetime.
 A text event is a fragment, not a complete field or necessarily a complete UTF-8
 character. Use `event->text_len` in bytes. The mapper sends each fragment
 directly to `ki_doc_text(doc, event->text, event->text_len)`; `KiDoc`
-handles character boundaries and physical line/page wrapping. TEXT and CDATA
+handles character boundaries and physical line/page wrapping: words break at
+spaces and tabs, and a word split across calls is still one word. TEXT and CDATA
 use the same emission path. References are already decoded in ordinary text;
 reference-looking text inside CDATA stays literal. The mapper preserves fragment
 whitespace, including a space between separate TEXT/CDATA events. The library
@@ -131,11 +132,15 @@ in `CatalogMap.items`.
 
 ## Errors and file publication
 
-For a schema failure, construct a bounded message naming the rule and the current
-`event->byte_offset`, then return `ki_doc_fail(doc, message)`. This records
-`KI_CAUSE_PROFILE`. The byte offset is the parser position **after** consuming
-the event, including an empty element's synthetic END. It is not a character
-index or the beginning of the tag. The helper does not append an offset for you.
+For a schema failure, return `ki_doc_fail(doc, rule)` with a message naming the
+rule. This records `KI_CAUSE_PROFILE` and appends the current event position as
+`at line L, column C, byte B`, so the mapper does not format an offset itself.
+The position is the parser position **after** consuming the event, including
+an empty element's synthetic END; it is not the beginning of the tag. The byte
+equals `event->byte_offset`; line and column (1-based, Unicode scalars, CRLF as
+one line break) are only available in the message. The result keeps the whole
+position within 160 bytes and shortens a long rule at a UTF-8 boundary. A mapper
+that still adds its own offset gets both.
 
 `ki_doc_fail` is for mapper rules. Return an existing `ki_doc_text` or
 `ki_doc_break` failure directly; replacing it with a profile failure would

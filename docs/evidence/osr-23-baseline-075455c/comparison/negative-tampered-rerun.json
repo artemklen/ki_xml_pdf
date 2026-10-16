@@ -1,0 +1,122 @@
+{
+  "base": "<evidence-root>/baseline-075455c",
+  "other": "<evidence-root>/compare-negative-control/tampered",
+  "environment_differences": {},
+  "runs": {
+    "full-records-1MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "pdf_sha256": [
+          "e6a926b6bf288d8af8e0014d2acee241a48cf039f04819fa72e24f736493c0c1",
+          "0000000000000000000000000000000000000000000000000000000000000000"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2396,
+          2524
+        ],
+        "converter_elapsed_s": [
+          0.12,
+          0.08
+        ],
+        "generator_rss_kib": [
+          23192,
+          23232
+        ],
+        "reader_rss_kib": [
+          21560,
+          21584
+        ],
+        "reader_elapsed_s": [
+          1.41,
+          1.41
+        ],
+        "oracle_rss_kib": [
+          16840,
+          16924
+        ]
+      }
+    },
+    "full-report-1MiB": {
+      "settings_match": true,
+      "different_outputs": {
+        "fixture_sha256": [
+          "290cf62618e6f0bb1cb62f4b916ef32391a0a9f08a0d494f2e3cd30a5fd956ee",
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        ]
+      },
+      "measured": {
+        "converter_rss_kib": [
+          2340,
+          2524
+        ],
+        "converter_elapsed_s": [
+          0.07,
+          0.06
+        ],
+        "generator_rss_kib": [
+          20940,
+          20980
+        ],
+        "reader_rss_kib": [
+          19384,
+          19424
+        ],
+        "reader_elapsed_s": [
+          0.48,
+          0.47
+        ],
+        "oracle_rss_kib": [
+          16948,
+          16832
+        ]
+      }
+    },
+    "select-report-16MiB-limit1000": {
+      "settings_match": true,
+      "different_outputs": {},
+      "measured": {
+        "converter_rss_kib": [
+          2536,
+          2504
+        ],
+        "converter_elapsed_s": [
+          0.15,
+          0.13
+        ],
+        "generator_rss_kib": [
+          21176,
+          21076
+        ],
+        "reader_rss_kib": [
+          18176,
+          18140
+        ],
+        "reader_elapsed_s": [
+          0.03,
+          0.03
+        ],
+        "oracle_rss_kib": [
+          16972,
+          16924
+        ]
+      }
+    }
+  },
+  "only_in_base": [
+    "full-records-16MiB",
+    "full-records-64MiB",
+    "full-report-16MiB",
+    "full-report-64MiB",
+    "select-report-1024MiB-limit1000",
+    "select-report-256MiB-limit1000"
+  ],
+  "only_in_other": [],
+  "problems": [
+    "full-records-1MiB: outputs differ ['pdf_sha256']",
+    "full-report-1MiB: fixture hash differs",
+    "full-report-1MiB: outputs differ ['fixture_sha256']"
+  ],
+  "ok": false
+}

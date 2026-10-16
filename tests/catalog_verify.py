@@ -71,9 +71,12 @@ class Verification:
             require(match is not None and int(match.group(1)) == cause,
                     f"{label} chunk={chunk}: expected cause={cause}, stderr={process.stderr!r}")
             if offset is not None:
-                match = re.search(r"\bat byte (\d+)\b", process.stderr)
-                require(match is not None and int(match.group(1)) == offset,
-                        f"{label} chunk={chunk}: expected byte={offset}, stderr={process.stderr!r}")
+                line, column = position(xml.encode("utf-8")[:offset])
+                match = re.search(r"\bat line (\d+), column (\d+), byte (\d+)\b", process.stderr)
+                require(match is not None and
+                        tuple(map(int, match.groups())) == (line, column, offset),
+                        f"{label} chunk={chunk}: expected line={line} column={column} byte={offset}, "
+                        f"stderr={process.stderr!r}")
             if rule is not None:
                 require(rule in process.stderr,
                         f"{label} chunk={chunk}: missing rule {rule!r}: {process.stderr!r}")
@@ -82,6 +85,14 @@ class Verification:
             require(set(directory.iterdir()) == before,
                     f"{label} chunk={chunk}: temporary output remains")
             self.rejections += 1
+
+
+def position(consumed: bytes) -> tuple[int, int]:
+    """1-based line and Unicode-scalar column after a consumed UTF-8 prefix."""
+    text = consumed.decode("utf-8")
+    text = text.removeprefix("\ufeff")
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    return len(lines), len(lines[-1]) + 1
 
 
 def require(condition, message):
