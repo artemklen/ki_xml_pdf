@@ -1,0 +1,7 @@
+OSR-10 predictions recorded before measuring (2026-10-16 ~06:45 MSK)
+- DejaVuSans.ttf 759,720 B deflates (zlib default) to roughly 380-450 KB.
+- Short report (a few pages): font is > 85% of PDF bytes.
+- Large 16 MiB report (12,501,989 B after OSR-9): font is about 3-4%.
+- Repertoire subset (U+0000-04FF + 24 punct, GID preserving): compressed font 20-35% of full.
+- Usage subset for the ASCII/Cyrillic recipe text: compressed font < 10% of full (hinting tables fpgm/prep/cvt dominate).
+- Converter font memory today: one copy of the TTF (<= 8 MiB cap); a subset adds a second output buffer of at most TTF size.
