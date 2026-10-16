@@ -1,0 +1,42 @@
+OSR-16 predictions, written 2026-10-16 13:22 MSK before any harness or measurement.
+
+Synthetic-only. No real consumer, source system or target report exists.
+
+1. Current library (016f32c): a UTF-16 LE or BE document with a BOM fails as
+   KI_CAUSE_XML "unsupported encoding" at byte 0. Without a BOM, LE input
+   ("<\0?\0") fails as an XML error at byte 1 (NUL is not an XML Char), BE
+   input ("\0<\0?") at byte 0. A document of fewer than 3 bytes is not
+   recognized as UTF-16 (the BOM check needs 3 bytes).
+2. External adapter (read_bytes callback, research only): for every valid
+   fixture, every source chunk size (1, 2, 3, 4096) and every output cap
+   (1, 3, unlimited), the PDF bytes equal the PDF from the same text given as
+   UTF-8 through the same API. A surrogate pair split across reads converts
+   correctly.
+3. The declaration rewrite encoding="UTF-16" -> encoding="UTF-8" plus one
+   space keeps the scalar count, so the library's line and column equal the
+   source line and column. Library byte offsets are UTF-8 offsets; the adapter
+   maps them back to source byte offsets exactly with a bounded ring. ASCII
+   input: src = 2 * utf8 + 2 (BOM). Mapped offsets equal an independent
+   oracle computed from the fixture text.
+4. Encoding errors (lone high, lone low, high at EOF, odd trailing byte, BOM
+   versus declaration mismatch, no BOM without a UTF-16LE/BE declaration)
+   are detected by the adapter with an exact source byte offset. The library
+   sees a read error, so KiResult.cause is KI_CAUSE_IO; the precise reason and
+   offset live only in the adapter. ki_convert_to_file keeps the old
+   destination.
+5. Invalid XML scalars that are valid UTF-16 (U+0001, U+FFFE) pass the
+   transcoder and are rejected by the library as XML at the mapped position.
+   A valid supplementary scalar (U+1F600) is KI_CAUSE_FONT, not an encoding
+   error: decoding does not add glyphs.
+6. Cancellation from the cancelled callback gives KI_CAUSE_CANCEL; the source
+   file descriptor is still open after the call and is closed by its owner.
+7. Adapter state is under 8 KiB (2 pending source bytes, 1 high surrogate,
+   up to 3 pending UTF-8 bytes, a declaration buffer of at most 256 bytes and
+   a 4 KiB offset ring). Converter-plus-adapter peak RSS for a large streamed
+   input (about 16 MiB of UTF-8 text, about 2x as UTF-16) stays within
+   +256 KiB of xml2pdf on the equivalent UTF-8 file, with no intermediate
+   file.
+8. Decision expected: defer. The external route works without library
+   changes; an internal decoder is technically feasible (est. 250-400 lines
+   of C plus tests and fuzz corpus) but without a real consumer it is not
+   justified. OSR-16 stays open.
