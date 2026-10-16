@@ -1,0 +1,11 @@
+### 19-large-proof: TMPDIR=<osr25-root>/scratch python3 tests/large_proof.py 1073741824
+### HEAD 48bdef2fd01dfff8b85e0cdd77af55d4c9593531
+commit=48bdef2fd01dfff8b85e0cdd77af55d4c9593531
+xml2pdf: pages=41 objects=131 offset_bytes=1056
+rss_kib=2748 elapsed=8.08
+xml_bytes=1073741815
+pdf_bytes=432803 pdf_pages=41 records_total=19522650 rss_kib=2748 spool=1056
+reader_page=1 ok
+reader_page=41 ok
+reader_page=21 ok
+large_proof ok

@@ -1,0 +1,66 @@
+### 09-cli-catalog: python3 tests/cli_pipeline.py && python3 tests/catalog_verify.py --binary examples/catalog && python3 tests/integration_check.py && ./xml2pdf --help && ./xml2pdf --version
+### HEAD 48bdef2fd01dfff8b85e0cdd77af55d4c9593531
+PASS file-to-file
+PASS file-to-stdout
+PASS stdin-to-file
+PASS stdin-to-stdout
+PASS -h
+PASS --help
+PASS -- accepts paths beginning with --
+PASS invalid arguments return 2
+PASS late-xml preserves OLD and cleans temporary files
+PASS page-quota preserves OLD and cleans temporary files
+PASS output-quota preserves OLD and cleans temporary files
+PASS spool-quota preserves OLD and cleans temporary files
+PASS xml-coordinates reports line, column and byte
+PASS profile-coordinates reports line, column and byte
+PASS utf8-attribute-coordinates reports line, column and byte
+PASS utf8-text-coordinates reports line, column and byte
+PASS utf8-named-reference-coordinates reports line, column and byte
+PASS utf8-numeric-reference-coordinates reports line, column and byte
+PASS SIGTERM while stdin waits preserves OLD and cleans temporary files
+PASS stdout /dev/full returns I/O failure
+PASS stdout closed pipe returns I/O failure instead of SIGPIPE death
+PASS late XML error leaves a partial PDF on stdout
+PASS default records-v1 files
+PASS default records-v1 pipeline
+cli_pipeline ok: 24 scenarios; binary=<osr25-root>/checkout/xml2pdf
+catalog_verify ok: success=12 rejected=72 usage=5 long_field_utf8_bytes=13827
+integration: 3 combined cases over 12 routes (6 pages), 8 failure runs kept or did not create the destination; font custom-font.ttf from system DejaVu Sans Bold
+xml2pdf 0.3.0 — profiles records-v1, report-v1
+usage: xml2pdf [options] [--] input.xml output.pdf
+       xml2pdf -h | --help | --version
+Use '-' for stdin or stdout. Conversion diagnostics go to stderr.
+
+Options:
+  --profile NAME           records-v1 (default) or report-v1
+  --record-offset N        skip N report-v1 records
+  --record-limit N         select N records after offset (0: all)
+  --font PATH              use only this font, with no fallback
+  --max-pages N            page quota (0: no separate quota)
+  --max-output-bytes N     PDF byte quota (0: only the 9999999999-byte xref ceiling)
+  --max-spool-bytes N      offset-file quota (0: 64 MiB)
+  --temp-dir DIR           offset-file directory
+
+Page geometry (points, 1/72 inch; decimal digits only, e.g. 24 or 595.276):
+  --page-size NAME         letter (default, 612x792) or a4 (595.276x841.89)
+  --orientation NAME       portrait (default) or landscape for --page-size
+  --page-width PT          custom width 3..14400, with --page-height
+  --page-height PT         custom height 3..14400, with --page-width
+  --margin PT|T,R,B,L      all margins, or top,right,bottom,left (default 40)
+  --font-size PT           1..144 (default 10); leading is 1.4 x size
+Each geometry option may appear once. A custom size excludes --page-size
+and --orientation. Invalid geometry exits 2 before any input is read.
+
+Document information (/Info), each optional and written only when given:
+  --title TEXT             UTF-8, 1..1024 bytes; no controls except tab, LF, CR
+  --producer TEXT          same rules as --title
+  --creation-date DATE     YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DDTHH:MM:SS+HH:MM/-HH:MM
+No date is added unless given; no XMP or PDF/A claim. Invalid metadata
+exits 2 before any input is read or output created.
+
+Input: UTF-8; no network access. XML bounds: depth 64, 8 attributes,
+names 63 bytes, attribute values 255 bytes, input window 4096 bytes.
+Exit codes: 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel.
+Files are replaced atomically; stdout may contain a partial PDF on failure.
+xml2pdf 0.3.0 records-v1

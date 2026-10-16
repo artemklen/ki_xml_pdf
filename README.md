@@ -292,6 +292,15 @@ The [OSR-23 baseline](docs/evidence/osr-23-baseline-075455c/README.md) measured 
 
 An independent streaming oracle checked every rendered record against the fixture recipe. Raw CSV/JSON, per-process time records for the generator, converter and reader, hashes and negative controls are in that directory. PDF size, spool size and time grow with the rendered content, and RSS includes the loaded font, so a different font changes it. Full output of a 1 GiB input was not measured. The selection rows do not describe full output, and no comparison with other converters is made.
 
+### Final measurements on 0.3.0
+
+The [OSR-25 run](docs/evidence/osr-25-integration-48bdef2/README.md) repeated both series with the same runner, fixtures, options and font on the integrated 0.3.0 source `48bdef2`, on the same host. All nine cases passed the oracle and every resource gate:
+
+- **Full output**: converter peak RSS 2752–2952 KiB. With Flate streams the 64 MiB inputs produced 115,552 pages / 112,864,984 bytes (`records-v1`) and 39,033 pages / 48,620,561 bytes (`report-v1`); the 16 MiB `report-v1` PDF is 12,545,307 bytes, 14.4% of the 86,884,343-byte baseline. Converter time grew with compression, for example 4.27 → 11.54 s for the 64 MiB `records-v1` input.
+- **Selection** of 1000 records from 16, 256 and 1024 MiB: converter peak RSS 2764–2848 KiB, 41 pages and about 461 KB of PDF each time.
+
+The baseline stays unchanged. Full output of a 1 GiB input was again not measured.
+
 Layout consists of sequential text blocks. Tables, global sorting, XSL-FO, UTF-16, additional operating systems, and automatic support for unknown schemas are outside the current contract. Adoption and comparisons with other converters have not been measured.
 
 ## Checks

@@ -1,0 +1,12 @@
+{
+  "recipe": "osr23-v1",
+  "profile": "records-v1",
+  "target_bytes": 67108864,
+  "input_bytes": 67108881,
+  "records": 1925863,
+  "omitted_record": 0,
+  "tail": "valid",
+  "sha256": "ce243f06f8dbdd7c24db91b795e61b5a5e078580655765299f42ef5d5fb789e7",
+  "path": "<osr25-root>/resource-scratch/full-records-64MiB.xml",
+  "command": "/usr/bin/python3 <osr25-root>/checkout/tests/resource_recipe.py --profile records-v1 --target-bytes 67108864 --out <osr25-root>/resource-scratch/full-records-64MiB.xml"
+}

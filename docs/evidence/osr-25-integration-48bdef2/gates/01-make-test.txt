@@ -1,0 +1,121 @@
+### 01-make-test: make -j2 xml2pdf test_stream && make test
+### HEAD 48bdef2fd01dfff8b85e0cdd77af55d4c9593531
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o test_stream tests/test_stream.c libki_xml_pdf.a -lz -pthread -Wl,--wrap=fsync -Wl,--wrap=deflate -Wl,--wrap=deflateInit2_
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+./test_stream
+xml2pdf: pages=3 objects=17 offset_bytes=144
+xml2pdf: pages=3 objects=17 offset_bytes=144
+input and output are the same file
+input and output are the same file
+input and output are the same file
+input and output are the same file
+xml: end tag mismatch at line 1, column 4446, byte 4445
+read error
+pdf write failed
+pdf publish failed
+cannot create temporary output for /tmp/ki-xml-pdf-out-Gh99f6/ro/out.pdf
+xml2pdf: pages=1 objects=11 offset_bytes=96
+xml: no document element at line 1, column 1, byte 0
+xml2pdf: pages=1 objects=11 offset_bytes=96
+xml2pdf: pages=1 objects=11 offset_bytes=96
+big-stream bytes=9586989 items=1198372 parser_bytes=8544 rss_delta_kb=0 max_depth=2
+ok big_stream_fixed_memory
+ok split_mid_tag_and_text
+ok one_byte_entities_and_nesting
+ok skips_and_errors
+ok cdata_and_numeric
+cdata-stream bytes=4194304 parts=4101 parser_bytes=8544 rss_delta_kb=0
+ok cdata_stream_fixed_memory
+ok page_sink_flushes
+ok pdf_appends_and_releases
+ok convert_pipeline
+ok output_keeps_previous
+ok wellformed_profile
+ok review_regressions
+ok library_contract
+ok callback_usage_result
+ok callback_to_file
+ok callback_accepted_bytes
+ok report_v1
+ok font_bounds
+ok font_names
+ok font_zero_advance
+ok font_mark_runs
+ok xml_char_contexts
+ok xml_references
+ok xml_audited_corpus
+ok xml_pi_and_declaration
+ok xml_doctype_and_dtd
+ok xml_late_tails
+ok xml_chunk_boundaries
+ok xml_public_causes
+ok xml_selected_tails
+ok xml_coordinates
+ok xml_coordinate_limits
+ok profile_coordinates
+ok custom_fail_coordinates
+ok pdf_byte_ceiling
+ok output_quota_exact
+ok flate_streams
+ok flate_expansion
+ok flate_errors
+ok flate_reader_controls
+ok wrap_opportunities
+ok wrap_oversized
+ok wrap_zero_advance
+ok wrap_fragments
+ok wrap_pages
+wrap-token small=65536 big=4194304 rss_growth_small_kb=700 rss_growth_big_kb=700 layout_bytes=52824
+ok wrap_token_memory
+ok wrap_profiles
+ok geometry_config
+ok geometry_usage
+ok geometry_matrix
+ok geometry_legacy
+ok geometry_ink
+ok geometry_outline_bounds
+ok info_config
+ok info_values
+ok info_usage
+ok info_limits
+ok integration_contexts
+all tests passed
+python3 tests/pdf_offsets.py --binary ./xml2pdf
+quota 0: exit 0, size 425281, startxref 423773
+quota 425281: exit 0, size 425281
+quota 425280: exit 4, destination kept
+quota 423774: exit 4, destination kept
+quota 423773: exit 4, destination kept
+pdf offsets ok
+python3 tests/pdf_streams.py --binary ./xml2pdf
+obj 6 font filter=Flate length=382174 decoded=759720
+obj 8 cmap filter=none length=17333 decoded=17333
+obj 9 page filter=Flate length=344 decoded=6931
+obj 12 page filter=Flate length=345 decoded=7083
+obj 15 page filter=Flate length=346 decoded=7083
+obj 18 page filter=Flate length=345 decoded=7083
+obj 21 page filter=Flate length=345 decoded=7083
+obj 24 page filter=Flate length=348 decoded=7083
+obj 27 page filter=Flate length=170 decoded=258
+pages 7, font sha256 57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e matches
+control damaged page body: rejected (damaged Flate data: Error -3 while decompressing data: invalid distance too far back)
+control page body with lost deflate tail: rejected (damaged Flate data: Error -3 while decompressing data: incorrect data check)
+control output truncated inside a page stream: rejected (missing startxref)
+control page body cut in half: rejected (truncated Flate data)
+control wrong length object value: rejected (object 9: /Length 444 does not end at endstream)
+control wrong font /Length1: rejected (object 6: /Length1 859720 != decoded 759720)
+pdf streams ok

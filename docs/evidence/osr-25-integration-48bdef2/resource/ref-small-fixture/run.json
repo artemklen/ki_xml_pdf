@@ -1,0 +1,9 @@
+{
+  "run_id": "ref-small-fixture",
+  "converter_exit": 0,
+  "converter_rss_kib": 2916,
+  "converter_elapsed_s": 0.03,
+  "input_bytes": 80197,
+  "pdf_bytes": 425281,
+  "converter_command": "<osr25-root>/checkout/xml2pdf --font <osr25-root>/checkout/fonts/DejaVuSans.ttf <osr25-root>/checkout/tests/fixture.xml <osr25-root>/resource-scratch/ref-small.pdf"
+}

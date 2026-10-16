@@ -1,0 +1,19 @@
+abi_canary_c uses <osr25-root>/scratch/prefix/lib/libki_xml_pdf.so.0
+layout KiOptions size=144 size=0 font_path=8 temp_dir=16 max_pages=24 max_output_bytes=32 max_spool_bytes=40 profile=48 record_offset=56 record_limit=64 cancelled=72 cancel_user=80 map=88 map_user=96 log=104 log_user=112 read_bytes=120 write_bytes=128 io_user=136
+layout KiResult size=224 status=0 cause=4 message=8 pages=168 objects=172 offset_bytes=176 output_bytes=184 spool_bytes=192 report_total=200 report_selected=208 report_skipped=216
+layout KiEvent size=184 kind=0 name=8 nattr=16 attr_name=24 attr_val=88 text=152 text_len=160 from_cdata=168 byte_offset=176
+header version=0.2.0 profile=records-v1 causes=0,1,2,3,4,5,6,7
+entry ki_convert_file rc=0 pages=1 objects=11 output_bytes=412944
+entry ki_convert rc=0 total=3 selected=2 skipped=1
+entry ki_convert_to_file rc=0 mapper_calls=8
+entry ki_convert_file_fail rc=1 cause=7 kept=1
+canary c ok
+abi_canary_cpp uses <osr25-root>/scratch/prefix/lib/libki_xml_pdf.so.0
+layout KiOptions size=144 read_bytes=120 io_user=136
+layout KiResult size=224 report_skipped=216
+layout KiEvent size=184 byte_offset=176
+entry ki_convert_file rc=0 pages=1
+entry ki_convert rc=0 total=2 selected=1 skipped=1
+entry ki_convert_to_file rc=0 mapper_calls=5
+canary cpp ok
+abi canaries ok libdir=<osr25-root>/scratch/prefix/lib
