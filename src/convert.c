@@ -772,7 +772,7 @@ static int convert_streams(FILE *in, FILE *out, char *tmp_path, const char *pdf_
     if (!failed && out != NULL) {
         int publish_fail = fail_before_publish;
         int fd = fileno(out);
-        int sync_fail = fflush(out) != 0 || publish_fail;
+        int sync_fail = fflush(out) != 0 || ferror(out) || publish_fail;
         if (!sync_fail && opt != NULL && opt->cancelled != NULL && opt->cancelled(opt->cancel_user)) {
             rc = XML2PDF_ERR_RESOURCE;
             cause = KI_CAUSE_CANCEL;
@@ -877,13 +877,18 @@ typedef struct {
     int (*write_bytes)(void *user, const char *src, int n);
     void *user;
     long accepted;
+    int failed;
 } ByteSink;
 
 /* The writer counts bytes as it hands them to stdio, but stdio buffers
-   them; only what the callback accepted is the delivered output. */
+   them; only what the callback accepted is the delivered output.
+   stdio drops a buffer whose write failed and lets later writes succeed,
+   so the first failure is latched: the callback is never called again and
+   the stream stays in error, which the converter checks before success. */
 static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
     ByteSink *sink = cookie;
-    if (n > 2147483647u) {
+    if (sink->failed || n > 2147483647u) {
+        sink->failed = 1;
         errno = EIO;
         return -1;
     }
@@ -892,6 +897,7 @@ static ssize_t sink_write(void *cookie, const char *buf, size_t n) {
         sink->accepted += wr;
     }
     if (wr < 0 || (size_t)wr != n) {
+        sink->failed = 1;
         errno = EIO;
         return -1;
     }
@@ -937,6 +943,7 @@ int ki_convert_cfg(const KiOptions *opt, const KiConfig *cfg, KiResult *result) 
     sink->write_bytes = opt->write_bytes;
     sink->user = opt->io_user;
     sink->accepted = 0;
+    sink->failed = 0;
     cookie_io_functions_t fn;
     memset(&fn, 0, sizeof fn);
     fn.write = sink_write;

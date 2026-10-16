@@ -112,8 +112,9 @@ typedef struct KiOptions {
     /* Callback I/O for ki_convert and ki_convert_to_file. read_bytes returns
        0 only at EOF, 1..max for data (a short read is not EOF), or <0 for an
        error. write_bytes must return n after accepting the entire count or
-       <0 for an error; a short write also fails. Accepted bytes are not
-       rolled back. Callback state/resources belong to the caller and are
+       <0 for an error; a short write also fails. The first failed write
+       fails the conversion with KI_CAUSE_IO and write_bytes is not called
+       again. Accepted bytes are not rolled back. Callback state/resources belong to the caller and are
        never closed/freed by the library. ki_convert_file ignores both
        callbacks; ki_convert_to_file ignores write_bytes. */
     int (*read_bytes)(void *user, char *dst, int max);

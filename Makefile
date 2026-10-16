@@ -40,7 +40,7 @@ libki_xml_pdf.so: $(LIB_OBJS) libki_xml_pdf.map
 xml2pdf: src/main.c libki_xml_pdf.a
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/main.c libki_xml_pdf.a $(KI_LIBS)
 
-test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c tests/test_flate.c tests/test_layout_wrap.c tests/test_geometry.c tests/test_info.c tests/test_integration.c tests/pdf_inflate.c
+test_stream: libki_xml_pdf.a tests/test_stream.c tests/test_xml_subset.c tests/test_xml_coords.c tests/test_font_metrics.c tests/test_pdf_bounds.c tests/test_flate.c tests/test_layout_wrap.c tests/test_geometry.c tests/test_info.c tests/test_integration.c tests/test_callback_io.c tests/pdf_inflate.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_stream.c libki_xml_pdf.a $(KI_LIBS) -pthread $(TEST_WRAP)
 
 test: test_stream xml2pdf

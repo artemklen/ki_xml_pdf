@@ -3651,6 +3651,7 @@ static int test_font_bounds(void) {
 #include "test_geometry.c"
 #include "test_info.c"
 #include "test_integration.c"
+#include "test_callback_io.c"
 
 int main(void) {
     struct {
@@ -3716,6 +3717,7 @@ int main(void) {
         {"info_limits", test_info_limits},
         {"integration_contexts", test_integration_contexts},
         {"integration_cleanup", test_integration_cleanup},
+        {"callback_one_shot_write", test_callback_one_shot_write},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {
