@@ -1,0 +1,469 @@
+### 14-distcheck: make distcheck
+### HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a
+test -n "0.3.0"
+git archive --format=tar.gz --prefix=ki_xml_pdf-0.3.0/ -o ki_xml_pdf-0.3.0.tar.gz HEAD
+sha256sum ki_xml_pdf-0.3.0.tar.gz
+f3c9b5e6a22696d49bce9cbe911d009f769cfdea3eeb520bc9ebb2e0b619280e  ki_xml_pdf-0.3.0.tar.gz
+CC="cc" CXX="g++" PDFTOTEXT="pdftotext" \
+	DISTCHECK_ORACLE="" DISTCHECK_BREAK="" \
+	bash tests/distcheck.sh ki_xml_pdf-0.3.0.tar.gz
+make[1]: Entering directory '/tmp/ki-xml-pdf-dist.aWRYhM/ki_xml_pdf-0.3.0'
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/tmp/ki-xml-pdf-dist.aWRYhM/prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-xml-pdf-dist.aWRYhM/prefix/bin /tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib /tmp/ki-xml-pdf-dist.aWRYhM/prefix/include \
+	/tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-xml-pdf-dist.aWRYhM/prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-xml-pdf-dist.aWRYhM/prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-xml-pdf-dist.aWRYhM/prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-xml-pdf-dist.aWRYhM/prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-xml-pdf-dist.aWRYhM/prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-xml-pdf-dist.aWRYhM/prefix/lib/pkgconfig/ki_xml_pdf.pc"
+make[1]: Leaving directory '/tmp/ki-xml-pdf-dist.aWRYhM/ki_xml_pdf-0.3.0'
+pages=1
+pages=1
+pages=1
+pages=1
+pages=1 total=2 selected=2 skipped=0
+PASS file-to-file
+PASS file-to-stdout
+PASS stdin-to-file
+PASS stdin-to-stdout
+PASS -h
+PASS --help
+PASS -- accepts paths beginning with --
+PASS invalid arguments return 2
+PASS late-xml preserves OLD and cleans temporary files
+PASS page-quota preserves OLD and cleans temporary files
+PASS output-quota preserves OLD and cleans temporary files
+PASS spool-quota preserves OLD and cleans temporary files
+PASS xml-coordinates reports line, column and byte
+PASS profile-coordinates reports line, column and byte
+PASS utf8-attribute-coordinates reports line, column and byte
+PASS utf8-text-coordinates reports line, column and byte
+PASS utf8-named-reference-coordinates reports line, column and byte
+PASS utf8-numeric-reference-coordinates reports line, column and byte
+PASS SIGTERM while stdin waits preserves OLD and cleans temporary files
+PASS stdout /dev/full returns I/O failure
+PASS stdout closed pipe returns I/O failure instead of SIGPIPE death
+PASS late XML error leaves a partial PDF on stdout
+PASS default records-v1 files
+PASS default records-v1 pipeline
+cli_pipeline ok: 24 scenarios; binary=/tmp/ki-xml-pdf-dist.aWRYhM/prefix/bin/xml2pdf
+make[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/source'
+rm -f xml2pdf test_stream test_stream_san libki_xml_pdf.a libki_xml_pdf.so examples/consume examples/consume_cpp examples/report examples/catalog
+rm -f src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o src/xml_parse.d src/font.d src/geometry.d src/info.d src/page_sink.d src/pdf_write.d src/layout.d src/report.d src/convert.d src/.font_prefix src/.font_prefix.new
+make[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/source'
+make[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/source'
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/tmp/ki-build-integration.Y5M8MD/make-prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/bin /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/include \
+	/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-build-integration.Y5M8MD/make-prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-build-integration.Y5M8MD/make-prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-build-integration.Y5M8MD/make-prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-build-integration.Y5M8MD/make-stage/tmp/ki-build-integration.Y5M8MD/make-prefix/lib/pkgconfig/ki_xml_pdf.pc"
+make[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/source'
+-- The C compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Performing Test KI_HAVE_GLIBC
+-- Performing Test KI_HAVE_GLIBC - Success
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found Python3: /usr/bin/python3 (found version "3.13.5") found components: Interpreter
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/cmake-build
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/cmake-build'
+[  2%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/xml_parse.c.o
+[  5%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/xml_parse.c.o
+[  8%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/font.c.o
+[ 11%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/font.c.o
+[ 16%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/geometry.c.o
+[ 16%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/geometry.c.o
+[ 22%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/info.c.o
+[ 22%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/info.c.o
+[ 27%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/page_sink.c.o
+[ 27%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/page_sink.c.o
+[ 30%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/pdf_write.c.o
+[ 33%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/pdf_write.c.o
+[ 36%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/layout.c.o
+[ 38%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/layout.c.o
+[ 41%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/report.c.o
+[ 44%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/report.c.o
+[ 50%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/convert.c.o
+[ 50%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/convert.c.o
+[ 52%] Linking C static library libki_xml_pdf.a
+[ 55%] Linking C shared library libki_xml_pdf.so
+[ 55%] Built target ki_xml_pdf_shared
+[ 55%] Built target ki_xml_pdf_static
+[ 58%] Building C object CMakeFiles/test_stream.dir/tests/test_stream.c.o
+[ 61%] Building C object CMakeFiles/xml2pdf.dir/src/main.c.o
+[ 63%] Linking C executable xml2pdf
+[ 63%] Built target xml2pdf
+[ 66%] Building C object CMakeFiles/catalog_example.dir/examples/catalog_driver.c.o
+[ 69%] Building C object CMakeFiles/catalog_example.dir/examples/catalog_map.c.o
+[ 72%] Linking C executable examples/catalog
+[ 72%] Built target catalog_example
+[ 75%] Building C object CMakeFiles/test_stream.dir/src/xml_parse.c.o
+[ 77%] Building C object CMakeFiles/test_stream.dir/src/font.c.o
+[ 80%] Building C object CMakeFiles/test_stream.dir/src/geometry.c.o
+[ 83%] Building C object CMakeFiles/test_stream.dir/src/info.c.o
+[ 86%] Building C object CMakeFiles/test_stream.dir/src/page_sink.c.o
+[ 88%] Building C object CMakeFiles/test_stream.dir/src/pdf_write.c.o
+[ 91%] Building C object CMakeFiles/test_stream.dir/src/layout.c.o
+[ 94%] Building C object CMakeFiles/test_stream.dir/src/report.c.o
+[ 97%] Building C object CMakeFiles/test_stream.dir/src/convert.c.o
+[100%] Linking C executable test_stream
+[100%] Built target test_stream
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/cmake-build'
+xml2pdf: pages=1 objects=11 offset_bytes=96
+Internal ctest changing into directory: /tmp/ki-build-integration.Y5M8MD/cmake-build
+Test project /tmp/ki-build-integration.Y5M8MD/cmake-build
+    Start 1: stream
+1/9 Test #1: stream ...........................   Passed   15.69 sec
+    Start 2: catalog
+2/9 Test #2: catalog ..........................   Passed    1.91 sec
+    Start 3: cli_pipeline
+3/9 Test #3: cli_pipeline .....................   Passed    0.55 sec
+    Start 4: pdf_offsets
+4/9 Test #4: pdf_offsets ......................   Passed    0.17 sec
+    Start 5: pdf_streams
+5/9 Test #5: pdf_streams ......................   Passed    0.09 sec
+    Start 6: wrap_check
+6/9 Test #6: wrap_check .......................   Passed    0.80 sec
+    Start 7: geometry_check
+7/9 Test #7: geometry_check ...................   Passed    1.42 sec
+    Start 8: info_check
+8/9 Test #8: info_check .......................   Passed    0.56 sec
+    Start 9: integration_check
+9/9 Test #9: integration_check ................   Passed    0.75 sec
+
+100% tests passed, 0 tests failed out of 9
+
+Total Test time (real) =  21.95 sec
+-- Install configuration: "Release"
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/libki_xml_pdf.a
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/libki_xml_pdf.so.0.3.0
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/libki_xml_pdf.so.0
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/libki_xml_pdf.so
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/bin/xml2pdf
+-- Set non-toolchain portion of runtime path of "/tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/bin/xml2pdf" to "$ORIGIN/../lib"
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets-release.cmake
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/lib/pkgconfig/ki_xml_pdf.pc
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/include/ki_xml_pdf.h
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/share/ki_xml_pdf/DejaVuSans.ttf
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/share/ki_xml_pdf/DejaVuSans.copyright
+-- Installing: /tmp/ki-build-integration.Y5M8MD/cmake-stage/tmp/ki-build-integration.Y5M8MD/cmake-prefix/share/ki_xml_pdf/LICENSE
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-make-c-static-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-c-static-cmake'
+[ 50%] Building C object CMakeFiles/client.dir/report.c.o
+[100%] Linking C executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-c-static-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-c-static-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-c-static-pkg-config
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-make-c-shared-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-c-shared-cmake'
+[ 50%] Building C object CMakeFiles/client.dir/report.c.o
+[100%] Linking C executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-c-shared-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-c-shared-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-c-shared-pkg-config
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-make-cpp-static-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-cpp-static-cmake'
+[ 50%] Building CXX object CMakeFiles/client.dir/report.cpp.o
+[100%] Linking CXX executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-cpp-static-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-cpp-static-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-cpp-static-pkg-config
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-make-cpp-shared-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-cpp-shared-cmake'
+[ 50%] Building CXX object CMakeFiles/client.dir/report.cpp.o
+[100%] Linking CXX executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-make-cpp-shared-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-cpp-shared-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS make-cpp-shared-pkg-config
+xml2pdf: pages=1 objects=11 offset_bytes=96
+catalog_verify ok: success=12 rejected=72 usage=5 long_field_utf8_bytes=13827
+catalog installed PASS make-static
+catalog_verify ok: success=12 rejected=72 usage=5 long_field_utf8_bytes=13827
+catalog installed PASS make-shared
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-cmake-c-static-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-c-static-cmake'
+[ 50%] Building C object CMakeFiles/client.dir/report.c.o
+[100%] Linking C executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-c-static-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-c-static-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-c-static-pkg-config
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-cmake-c-shared-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-c-shared-cmake'
+[ 50%] Building C object CMakeFiles/client.dir/report.c.o
+[100%] Linking C executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-c-shared-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-c-shared-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-c-shared-pkg-config
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-cmake-cpp-static-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-cpp-static-cmake'
+[ 50%] Building CXX object CMakeFiles/client.dir/report.cpp.o
+[100%] Linking CXX executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-cpp-static-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-cpp-static-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-cpp-static-pkg-config
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-build-integration.Y5M8MD/consumer-cmake-cpp-shared-cmake
+gmake[1]: Entering directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-cpp-shared-cmake'
+[ 50%] Building CXX object CMakeFiles/client.dir/report.cpp.o
+[100%] Linking CXX executable client
+[100%] Built target client
+gmake[1]: Leaving directory '/tmp/ki-build-integration.Y5M8MD/consumer-cmake-cpp-shared-cmake'
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-cpp-shared-cmake
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+consumer 0.3.0: pages=1 total=2 selected=2 skipped=0
+matrix PASS cmake-cpp-shared-pkg-config
+xml2pdf: pages=1 objects=11 offset_bytes=96
+catalog_verify ok: success=12 rejected=72 usage=5 long_field_utf8_bytes=13827
+catalog installed PASS cmake-static
+catalog_verify ok: success=12 rejected=72 usage=5 long_field_utf8_bytes=13827
+catalog installed PASS cmake-shared
+build_integration ok: 16 installed C/C++ rows, staging, CTest and Poppler oracle; cc=cc cxx=g++
+distcheck ok: version=0.3.0 clean archive; 16 installed C/C++ rows; 4 catalog variants; installed CLI pipelines

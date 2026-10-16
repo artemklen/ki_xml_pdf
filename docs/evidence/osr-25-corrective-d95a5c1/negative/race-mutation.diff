@@ -1,0 +1,20 @@
+--- a/tests/test_stream.c
++++ b/tests/test_stream.c
+@@ -10,6 +10,7 @@
+ 
+ #include <dirent.h>
+ #include <pthread.h>
++#include <sched.h>
+ #include <time.h>
+ #include <fcntl.h>
+ #include <signal.h>
+@@ -71,8 +72,8 @@
+ 
+ int __real_deflate(z_streamp strm, int flush);
+ int __wrap_deflate(z_streamp strm, int flush) {
++    { int seen = deflate_calls; sched_yield(); deflate_calls = seen + 1; }
+     pthread_mutex_lock(&deflate_lock);
+-    deflate_calls++;
+     int fail = deflate_fail_in > 0 && --deflate_fail_in == 0;
+     int rc = deflate_fail_rc;
+     pthread_mutex_unlock(&deflate_lock);

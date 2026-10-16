@@ -3,7 +3,9 @@
    use all three _cfg entry points. Each job first runs alone to give its
    reference; the jobs then run together in threads, several rounds, and
    every output, result and mapper counter must equal its own reference.
-   A failing context is reused for a valid conversion afterwards.
+   A failing context is reused for a valid conversion afterwards. The
+   threaded rounds must make as many deflate() calls as the references, and
+   an early failure still removes every /tmp/ki-it-* fixture it created.
    Included from test_stream.c after test_info.c (GmIo, gm_map, gm_options,
    gm_file_is, gm_dir_entries, lw_text, lw_free, pdf_inflate_copy). */
 
@@ -39,6 +41,8 @@ typedef struct {
     size_t file_len;
     int again_rc;       /* the failing job then converts it_retry_xml */
     GmIo again;
+    int owns_in, owns_out; /* paths created by it_prepare, not yet removed */
+    int deflates;          /* deflate() calls of the serial reference */
 } ItJob;
 
 static char it_long[8192];
@@ -127,17 +131,21 @@ static int it_read_file(const char *path, unsigned char **out, size_t *len) {
 
 static const char *it_old = "OLD_INTEGRATION_DESTINATION";
 
+static void it_discard(ItJob *job);
+
 static int it_prepare(ItJob *job, const ItSpec *s, int k) {
+    it_discard(job);
     memset(job, 0, sizeof *job);
     job->spec = s;
     snprintf(job->in_path, sizeof job->in_path, "/tmp/ki-it-in-%d-XXXXXX", k);
     snprintf(job->out_path, sizeof job->out_path, "/tmp/ki-it-out-%d-XXXXXX", k);
     int fi = mkstemp(job->in_path);
+    job->owns_in = fi >= 0;
     int fo = fi < 0 ? -1 : mkstemp(job->out_path);
+    job->owns_out = fo >= 0;
     if (fo < 0) {
         if (fi >= 0) {
             close(fi);
-            unlink(job->in_path);
         }
         return -1;
     }
@@ -230,6 +238,19 @@ static void it_release(ItJob *job) {
     free(job->file);
     job->g.io.buf = job->again.io.buf = NULL;
     job->file = NULL;
+}
+
+/* Removes the job's fixture files and buffers; safe to repeat. */
+static void it_discard(ItJob *job) {
+    if (job->owns_in) {
+        unlink(job->in_path);
+        job->owns_in = 0;
+    }
+    if (job->owns_out) {
+        unlink(job->out_path);
+        job->owns_out = 0;
+    }
+    it_release(job);
 }
 
 /* PDF bytes of a job: the callback buffer or the published file. */
@@ -327,17 +348,45 @@ static int it_check_reference(const ItJob *job) {
     return 0;
 }
 
-static int test_integration_contexts(void) {
+static ItJob it_refs[IT_JOBS], it_jobs[IT_JOBS];
+
+/* Test-only forced early failure at a numbered stage of it_contexts, used
+   to check that the cleanup in test_integration_contexts is complete. */
+static int it_stop_at = -1;
+#define IT_STOP(stage)                                                         \
+    do {                                                                       \
+        if (it_stop_at == (stage)) {                                           \
+            return 1;                                                          \
+        }                                                                      \
+    } while (0)
+
+/* May return early from any check; started threads are always joined first
+   and the caller removes every fixture left in it_refs and it_jobs. */
+static int it_contexts(void) {
     it_fixtures();
-    static ItJob ref[IT_JOBS], run[IT_JOBS];
+    ItJob *ref = it_refs, *run = it_jobs;
+    for (int i = 0; i < IT_JOBS; i++) {
+        it_discard(&ref[i]);
+        it_discard(&run[i]);
+    }
+    memset(it_refs, 0, sizeof it_refs);
+    memset(it_jobs, 0, sizeof it_jobs);
+    int want_deflates = 0;
     for (int i = 0; i < IT_JOBS; i++) {
         CHECK(it_prepare(&ref[i], &it_specs[i], i) == 0);
+        int before = deflate_calls;
         it_run(&ref[i]);
+        ref[i].deflates = deflate_calls - before;
+        want_deflates += ref[i].deflates;
         if (it_check_reference(&ref[i]) != 0) {
             fprintf(stderr, "integration reference %s failed\n", it_specs[i].name);
             return 1;
         }
+        if (i == 3) {
+            IT_STOP(0);
+        }
     }
+    IT_STOP(1);
     /* The records profile keeps every word of the long text in order. */
     {
         const char *pdf;
@@ -384,6 +433,7 @@ static int test_integration_contexts(void) {
         for (int i = 0; i < IT_JOBS; i++) {
             CHECK(it_prepare(&run[i], &it_specs[i], i) == 0);
         }
+        deflate_calls = 0;
         it_gate_set(0);
         int started = 0;
         while (started < IT_JOBS && pthread_create(&t[started], NULL, it_run, &run[started]) == 0) {
@@ -396,21 +446,59 @@ static int test_integration_contexts(void) {
             pthread_join(t[i], NULL);
         }
         it_gate_set(-1);
+        if (round == 0) {
+            IT_STOP(2);
+        }
         CHECK(started == IT_JOBS);
+        /* A lost update in the shared wrapper counter would show up here. */
+        if (deflate_calls != want_deflates) {
+            fprintf(stderr, "round %d: %d deflate calls, serial references made %d\n", round, deflate_calls,
+                    want_deflates);
+            return 1;
+        }
         for (int i = 0; i < IT_JOBS; i++) {
             if (!it_same(&run[i], &ref[i])) {
                 fprintf(stderr, "round %d: %s differs from its serial reference\n", round, it_specs[i].name);
                 return 1;
             }
-            unlink(run[i].in_path);
-            unlink(run[i].out_path);
-            it_release(&run[i]);
+            it_discard(&run[i]);
         }
     }
+    return 0;
+}
+
+static int test_integration_contexts(void) {
+    int rc = it_contexts();
     for (int i = 0; i < IT_JOBS; i++) {
-        unlink(ref[i].in_path);
-        unlink(ref[i].out_path);
-        it_release(&ref[i]);
+        it_discard(&it_refs[i]);
+        it_discard(&it_jobs[i]);
+    }
+    return rc;
+}
+
+/* Forced failures before, between and after the threaded conversions leave
+   none of the fixture paths that the run created. */
+static int test_integration_cleanup(void) {
+    const int created[] = {2 * 4, 2 * IT_JOBS, 4 * IT_JOBS};
+    for (int stage = 0; stage < 3; stage++) {
+        it_stop_at = stage;
+        int rc = test_integration_contexts();
+        it_stop_at = -1;
+        CHECK(rc == 1);
+        int paths = 0;
+        for (int i = 0; i < 2 * IT_JOBS; i++) {
+            const ItJob *job = i < IT_JOBS ? &it_refs[i] : &it_jobs[i - IT_JOBS];
+            CHECK(!job->owns_in && !job->owns_out);
+            CHECK(job->file == NULL && job->g.io.buf == NULL && job->again.io.buf == NULL);
+            const char *p[2] = {job->in_path, job->out_path};
+            for (int k = 0; k < 2; k++) {
+                if (p[k][0] != '\0' && strstr(p[k], "XXXXXX") == NULL) {
+                    paths++;
+                    CHECK(access(p[k], F_OK) != 0);
+                }
+            }
+        }
+        CHECK(paths == created[stage]);
     }
     return 0;
 }

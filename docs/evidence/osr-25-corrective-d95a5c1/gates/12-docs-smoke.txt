@@ -1,0 +1,317 @@
+### 12-docs-smoke: bash tests/docs_smoke.sh
+### HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a
+docs_smoke: syntax PASS (27 shell blocks); local links/anchors PASS (54)
+docs_smoke: documented quickstart
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/xml_parse.o src/xml_parse.c
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/geometry.o src/geometry.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/info.o src/info.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/page_sink.o src/page_sink.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/pdf_write.o src/pdf_write.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/layout.o src/layout.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/report.o src/report.c
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/convert.o src/convert.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+xml2pdf: pages=1 objects=11 offset_bytes=96
+docs_smoke: documented pipes
+xml2pdf: pages=1 objects=11 offset_bytes=96
+xml2pdf: pages=1 objects=11 offset_bytes=96
+xml2pdf: pages=1 objects=11 offset_bytes=96
+docs_smoke: documented dashpaths
+xml2pdf: pages=1 objects=11 offset_bytes=96
+docs_smoke: documented selection
+xml2pdf: pages=1 objects=11 offset_bytes=96
+docs_smoke: help/version PASS (header 0.3.0; final distribution checks own literal release version)
+docs_smoke: documented cmake-build
+-- The C compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Performing Test KI_HAVE_GLIBC
+-- Performing Test KI_HAVE_GLIBC - Success
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found Python3: /usr/bin/python3 (found version "3.13.5") found components: Interpreter
+-- Configuring done (0.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-docs-smoke.ud3Mo5/source/build
+[  2%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/xml_parse.c.o
+[  5%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/font.c.o
+[  8%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/geometry.c.o
+[ 11%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/info.c.o
+[ 13%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/page_sink.c.o
+[ 16%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/pdf_write.c.o
+[ 19%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/layout.c.o
+[ 22%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/report.c.o
+[ 25%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/convert.c.o
+[ 27%] Linking C static library libki_xml_pdf.a
+[ 27%] Built target ki_xml_pdf_static
+[ 30%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/xml_parse.c.o
+[ 33%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/font.c.o
+[ 36%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/geometry.c.o
+[ 38%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/info.c.o
+[ 41%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/page_sink.c.o
+[ 44%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/pdf_write.c.o
+[ 47%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/layout.c.o
+[ 50%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/report.c.o
+[ 52%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/convert.c.o
+[ 55%] Linking C shared library libki_xml_pdf.so
+[ 55%] Built target ki_xml_pdf_shared
+[ 58%] Building C object CMakeFiles/xml2pdf.dir/src/main.c.o
+[ 61%] Linking C executable xml2pdf
+[ 61%] Built target xml2pdf
+[ 63%] Building C object CMakeFiles/catalog_example.dir/examples/catalog_driver.c.o
+[ 66%] Building C object CMakeFiles/catalog_example.dir/examples/catalog_map.c.o
+[ 69%] Linking C executable examples/catalog
+[ 69%] Built target catalog_example
+[ 72%] Building C object CMakeFiles/test_stream.dir/tests/test_stream.c.o
+[ 75%] Building C object CMakeFiles/test_stream.dir/src/xml_parse.c.o
+[ 77%] Building C object CMakeFiles/test_stream.dir/src/font.c.o
+[ 80%] Building C object CMakeFiles/test_stream.dir/src/geometry.c.o
+[ 83%] Building C object CMakeFiles/test_stream.dir/src/info.c.o
+[ 86%] Building C object CMakeFiles/test_stream.dir/src/page_sink.c.o
+[ 88%] Building C object CMakeFiles/test_stream.dir/src/pdf_write.c.o
+[ 91%] Building C object CMakeFiles/test_stream.dir/src/layout.c.o
+[ 94%] Building C object CMakeFiles/test_stream.dir/src/report.c.o
+[ 97%] Building C object CMakeFiles/test_stream.dir/src/convert.c.o
+[100%] Linking C executable test_stream
+[100%] Built target test_stream
+xml2pdf: pages=1 objects=11 offset_bytes=96
+docs_smoke: documented make-install
+printf '%s\n' '/tmp/ki-docs-smoke.ud3Mo5/make-prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+printf '%s\n' '/tmp/ki-docs-smoke.ud3Mo5/make-prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-docs-smoke.ud3Mo5/make-prefix/bin /tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib /tmp/ki-docs-smoke.ud3Mo5/make-prefix/include \
+	/tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-docs-smoke.ud3Mo5/make-prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-docs-smoke.ud3Mo5/make-prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-docs-smoke.ud3Mo5/make-prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-docs-smoke.ud3Mo5/make-prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/pkgconfig/ki_xml_pdf.pc"
+docs_smoke: documented cmake-install
+-- The C compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Performing Test KI_HAVE_GLIBC
+-- Performing Test KI_HAVE_GLIBC - Success
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found Python3: /usr/bin/python3 (found version "3.13.5") found components: Interpreter
+-- Configuring done (0.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-docs-smoke.ud3Mo5/source/build-install
+[  2%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/xml_parse.c.o
+[  5%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/font.c.o
+[  8%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/geometry.c.o
+[ 11%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/info.c.o
+[ 13%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/page_sink.c.o
+[ 16%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/pdf_write.c.o
+[ 19%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/layout.c.o
+[ 22%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/report.c.o
+[ 25%] Building C object CMakeFiles/ki_xml_pdf_static.dir/src/convert.c.o
+[ 27%] Linking C static library libki_xml_pdf.a
+[ 27%] Built target ki_xml_pdf_static
+[ 30%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/xml_parse.c.o
+[ 33%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/font.c.o
+[ 36%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/geometry.c.o
+[ 38%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/info.c.o
+[ 41%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/page_sink.c.o
+[ 44%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/pdf_write.c.o
+[ 47%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/layout.c.o
+[ 50%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/report.c.o
+[ 52%] Building C object CMakeFiles/ki_xml_pdf_shared.dir/src/convert.c.o
+[ 55%] Linking C shared library libki_xml_pdf.so
+[ 55%] Built target ki_xml_pdf_shared
+[ 58%] Building C object CMakeFiles/xml2pdf.dir/src/main.c.o
+[ 61%] Linking C executable xml2pdf
+[ 61%] Built target xml2pdf
+[ 63%] Building C object CMakeFiles/catalog_example.dir/examples/catalog_driver.c.o
+[ 66%] Building C object CMakeFiles/catalog_example.dir/examples/catalog_map.c.o
+[ 69%] Linking C executable examples/catalog
+[ 69%] Built target catalog_example
+[ 72%] Building C object CMakeFiles/test_stream.dir/tests/test_stream.c.o
+[ 75%] Building C object CMakeFiles/test_stream.dir/src/xml_parse.c.o
+[ 77%] Building C object CMakeFiles/test_stream.dir/src/font.c.o
+[ 80%] Building C object CMakeFiles/test_stream.dir/src/geometry.c.o
+[ 83%] Building C object CMakeFiles/test_stream.dir/src/info.c.o
+[ 86%] Building C object CMakeFiles/test_stream.dir/src/page_sink.c.o
+[ 88%] Building C object CMakeFiles/test_stream.dir/src/pdf_write.c.o
+[ 91%] Building C object CMakeFiles/test_stream.dir/src/layout.c.o
+[ 94%] Building C object CMakeFiles/test_stream.dir/src/report.c.o
+[ 97%] Building C object CMakeFiles/test_stream.dir/src/convert.c.o
+[100%] Linking C executable test_stream
+[100%] Built target test_stream
+-- Install configuration: "Release"
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.a
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.so.0.3.0
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.so.0
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.so
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/bin/xml2pdf
+-- Set non-toolchain portion of runtime path of "/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/bin/xml2pdf" to "$ORIGIN/../lib"
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets-release.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/pkgconfig/ki_xml_pdf.pc
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/include/ki_xml_pdf.h
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/share/ki_xml_pdf/DejaVuSans.ttf
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/share/ki_xml_pdf/DejaVuSans.copyright
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/share/ki_xml_pdf/LICENSE
+docs_smoke: documented staging
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/bin /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/include \
+	/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/
+cp include/ki_xml_pdf.h /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/cmake/ki_xml_pdf" "/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/usr/local|g' \
+	-e 's|@KI_LIBDIR@|/usr/local/lib|g' -e 's|@KI_INCLUDEDIR@|/usr/local/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-docs-smoke.ud3Mo5/source/stage/usr/local/lib/pkgconfig/ki_xml_pdf.pc"
+-- Install configuration: "Release"
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.a
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.so.0.3.0
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.so.0
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/libki_xml_pdf.so
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/bin/xml2pdf
+-- Set non-toolchain portion of runtime path of "/tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/bin/xml2pdf" to "$ORIGIN/../lib"
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets-release.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/lib/pkgconfig/ki_xml_pdf.pc
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/include/ki_xml_pdf.h
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/share/ki_xml_pdf/DejaVuSans.ttf
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/share/ki_xml_pdf/DejaVuSans.copyright
+-- Installing: /tmp/ki-docs-smoke.ud3Mo5/source/stage-cmake/tmp/ki-docs-smoke.ud3Mo5/cmake-prefix/share/ki_xml_pdf/LICENSE
+docs_smoke: documented pkg-consumers
+pages=1 total=2 selected=2 skipped=0
+pages=1
+pages=1 total=2 selected=2 skipped=0
+pages=1
+docs_smoke: documented cmake-consumers
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-docs-smoke.ud3Mo5/consumer.C7CH9e/shared
+[ 25%] Building C object CMakeFiles/report-client.dir/report.c.o
+[ 50%] Linking C executable report-client
+[ 50%] Built target report-client
+[ 75%] Building CXX object CMakeFiles/consume-client.dir/consume.cpp.o
+[100%] Linking CXX executable consume-client
+[100%] Built target consume-client
+pages=1 total=2 selected=2 skipped=0
+pages=1
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.3.1")
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/ki-docs-smoke.ud3Mo5/consumer.C7CH9e/static
+[ 25%] Building C object CMakeFiles/report-client.dir/report.c.o
+[ 50%] Linking C executable report-client
+[ 50%] Built target report-client
+[ 75%] Building CXX object CMakeFiles/consume-client.dir/consume.cpp.o
+[100%] Linking CXX executable consume-client
+[100%] Built target consume-client
+pages=1 total=2 selected=2 skipped=0
+pages=1
+xml2pdf: pages=1 objects=11 offset_bytes=96
+docs_smoke: documented catalog
+printf '%s\n' '/usr/local' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o examples/consume examples/consume.c libki_xml_pdf.a -lz
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o examples/report examples/report.c libki_xml_pdf.a -lz
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o examples/catalog examples/catalog_driver.c examples/catalog_map.c libki_xml_pdf.a -lz
+c++  -Wall -Wextra -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o examples/consume_cpp examples/consume.cpp libki_xml_pdf.a -lz
+items=2 pages=1 output_bytes=413079
+items=2 pages=1 output_bytes=413079
+items=2 pages=1 output_bytes=413079
+docs_smoke: documented catalog-install
+printf '%s\n' '/tmp/ki-docs-smoke.ud3Mo5/make-prefix' > src/.font_prefix.new
+if cmp -s src/.font_prefix.new src/.font_prefix; then rm -f src/.font_prefix.new; else mv src/.font_prefix.new src/.font_prefix; fi
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -MMD -MP -c -o src/font.o src/font.c
+ar rcs libki_xml_pdf.a src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o
+cc -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf/DejaVuSans.ttf\" -o xml2pdf src/main.c libki_xml_pdf.a -lz
+cc -shared -Wl,-soname,libki_xml_pdf.so.0 -Wl,--version-script=libki_xml_pdf.map -o libki_xml_pdf.so src/xml_parse.o src/font.o src/geometry.o src/info.o src/page_sink.o src/pdf_write.o src/layout.o src/report.o src/convert.o -lz
+mkdir -p /tmp/ki-docs-smoke.ud3Mo5/make-prefix/bin /tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib /tmp/ki-docs-smoke.ud3Mo5/make-prefix/include \
+	/tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf
+cp xml2pdf /tmp/ki-docs-smoke.ud3Mo5/make-prefix/bin/xml2pdf
+cp libki_xml_pdf.a libki_xml_pdf.so /tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/
+cp include/ki_xml_pdf.h /tmp/ki-docs-smoke.ud3Mo5/make-prefix/include/
+cp fonts/DejaVuSans.ttf fonts/DejaVuSans.copyright LICENSE /tmp/ki-docs-smoke.ud3Mo5/make-prefix/share/ki_xml_pdf/
+ln -sfn libki_xml_pdf.so /tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/libki_xml_pdf.so.0
+mkdir -p "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf" "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/pkgconfig"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_DEFAULT_SHARED@|ON|g' \
+	cmake/ki_xml_pdfConfig.cmake.in > "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_VERSION_MAJOR@|0|g' \
+	-e 's|@KI_VERSION_MINOR@|3|g' cmake/ki_xml_pdfConfigVersion.cmake.in \
+	> "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfConfigVersion.cmake"
+cp cmake/ki_xml_pdfMakeTargets.cmake.in "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/cmake/ki_xml_pdf/ki_xml_pdfTargets.cmake"
+sed -e 's|@KI_VERSION@|0.3.0|g' -e 's|@KI_PREFIX@|/tmp/ki-docs-smoke.ud3Mo5/make-prefix|g' \
+	-e 's|@KI_LIBDIR@|/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib|g' -e 's|@KI_INCLUDEDIR@|/tmp/ki-docs-smoke.ud3Mo5/make-prefix/include|g' \
+	cmake/ki_xml_pdf.pc.in > "/tmp/ki-docs-smoke.ud3Mo5/make-prefix/lib/pkgconfig/ki_xml_pdf.pc"
+items=2 pages=1 output_bytes=413079
+docs_smoke PASS: 22 PDFs checked; documented Make/CMake, C/C++ static/shared consumers, pipelines and catalog modes; CC=cc CXX=c++ PDFTOTEXT=pdftotext

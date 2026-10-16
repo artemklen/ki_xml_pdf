@@ -59,7 +59,11 @@ int __wrap_fsync(int fd) {
 }
 
 /* Compressor fault injection, linked with --wrap. deflate_fail_in = n makes
-   the nth following deflate() call return deflate_fail_rc without running. */
+   the nth following deflate() call return deflate_fail_rc without running.
+   Concurrent conversions also pass through the wrapper, so its counter
+   updates are serialized; tests set or read the variables directly only
+   while no conversion thread is running (pthread_join orders them). */
+static pthread_mutex_t deflate_lock = PTHREAD_MUTEX_INITIALIZER;
 static int deflate_fail_in;
 static int deflate_fail_rc;
 static int deflate_init_fail_rc;
@@ -67,9 +71,13 @@ static int deflate_calls;
 
 int __real_deflate(z_streamp strm, int flush);
 int __wrap_deflate(z_streamp strm, int flush) {
+    pthread_mutex_lock(&deflate_lock);
     deflate_calls++;
-    if (deflate_fail_in > 0 && --deflate_fail_in == 0) {
-        return deflate_fail_rc;
+    int fail = deflate_fail_in > 0 && --deflate_fail_in == 0;
+    int rc = deflate_fail_rc;
+    pthread_mutex_unlock(&deflate_lock);
+    if (fail) {
+        return rc;
     }
     return __real_deflate(strm, flush);
 }
@@ -3707,6 +3715,7 @@ int main(void) {
         {"info_usage", test_info_usage},
         {"info_limits", test_info_limits},
         {"integration_contexts", test_integration_contexts},
+        {"integration_cleanup", test_integration_cleanup},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {

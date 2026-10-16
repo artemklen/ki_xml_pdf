@@ -1,0 +1,3 @@
+### 08-font-fixtures: python3 tests/font_fixtures.py --check
+### HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a
+truncated-cmap-184.ttf: 184 bytes sha256 7aebf921202f4a86939c824ffa0be4a974c967b46b2b86cf9f680e81f0f78d3b ok

@@ -1,0 +1,3 @@
+### 07-fuzz: python3 tests/fuzz_smoke.py
+### HEAD d95a5c12c3b0e3b0a2f281556c87d9fba30c617a
+fuzz_smoke seed=20261007 iters=24 as_kib=262144 timeout=5s golden=1 truncations=6 xml_corpus=11 fonts=6 successful_mutants=2 projected_mutants=2 elapsed=1.23s ok
