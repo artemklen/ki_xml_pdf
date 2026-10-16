@@ -23,8 +23,14 @@ static int s16(const unsigned char *p) {
     return v;
 }
 
+/* True when [off, off + need) lies inside a buffer of len bytes, without
+   computing off + need. */
+static int span_ok(size_t len, size_t off, size_t need) {
+    return off <= len && need <= len - off;
+}
+
 static int find_table(const unsigned char *data, size_t len, const char tag[4], size_t *off, size_t *tlen) {
-    if (len < 12) {
+    if (!span_ok(len, 0, 12)) {
         return -1;
     }
     unsigned n = ru16(data + 4);
@@ -38,7 +44,7 @@ static int find_table(const unsigned char *data, size_t len, const char tag[4], 
         }
         size_t o = ru32(e + 8);
         size_t nlen = ru32(e + 12);
-        if (o > len || nlen > len - o) {
+        if (!span_ok(len, o, nlen)) {
             return -1;
         }
         *off = o;
@@ -49,7 +55,7 @@ static int find_table(const unsigned char *data, size_t len, const char tag[4], 
 }
 
 static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
-    if (len < 14) {
+    if (!span_ok(len, 0, 14)) {
         return 0;
     }
     unsigned seg = ru16(cmap + 6) / 2;
@@ -57,10 +63,10 @@ static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
         return 0;
     }
     size_t end_at = 14;
-    size_t start_at = end_at + 2 * seg + 2;
-    size_t delta_at = start_at + 2 * seg;
-    size_t range_at = delta_at + 2 * seg;
-    if (range_at + 2 * seg > len) {
+    size_t start_at = end_at + 2 * (size_t)seg + 2;
+    size_t delta_at = start_at + 2 * (size_t)seg;
+    size_t range_at = delta_at + 2 * (size_t)seg;
+    if (!span_ok(len, range_at, 2 * (size_t)seg)) {
         return 0;
     }
     for (unsigned i = 0; i < seg; i++) {
@@ -81,7 +87,7 @@ static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
             return 0;
         }
         size_t pos = range_at + 2 * (size_t)i + roff + (size_t)(cp - start) * 2;
-        if (pos < range_at || pos + 2 > len) {
+        if (!span_ok(len, pos, 2)) {
             return 0;
         }
         unsigned g = ru16(cmap + pos);
@@ -94,18 +100,18 @@ static unsigned glyph_of(const unsigned char *cmap, size_t len, unsigned cp) {
 }
 
 static unsigned advance_of(const unsigned char *hmtx, size_t hlen, unsigned num_h, unsigned gid) {
-    if (num_h == 0 || hlen < 2) {
+    if (num_h == 0) {
         return 0;
     }
     size_t at = (size_t)(gid < num_h ? gid : num_h - 1) * 4;
-    if (at + 2 > hlen) {
+    if (!span_ok(hlen, at, 2)) {
         return 0;
     }
     return ru16(hmtx + at);
 }
 
 static const unsigned char *format4(const unsigned char *cmap, size_t len, size_t *out_len) {
-    if (len < 4) {
+    if (!span_ok(len, 0, 4)) {
         return NULL;
     }
     unsigned num = ru16(cmap + 2);
@@ -116,21 +122,25 @@ static const unsigned char *format4(const unsigned char *cmap, size_t len, size_
     size_t best_len = 0;
     for (unsigned i = 0; i < num; i++) {
         size_t rec = 4 + (size_t)i * 8;
-        if (rec + 8 > len) {
+        if (!span_ok(len, rec, 8)) {
             return NULL;
         }
         unsigned plat = ru16(cmap + rec);
         unsigned enc = ru16(cmap + rec + 2);
+        if (plat != 3 || enc != 1) {
+            continue;
+        }
         size_t rel = ru32(cmap + rec + 4);
-        if (rel + 2 > len) {
+        /* format and length must both be present before either is read. */
+        if (!span_ok(len, rel, 4)) {
             continue;
         }
         unsigned fmt = ru16(cmap + rel);
-        if (fmt != 4 || plat != 3 || enc != 1) {
+        if (fmt != 4) {
             continue;
         }
         unsigned sublen = ru16(cmap + rel + 2);
-        if (sublen < 14 || sublen > len || rel > len - sublen) {
+        if (sublen < 14 || !span_ok(len, rel, sublen)) {
             return NULL;
         }
         best = cmap + rel;
@@ -213,6 +223,10 @@ int font_load(FontFace *face, const char *path) {
     face->ascent = s16(data + hhea_off + 4);
     face->descent = s16(data + hhea_off + 6);
     unsigned num_h = ru16(data + hhea_off + 34);
+    if (num_h == 0 || hmtx_len / 4 < num_h) {
+        free(data);
+        return -1;
+    }
     const unsigned char *hmtx = data + hmtx_off;
 
     for (unsigned cp = 0; cp < FONT_BMP_MAX; cp++) {

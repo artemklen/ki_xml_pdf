@@ -1,0 +1,75 @@
+clang -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"/usr/local/share/ki_xml_pdf/DejaVuSans.ttf\" -o test_stream_san src/xml_parse.c src/font.c src/page_sink.c src/pdf_write.c src/layout.c src/report.c src/convert.c tests/test_stream.c -pthread -Wl,--wrap=fsync
+ASAN_OPTIONS=halt_on_error=1:detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ./test_stream_san
+xml2pdf: pages=3 objects=13 offset_bytes=112
+xml2pdf: pages=3 objects=13 offset_bytes=112
+input and output are the same file
+input and output are the same file
+input and output are the same file
+input and output are the same file
+xml: end tag mismatch
+read error
+pdf write failed
+pdf publish failed
+cannot create temporary output for /tmp/ki-xml-pdf-out-W8BBud/ro/out.pdf
+xml2pdf: pages=1 objects=9 offset_bytes=80
+xml: no document element at byte 0
+xml2pdf: pages=1 objects=9 offset_bytes=80
+xml2pdf: pages=1 objects=9 offset_bytes=80
+=================================================================
+==2747821==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x511000003302 at pc 0x55fb3924d35e bp 0x7ffe1f825e30 sp 0x7ffe1f825e28
+READ of size 1 at 0x511000003302 thread T0
+    #0 0x55fb3924d35d in ru16 <evidence-root>/osr-24/checkout-base/src/font.c:11:36
+    #1 0x55fb3924d35d in format4 <evidence-root>/osr-24/checkout-base/src/font.c:132:27
+    #2 0x55fb3924b71b in font_load <evidence-root>/osr-24/checkout-base/src/font.c:199:32
+    #3 0x55fb3929e7f7 in load_font_bytes <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3323:14
+    #4 0x55fb3928b85d in std_font <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3332:12
+    #5 0x55fb3928b85d in test_font_bounds <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3372:9
+    #6 0x55fb3926b88b in main <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3571:18
+    #7 0x7f6648bb9ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #8 0x7f6648bb9d64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #9 0x55fb3915d550 in _start (<evidence-root>/osr-24/checkout-base/test_stream_san+0x66550) (BuildId: b7470c98e34546f5590dca2802e49cd87735d0e2)
+
+0x511000003302 is located 0 bytes after 194-byte region [0x511000003240,0x511000003302)
+allocated by thread T0 here:
+    #0 0x55fb391fd383 in malloc (<evidence-root>/osr-24/checkout-base/test_stream_san+0x106383) (BuildId: b7470c98e34546f5590dca2802e49cd87735d0e2)
+    #1 0x55fb3924b4bd in font_load <evidence-root>/osr-24/checkout-base/src/font.c:181:27
+    #2 0x55fb3929e7f7 in load_font_bytes <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3323:14
+    #3 0x55fb3928b85d in std_font <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3332:12
+    #4 0x55fb3928b85d in test_font_bounds <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3372:9
+    #5 0x55fb3926b88b in main <evidence-root>/osr-24/checkout-base/tests/test_stream.c:3571:18
+    #6 0x7f6648bb9ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow <evidence-root>/osr-24/checkout-base/src/font.c:11:36 in ru16
+Shadow bytes around the buggy address:
+  0x511000003080: fd fd fd fd fd fa fa fa fa fa fa fa fa fa fa fa
+  0x511000003100: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x511000003180: fd fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa
+  0x511000003200: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x511000003280: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x511000003300:[02]fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x511000003380: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x511000003400: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x511000003480: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x511000003500: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x511000003580: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==2747821==ABORTING
+make: *** [Makefile:55: test-san] Error 1

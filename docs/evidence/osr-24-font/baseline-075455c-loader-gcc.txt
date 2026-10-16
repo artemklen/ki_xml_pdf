@@ -1,0 +1,51 @@
+=================================================================
+==2744295==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x5100000000f8 at pc 0x558d20043664 bp 0x7fff169be370 sp 0x7fff169be368
+READ of size 1 at 0x5100000000f8 thread T0
+    #0 0x558d20043663 in ru16 <evidence-root>/osr-23/src-075455c/src/font.c:11
+    #1 0x558d20044936 in format4 <evidence-root>/osr-23/src-075455c/src/font.c:132
+    #2 0x558d20044936 in font_load <evidence-root>/osr-23/src-075455c/src/font.c:199
+    #3 0x558d200434d6 in main <evidence-root>/osr-24/repro/load_font.c:5
+    #4 0x7ff4c8835ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #5 0x7ff4c8835d64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #6 0x558d20043300 in _start (<evidence-root>/osr-24/repro/load_gcc+0x6300) (BuildId: 4a47a8cf83d75a0ba78f31526d66fd425e3df662)
+
+0x5100000000f8 is located 0 bytes after 184-byte region [0x510000000040,0x5100000000f8)
+allocated by thread T0 here:
+    #0 0x7ff4c92f4c57 in malloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:69
+    #1 0x558d20044367 in font_load <evidence-root>/osr-23/src-075455c/src/font.c:181
+    #2 0x558d200434d6 in main <evidence-root>/osr-24/repro/load_font.c:5
+    #3 0x7ff4c8835ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow <evidence-root>/osr-23/src-075455c/src/font.c:11 in ru16
+Shadow bytes around the buggy address:
+  0x50fffffffe00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x50fffffffe80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x50ffffffff00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x50ffffffff80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x510000000000: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+=>0x510000000080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00[fa]
+  0x510000000100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x510000000180: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x510000000200: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x510000000280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x510000000300: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==2744295==ABORTING

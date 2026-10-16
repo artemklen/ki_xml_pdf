@@ -2,6 +2,10 @@
 
 Версии до 1.0 не обещают стабильный ABI. Совместимость ломается вместе с номером 0.y.
 
+## Unreleased
+
+- Reject TTF files whose cmap subtable header, encoding records, table directory or table spans are truncated or out of range with `KI_CAUSE_FONT`, without reading past the font data. All range checks avoid offset-plus-length overflow. The `hmtx` table must hold all `numberOfHMetrics` entries. The 8 MiB font size cap is unchanged.
+
 ## 0.2.0
 
 - Initialize `KiResult` before callback option validation, so reused results never retain earlier metrics on a usage error.

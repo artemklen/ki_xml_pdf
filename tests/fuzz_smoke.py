@@ -157,6 +157,7 @@ def main() -> int:
             broken[rng.randrange(len(broken))] = rng.randrange(256)
         samples = [font[:206], font[:1024], font, bytes(broken)]
         samples.append((root / "tests" / "corpus" / "truncated-hmtx.ttf").read_bytes()[:LIMIT])
+        samples.append((root / "tests" / "corpus" / "truncated-cmap-184.ttf").read_bytes()[:LIMIT])
         hello = root / "examples" / "hello.xml"
         for number, data in enumerate(samples):
             with tempfile.TemporaryDirectory(prefix="ki-fuzz.") as tmp:

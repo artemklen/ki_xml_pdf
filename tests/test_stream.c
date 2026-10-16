@@ -3218,6 +3218,331 @@ static int mem_cancel_stop(void *user) {
     return ((MemIo *)user)->stop != 0;
 }
 
+/* Synthetic TTF: directory then head, hhea, hmtx, cmap in that order, so a
+   read past the cmap table also runs past the heap copy of the file. */
+#define TTF_DIR 76
+#define TTF_CAP 1024
+
+static void put16(unsigned char *p, unsigned v) {
+    p[0] = (unsigned char)(v >> 8);
+    p[1] = (unsigned char)v;
+}
+
+static void put32(unsigned char *p, unsigned long v) {
+    put16(p, (unsigned)(v >> 16) & 0xFFFFu);
+    put16(p + 2, (unsigned)v & 0xFFFFu);
+}
+
+static size_t ttf_build(unsigned char *out, size_t head_len, size_t hhea_len, unsigned num_h,
+                        size_t hmtx_len, const unsigned char *cmap, size_t cmap_len) {
+    const char *tags[4] = {"head", "hhea", "hmtx", "cmap"};
+    size_t lens[4] = {head_len, hhea_len, hmtx_len, cmap_len};
+    memset(out, 0, TTF_CAP);
+    put32(out, 0x00010000ul);
+    put16(out + 4, 4);
+    size_t at = TTF_DIR;
+    for (int i = 0; i < 4; i++) {
+        unsigned char *e = out + 12 + 16 * i;
+        memcpy(e, tags[i], 4);
+        put32(e + 8, at);
+        put32(e + 12, lens[i]);
+        unsigned char *t = out + at;
+        if (i == 0 && head_len >= 20) {
+            put16(t + 18, 2048);
+        } else if (i == 1 && hhea_len >= 36) {
+            put16(t + 4, 1900);
+            put16(t + 6, 0xFE00);
+            put16(t + 34, num_h);
+        } else if (i == 2) {
+            for (size_t m = 0; m + 2 <= hmtx_len; m += 4) {
+                put16(t + m, 500);
+            }
+        } else if (i == 3) {
+            memcpy(t, cmap, cmap_len);
+        }
+        at += lens[i];
+    }
+    return at;
+}
+
+/* 40-byte (3,1) format 4 body: U+0020 -> 1, U+0041 -> 2, terminal 0xFFFF. */
+static size_t f4_body(unsigned char *p) {
+    const unsigned ends[3] = {0x20, 0x41, 0xFFFF};
+    const unsigned deltas[3] = {(1u - 0x20u) & 0xFFFFu, (2u - 0x41u) & 0xFFFFu, 1};
+    memset(p, 0, 40);
+    put16(p, 4);
+    put16(p + 2, 40);
+    put16(p + 6, 6);
+    put16(p + 8, 4);
+    put16(p + 10, 1);
+    put16(p + 12, 2);
+    for (int i = 0; i < 3; i++) {
+        put16(p + 14 + 2 * i, ends[i]);
+        put16(p + 22 + 2 * i, ends[i]);
+        put16(p + 28 + 2 * i, deltas[i]);
+    }
+    return 40;
+}
+
+static size_t cmap_head(unsigned char *p, unsigned num) {
+    put16(p, 0);
+    put16(p + 2, num);
+    return 4;
+}
+
+static void cmap_rec(unsigned char *p, unsigned plat, unsigned enc, unsigned long rel) {
+    put16(p, plat);
+    put16(p + 2, enc);
+    put32(p + 4, rel);
+}
+
+static size_t valid_cmap(unsigned char *p) {
+    cmap_head(p, 1);
+    cmap_rec(p + 4, 3, 1, 12);
+    return 12 + f4_body(p + 12);
+}
+
+static int load_font_bytes(const unsigned char *b, size_t n) {
+    char path[] = "/tmp/ki-font-bounds-XXXXXX";
+    int fd = mkstemp(path);
+    if (fd < 0) {
+        return -2;
+    }
+    size_t done = 0;
+    while (done < n) {
+        ssize_t w = write(fd, b + done, n - done);
+        if (w <= 0) {
+            close(fd);
+            unlink(path);
+            return -2;
+        }
+        done += (size_t)w;
+    }
+    close(fd);
+    FontFace face;
+    int rc = font_load(&face, path);
+    if (rc == 0) {
+        font_free(&face);
+    }
+    unlink(path);
+    return rc;
+}
+
+static int std_font(unsigned char *ttf, const unsigned char *cmap, size_t cmap_len) {
+    return load_font_bytes(ttf, ttf_build(ttf, 54, 36, 3, 12, cmap, cmap_len));
+}
+
+static int test_font_bounds(void) {
+    static unsigned char ttf[TTF_CAP];
+    unsigned char cmap[256];
+    size_t cl, n;
+
+    /* Positive control: cmap ends exactly at the table and file end. */
+    cl = valid_cmap(cmap);
+    CHECK(std_font(ttf, cmap, cl) == 0);
+    n = ttf_build(ttf, 54, 36, 3, 12, cmap, cl);
+    {
+        FontFace face;
+        char path[] = "/tmp/ki-font-bounds-XXXXXX";
+        int fd = mkstemp(path);
+        CHECK(fd >= 0);
+        CHECK(write(fd, ttf, n) == (ssize_t)n);
+        close(fd);
+        CHECK(font_load(&face, path) == 0);
+        uint16_t gid = 0, adv = 0;
+        CHECK(font_lookup(&face, 'A', &gid, &adv) == 0 && gid == 2 && adv == 500);
+        CHECK(font_lookup(&face, ' ', &gid, &adv) == 0 && gid == 1);
+        CHECK(font_lookup(&face, 'B', &gid, &adv) != 0);
+        font_free(&face);
+        unlink(path);
+    }
+
+    /* Only (3,1) record; its rel walks len-4..len on a 16-byte final cmap,
+       with format 4 written at rel wherever two bytes remain. */
+    for (unsigned rel = 12; rel <= 16; rel++) {
+        memset(cmap, 0, 16);
+        cmap_head(cmap, 1);
+        cmap_rec(cmap + 4, 3, 1, rel);
+        if (rel + 2 <= 16) {
+            put16(cmap + rel, 4);
+        }
+        if (rel + 4 <= 16) {
+            put16(cmap + rel + 2, 40);
+        }
+        CHECK(std_font(ttf, cmap, 16) != 0);
+    }
+    /* len-4 is fine when a complete header there is simply not format 4. */
+    cmap_head(cmap, 2);
+    cmap_rec(cmap + 4, 3, 1, 20);
+    f4_body(cmap + 20);
+    put16(cmap + 60, 12);
+    put16(cmap + 62, 0);
+    for (unsigned long rel = 60; rel <= 64; rel++) {
+        cmap_rec(cmap + 12, 3, 1, rel);
+        CHECK(std_font(ttf, cmap, 64) == 0);
+        cmap_rec(cmap + 12, 0, 3, rel);
+        CHECK(std_font(ttf, cmap, 64) == 0);
+    }
+    /* ...but a selected format 4 there with an impossible length rejects. */
+    cmap_rec(cmap + 12, 3, 1, 60);
+    put16(cmap + 60, 4);
+    put16(cmap + 62, 40);
+    CHECK(std_font(ttf, cmap, 64) != 0);
+
+    /* Near-maximum subtable offsets. */
+    const unsigned long rels[] = {0xFFFFFFFFul, 0xFFFFFFFCul, 0xFFFFFFFEul, 0x80000000ul, 53, 52};
+    for (size_t i = 0; i < sizeof rels / sizeof rels[0]; i++) {
+        cl = valid_cmap(cmap);
+        cmap_rec(cmap + 4, 3, 1, rels[i]);
+        CHECK(std_font(ttf, cmap, cl) != 0);
+    }
+
+    /* Truncated cmap header and encoding records. */
+    cl = valid_cmap(cmap);
+    for (size_t len = 0; len < 12; len++) {
+        CHECK(std_font(ttf, cmap, len) != 0);
+    }
+    cmap_head(cmap, 0xFFFF);
+    CHECK(std_font(ttf, cmap, cl) != 0);
+    cmap_head(cmap, 2);
+    CHECK(std_font(ttf, cmap, 19) != 0);
+
+    /* Declared subtable length: undersized, past the table, exact. */
+    const unsigned sublens[] = {0, 13, 41, 0xFFFF};
+    for (size_t i = 0; i < sizeof sublens / sizeof sublens[0]; i++) {
+        cl = valid_cmap(cmap);
+        put16(cmap + 14, sublens[i]);
+        CHECK(std_font(ttf, cmap, cl) != 0);
+    }
+    cl = valid_cmap(cmap);
+    CHECK(std_font(ttf, cmap, cl - 1) != 0);
+
+    /* Segment count and idRangeOffset beyond the subtable. */
+    cl = valid_cmap(cmap);
+    put16(cmap + 12 + 6, 0xFFFE);
+    CHECK(std_font(ttf, cmap, cl) != 0);
+    cl = valid_cmap(cmap);
+    put16(cmap + 12 + 34 + 2, 0xFFFE);
+    CHECK(std_font(ttf, cmap, cl) != 0);
+    cl = valid_cmap(cmap);
+    put16(cmap + 12 + 34 + 2, 4);
+    CHECK(std_font(ttf, cmap, cl) != 0);
+
+    /* Table directory and table spans. */
+    cl = valid_cmap(cmap);
+    n = ttf_build(ttf, 54, 36, 3, 12, cmap, cl);
+    for (size_t len = 0; len < TTF_DIR; len += 5) {
+        CHECK(load_font_bytes(ttf, len) != 0);
+    }
+    CHECK(load_font_bytes(ttf, TTF_DIR - 1) != 0);
+    CHECK(load_font_bytes(ttf, n - 1) != 0);
+    put16(ttf + 4, 0xFFFF);
+    CHECK(load_font_bytes(ttf, n) != 0);
+    const size_t cmap_entry = 12 + 16 * 3;
+    const unsigned long bad_off[] = {0xFFFFFFFFul, 0xFFFFFFF0ul, 0x80000000ul};
+    for (size_t i = 0; i < sizeof bad_off / sizeof bad_off[0]; i++) {
+        n = ttf_build(ttf, 54, 36, 3, 12, cmap, cl);
+        put32(ttf + cmap_entry + 8, bad_off[i]);
+        CHECK(load_font_bytes(ttf, n) != 0);
+        n = ttf_build(ttf, 54, 36, 3, 12, cmap, cl);
+        put32(ttf + cmap_entry + 12, bad_off[i]);
+        CHECK(load_font_bytes(ttf, n) != 0);
+    }
+    n = ttf_build(ttf, 54, 36, 3, 12, cmap, cl);
+    put32(ttf + cmap_entry + 12, cl + 1);
+    CHECK(load_font_bytes(ttf, n) != 0);
+    put32(ttf + cmap_entry + 8, n + 1);
+    put32(ttf + cmap_entry + 12, 0);
+    CHECK(load_font_bytes(ttf, n) != 0);
+
+    /* head, hhea and hmtx sizes. */
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 53, 36, 3, 12, cmap, cl)) != 0);
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 54, 35, 3, 12, cmap, cl)) != 0);
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 54, 36, 3, 11, cmap, cl)) != 0);
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 54, 36, 0, 12, cmap, cl)) != 0);
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 54, 36, 0xFFFF, 12, cmap, cl)) != 0);
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 54, 36, 1, 4, cmap, cl)) == 0);
+    CHECK(load_font_bytes(ttf, ttf_build(ttf, 54, 36, 3, 16, cmap, cl)) == 0);
+    CHECK(font_load(&(FontFace){0}, "tests/corpus/truncated-hmtx.ttf") != 0);
+
+    /* 8 MiB file cap stays inclusive. */
+    {
+        size_t cap = 8u * 1024u * 1024u;
+        unsigned char *big = calloc(cap + 1, 1);
+        CHECK(big != NULL);
+        n = ttf_build(ttf, 54, 36, 3, 12, cmap, cl);
+        memcpy(big, ttf, n);
+        int at_cap = load_font_bytes(big, cap);
+        int over_cap = load_font_bytes(big, cap + 1);
+        free(big);
+        CHECK(at_cap == 0);
+        CHECK(over_cap != 0);
+    }
+
+    /* The exact 184-byte truncated cmap through loader and public API. */
+    const char *bad = "tests/corpus/truncated-cmap-184.ttf";
+    struct stat st;
+    CHECK(stat(bad, &st) == 0 && st.st_size == 184);
+    FontFace face;
+    CHECK(font_load(&face, bad) != 0);
+    setenv("KI_XML_PDF_FONT", bad, 1);
+    CHECK(font_open_default(&face) != 0);
+    unsetenv("KI_XML_PDF_FONT");
+
+    char dir[] = "/tmp/ki-font-bounds-dir-XXXXXX";
+    CHECK(mkdtemp(dir) != NULL);
+    char dest[256];
+    snprintf(dest, sizeof dest, "%s/out.pdf", dir);
+    const char *old = "OLD_FONT_DEST";
+    CHECK(write_all(dest, old, strlen(old)) == 0);
+    KiOptions opt;
+    KiResult result;
+    ki_options_init(&opt);
+    opt.font_path = bad;
+    opt.temp_dir = dir;
+    CHECK(ki_convert_file("tests/fixture.xml", dest, &opt, &result) == XML2PDF_ERR_XML);
+    CHECK(result.status == XML2PDF_ERR_XML && result.cause == KI_CAUSE_FONT);
+    CHECK(same_bytes(dest, old, strlen(old)));
+    CHECK(callback_directory_entries(dir) == 1);
+
+    MemIo io;
+    memset(&io, 0, sizeof io);
+    io.s = "<doc>Hello</doc>";
+    io.n = strlen(io.s);
+    io.chunk = 1;
+    ki_options_init(&opt);
+    opt.font_path = bad;
+    opt.temp_dir = dir;
+    opt.read_bytes = mem_read;
+    opt.write_bytes = mem_write;
+    opt.io_user = &io;
+    CHECK(ki_convert(&opt, &result) == XML2PDF_ERR_XML);
+    CHECK(result.cause == KI_CAUSE_FONT);
+    CHECK(io.calls == 0 && io.len == 0);
+    free(io.buf);
+
+    memset(&io, 0, sizeof io);
+    io.s = "<doc>Hello</doc>";
+    io.n = strlen(io.s);
+    io.chunk = 1;
+    CHECK(ki_convert_to_file(dest, &opt, &result) == XML2PDF_ERR_XML);
+    CHECK(result.cause == KI_CAUSE_FONT);
+    CHECK(io.calls == 0);
+    CHECK(same_bytes(dest, old, strlen(old)));
+    CHECK(callback_directory_entries(dir) == 1);
+
+    /* The same destination still publishes with the bundled font. */
+    opt.font_path = "fonts/DejaVuSans.ttf";
+    memset(&io, 0, sizeof io);
+    io.s = "<doc>Hello</doc>";
+    io.n = strlen(io.s);
+    CHECK(ki_convert_to_file(dest, &opt, &result) == XML2PDF_OK);
+    CHECK(callback_directory_entries(dir) == 1);
+    unlink(dest);
+    rmdir(dir);
+    return 0;
+}
+
 int main(void) {
     struct {
         const char *name;
@@ -3239,6 +3564,7 @@ int main(void) {
         {"callback_usage_result", test_callback_usage_result},
         {"callback_to_file", test_callback_to_file},
         {"report_v1", test_report_v1},
+        {"font_bounds", test_font_bounds},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {
