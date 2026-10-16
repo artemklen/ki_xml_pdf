@@ -8,23 +8,34 @@
 #define LAYOUT_LINE PDF_LINE_BYTES
 #define LAYOUT_LINES 50
 
+/* line[0, len) is placed on the current output line and line[len, len +
+   wlen) is the word still being collected, so the pending word needs no
+   storage of its own and never exceeds LAYOUT_LINE - 1 bytes with it. */
 typedef struct Layout {
     PdfWriter *pdf;
     char line[LAYOUT_LINE];
     size_t len;
     long units;
+    size_t wlen;
+    long wunits;
+    /* Start of the word's last positive-advance code point and the word's
+       width before it: the latest split that keeps marks with their base. */
+    size_t wbase;
+    long wbase_units;
     char page[LAYOUT_LINES][LAYOUT_LINE];
     size_t plen[LAYOUT_LINES];
     int nlines;
     unsigned char hold[4];
     int hold_n;
     unsigned bad_cp;
-    /* Set when a line would exceed LAYOUT_LINE - 1 bytes without reaching
-       the width limit, e.g. a long run of zero-advance marks. */
+    /* Set when a word would exceed LAYOUT_LINE - 1 bytes and the next code
+       point has zero advance, so no split can keep a mark with its base. */
     int line_full;
 } Layout;
 
 int layout_init(Layout *lay, PdfWriter *pdf);
+/* True when nothing, not even a pending word, is on the current line. */
+int layout_line_empty(const Layout *lay);
 int layout_text(Layout *lay, const char *s, size_t n);
 int layout_break(Layout *lay);
 int layout_finish(Layout *lay);

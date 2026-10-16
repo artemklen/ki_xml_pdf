@@ -102,7 +102,7 @@ static int map_event(Layout *lay, MapState *st, const XmlEvent *ev) {
             }
         }
         int preserve = ev->from_cdata || (st->depth > 0 && st->preserve[st->depth - 1]);
-        if (only_ws && has_break && lay->len == 0 && !preserve) {
+        if (only_ws && has_break && layout_line_empty(lay) && !preserve) {
             return 0;
         }
         return layout_text(lay, ev->text, ev->text_len);

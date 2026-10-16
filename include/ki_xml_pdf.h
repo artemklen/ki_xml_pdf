@@ -24,8 +24,9 @@ extern "C" {
    before rename. After a successful rename, cancel does not roll the file
    back. A character outside the font repertoire is KI_CAUSE_FONT with the
    U+ code point, not an XML syntax error. A zero-advance glyph (combining
-   mark) is present; a line over 1023 UTF-8 bytes that cannot wrap is
-   KI_CAUSE_RESOURCE. XML and profile failures, including ki_doc_fail, end
+   mark) is present. Text wraps at spaces and tabs; a longer word is cut at
+   a code point boundary. One base with zero-advance marks over 1023 UTF-8
+   bytes cannot be cut and is KI_CAUSE_RESOURCE. XML and profile failures, including ki_doc_fail, end
    with "at line L, column C, byte B": the consumed position, line/column
    1-based in Unicode scalars, byte 0-based in raw input bytes (BOM
    included, CR/LF/CRLF one line break, a long rule shortened at a UTF-8

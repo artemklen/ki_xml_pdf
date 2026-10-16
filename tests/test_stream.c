@@ -3,6 +3,7 @@
 #include "convert.h"
 #include "font.h"
 #include "ki_xml_pdf.h"
+#include "layout.h"
 #include "page_sink.h"
 #include "pdf_write.h"
 #include "xml_parse.h"
@@ -3636,6 +3637,7 @@ static int test_font_bounds(void) {
 #include "test_font_metrics.c"
 #include "test_pdf_bounds.c"
 #include "test_flate.c"
+#include "test_layout_wrap.c"
 
 int main(void) {
     struct {
@@ -3682,6 +3684,13 @@ int main(void) {
         {"flate_expansion", test_flate_expansion},
         {"flate_errors", test_flate_errors},
         {"flate_reader_controls", test_flate_reader_controls},
+        {"wrap_opportunities", test_wrap_opportunities},
+        {"wrap_oversized", test_wrap_oversized},
+        {"wrap_zero_advance", test_wrap_zero_advance},
+        {"wrap_fragments", test_wrap_fragments},
+        {"wrap_pages", test_wrap_pages},
+        {"wrap_token_memory", test_wrap_token_memory},
+        {"wrap_profiles", test_wrap_profiles},
     };
     int n = (int)(sizeof tests / sizeof tests[0]);
     for (int i = 0; i < n; i++) {

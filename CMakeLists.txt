@@ -104,6 +104,9 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/pdf_streams.py"
         --binary "$<TARGET_FILE:xml2pdf>"
         --font "${CMAKE_CURRENT_SOURCE_DIR}/fonts/DejaVuSans.ttf")
+    add_test(NAME wrap_check COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_check.py"
+        --binary "$<TARGET_FILE:xml2pdf>")
 endif()
 
 set(KI_DEFAULT_SHARED "${BUILD_SHARED_LIBS}")

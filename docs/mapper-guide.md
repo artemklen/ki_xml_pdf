@@ -94,7 +94,8 @@ event pointer does not extend its lifetime.
 A text event is a fragment, not a complete field or necessarily a complete UTF-8
 character. Use `event->text_len` in bytes. The mapper sends each fragment
 directly to `ki_doc_text(doc, event->text, event->text_len)`; `KiDoc`
-handles character boundaries and physical line/page wrapping. TEXT and CDATA
+handles character boundaries and physical line/page wrapping: words break at
+spaces and tabs, and a word split across calls is still one word. TEXT and CDATA
 use the same emission path. References are already decoded in ordinary text;
 reference-looking text inside CDATA stays literal. The mapper preserves fragment
 whitespace, including a space between separate TEXT/CDATA events. The library

@@ -446,9 +446,12 @@ static int utf8_next(const char *s, size_t n, size_t *i, unsigned *cp) {
     return 1;
 }
 
+/* Trailing spaces and tabs are not measured: layout lets them hang past
+   the margin because they draw no ink. */
 static int line_too_wide(const FontFace *face, const char *s, size_t n) {
     size_t i = 0;
     long units = 0;
+    long inked = 0;
     long limit = (long)(PAGE_WIDTH - 2 * PAGE_MARGIN) * face->units / PAGE_FONT_PT;
     while (i < n) {
         unsigned cp = 0;
@@ -468,11 +471,11 @@ static int line_too_wide(const FontFace *face, const char *s, size_t n) {
             return -1;
         }
         units += adv;
-        if (units > limit) {
-            return 1;
+        if (cp != ' ') {
+            inked = units;
         }
     }
-    return 0;
+    return inked > limit ? 1 : 0;
 }
 
 /* Poppler's layout extractor drops a space whose gap equals the glyph
@@ -520,12 +523,17 @@ static int append_actual_text(char *out, size_t cap, size_t *o, const char *s, s
     return 0;
 }
 
+/* Spaces past the right margin are trailing (line_too_wide rejects ink
+   there). They are left out of the glyph string so no glyph box extends
+   beyond the margin; ActualText still carries them. */
 static int append_hex_line(char *out, size_t cap, size_t *o, const FontFace *face, const char *s, size_t n) {
     if (*o + 1 >= cap) {
         return -1;
     }
     out[(*o)++] = '<';
     size_t i = 0;
+    long units = 0;
+    long limit = (long)(PAGE_WIDTH - 2 * PAGE_MARGIN) * face->units / PAGE_FONT_PT;
     while (i < n) {
         unsigned cp = 0;
         int rc = utf8_next(s, n, &i, &cp);
@@ -542,6 +550,10 @@ static int append_hex_line(char *out, size_t cap, size_t *o, const FontFace *fac
         uint16_t adv = 0;
         if (font_lookup(face, cp, &gid, &adv) != 0) {
             return -1;
+        }
+        units += adv;
+        if (cp == ' ' && units > limit) {
+            continue;
         }
         if (*o + 5 >= cap) {
             return -1;

@@ -83,6 +83,7 @@ static int flush_page(Layout *lay) {
     return rc;
 }
 
+/* Moves line[0, len) to the page and the pending word to the line start. */
 static int commit_line(Layout *lay) {
     int max_lines = font_max_lines(&lay->pdf->font, 792, 40, 10, 14);
     if (max_lines > LAYOUT_LINES) {
@@ -96,14 +97,102 @@ static int commit_line(Layout *lay) {
             return -1;
         }
     }
-    if (lay->len >= LAYOUT_LINE) {
+    if (lay->len >= LAYOUT_LINE || lay->len + lay->wlen >= LAYOUT_LINE) {
         return -1;
     }
     memcpy(lay->page[lay->nlines], lay->line, lay->len);
     lay->plen[lay->nlines] = lay->len;
     lay->nlines++;
+    memmove(lay->line, lay->line + lay->len, lay->wlen);
     lay->len = 0;
     lay->units = 0;
+    return 0;
+}
+
+/* Commits the first k bytes (width k_units) of the pending word as one full
+   line; the rest stays pending. The line must already be empty. */
+static int commit_word(Layout *lay, size_t k, long k_units) {
+    lay->len = k;
+    lay->units = k_units;
+    lay->wlen -= k;
+    lay->wunits -= k_units;
+    lay->wbase = 0;
+    lay->wbase_units = 0;
+    return commit_line(lay);
+}
+
+/* Puts the pending word on the current line, or on a new one when it does
+   not fit after what is already there. */
+static int place_word(Layout *lay) {
+    if (lay->wlen == 0) {
+        return 0;
+    }
+    if (lay->len > 0 && lay->units + lay->wunits > line_limit(&lay->pdf->font) && commit_line(lay) != 0) {
+        return -1;
+    }
+    lay->len += lay->wlen;
+    lay->units += lay->wunits;
+    lay->wlen = 0;
+    lay->wunits = 0;
+    lay->wbase = 0;
+    lay->wbase_units = 0;
+    return 0;
+}
+
+/* Appends one code point to the pending word. A word wider than the line
+   or longer than LAYOUT_LINE - 1 bytes is cut, after anything earlier on the
+   line has been committed: before this code point when it has an advance,
+   otherwise before the base it would attach to. */
+static int word_append(Layout *lay, const char *b, size_t clen, long adv, long limit) {
+    if (adv > limit) {
+        return -1;
+    }
+    if (adv > 0 && lay->wunits + adv > limit) {
+        if (lay->len > 0 && commit_line(lay) != 0) {
+            return -1;
+        }
+        if (commit_word(lay, lay->wlen, lay->wunits) != 0) {
+            return -1;
+        }
+    }
+    if (lay->len + lay->wlen + clen >= LAYOUT_LINE) {
+        if (lay->len > 0 && commit_line(lay) != 0) {
+            return -1;
+        }
+        if (lay->wlen + clen >= LAYOUT_LINE) {
+            size_t k = adv > 0 ? lay->wlen : lay->wbase;
+            long k_units = adv > 0 ? lay->wunits : lay->wbase_units;
+            if (k == 0) {
+                lay->line_full = 1;
+                return -1;
+            }
+            if (commit_word(lay, k, k_units) != 0) {
+                return -1;
+            }
+        }
+    }
+    if (adv > 0) {
+        lay->wbase = lay->wlen;
+        lay->wbase_units = lay->wunits;
+    }
+    memcpy(lay->line + lay->len + lay->wlen, b, clen);
+    lay->wlen += clen;
+    lay->wunits += adv;
+    return 0;
+}
+
+/* Space and tab end the pending word and stay on its line even past the
+   width: they have no ink, and the next word is measured after them. */
+static int space_append(Layout *lay, const char *b, size_t clen, long adv) {
+    if (place_word(lay) != 0) {
+        return -1;
+    }
+    if (lay->len + clen >= LAYOUT_LINE && commit_line(lay) != 0) {
+        return -1;
+    }
+    memcpy(lay->line + lay->len, b, clen);
+    lay->len += clen;
+    lay->units += adv;
     return 0;
 }
 
@@ -113,7 +202,14 @@ int layout_init(Layout *lay, PdfWriter *pdf) {
     return 0;
 }
 
+int layout_line_empty(const Layout *lay) {
+    return lay->len == 0 && lay->wlen == 0 && lay->hold_n == 0;
+}
+
 int layout_break(Layout *lay) {
+    if (place_word(lay) != 0) {
+        return -1;
+    }
     if (lay->len == 0) {
         return 0;
     }
@@ -188,7 +284,7 @@ int layout_text(Layout *lay, const char *s, size_t n) {
             i += clen;
         }
         if (cp == '\n' || cp == '\r') {
-            if (commit_line(lay) != 0) {
+            if (place_word(lay) != 0 || commit_line(lay) != 0) {
                 return -1;
             }
             continue;
@@ -200,27 +296,20 @@ int layout_text(Layout *lay, const char *s, size_t n) {
             lay->bad_cp = look;
             return -1;
         }
-        if (lay->units > 0 && lay->units + (long)adv > limit) {
-            if (commit_line(lay) != 0) {
-                return -1;
-            }
-        }
-        if ((long)adv > limit) {
+        const char *b = chunk + (at - clen);
+        rc = look == ' ' ? space_append(lay, b, clen, (long)adv) : word_append(lay, b, clen, (long)adv, limit);
+        if (rc != 0) {
             return -1;
         }
-        if (lay->len + clen >= LAYOUT_LINE) {
-            lay->line_full = 1;
-            return -1;
-        }
-        memcpy(lay->line + lay->len, chunk + (at - clen), clen);
-        lay->len += clen;
-        lay->units += adv;
     }
     return 0;
 }
 
 int layout_finish(Layout *lay) {
     if (lay->hold_n != 0) {
+        return -1;
+    }
+    if (place_word(lay) != 0) {
         return -1;
     }
     if (lay->len > 0 && commit_line(lay) != 0) {
