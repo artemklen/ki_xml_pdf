@@ -1,0 +1,48 @@
+OSR-18 bounded table spike: predictions written 2026-10-16 13:36 MSK,
+before any harness code or measurement. Synthetic data only; no consumer.
+
+Model fixed before measuring
+- Default geometry: Letter, 40 pt margins, DejaVu Sans 10 pt, 14 pt
+  leading, 532 pt text width, 50 lines per page.
+- Fixed columns: widths given up front in points, a 2-space gutter, cells
+  wrapped inside their column with the OSR-14 rule (break at spaces/tabs,
+  code-point fallback for a word wider than the column, marks kept with
+  their base). A row is as tall as its tallest cell; an empty cell is blank
+  lines; a row with only empty cells is one blank line.
+- Page rule: the header repeats at the top of every page. A row that fits
+  on the remaining lines is placed; a row that fits a fresh page but not
+  the rest of this one moves to the next page; a row taller than a page
+  body is split at line boundaries, with the header repeated on each page.
+- Streaming rule: one row is buffered as UTF-8 bytes. Wrapped lines are
+  produced lazily from per-column cursors, so state per column is constant.
+
+Predicted numbers
+1. Widest glyph in the default repertoire at 10 pt: under 10 pt. So the
+   minimum usable column (widest glyph + no gutter) is under 10 pt and the
+   536 pt-ish text width allows about 16 columns of >= 30 pt; cap 16.
+2. A space is 651/2048 em = 3.18 pt at 10 pt. External pre-layout that
+   pads with spaces lands every column start within one space (< 3.2 pt)
+   right of the intended x; it never lands left of it.
+3. Proposed caps: 16 columns, 4096 UTF-8 bytes per cell, 16384 bytes per
+   row, 255 bytes per header cell (the parser attribute limit), header at
+   most 12 of 50 lines. In-library table state about 21 KiB on top of the
+   existing 51 KiB page buffer; under 128 KiB in total.
+4. Many short rows (100,000 rows x 4 columns): converter peak RSS through
+   the external route stays within 200 KiB of the plain baseline
+   (about 2.7 MiB); the pre-layout buffers at most one row.
+5. One huge cell of 8 MiB: the bounded prototype refuses it at byte 4097
+   of the cell with a resource error and never holds more than 16 KiB of
+   row text. Without a cap, a fixed-column layout must hold the whole
+   cell (8 MiB) because the next column's text for the first line comes
+   after it. In a 130 pt column 8 MiB of Cyrillic is roughly 4 million
+   characters, about 20 per line, so about 200,000 lines and 4,000+ pages
+   for one row.
+6. report-v1 sequential blocks render that same 8 MiB value with flat RSS
+   (within 200 KiB of a small document), because a field is streamed.
+7. A late error (cell cap at row 9,000, or the page quota) leaves an
+   existing file destination unchanged and no temporary file.
+8. Expected decision: no-go for an in-library table API now, defer OSR-18
+   until a real consumer supplies a target report. The external route
+   (pre-layout to padded lines) works with today's library for simple
+   grids but cannot draw rules, right-align exactly or pass width checks
+   by the library itself.
