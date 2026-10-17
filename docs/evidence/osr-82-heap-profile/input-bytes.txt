@@ -1,0 +1,3 @@
+16777245 /tmp/grok-goal-8e1fe17b08c7/implementer/measure-osr82/r16-report.xml
+16777233 /tmp/grok-goal-8e1fe17b08c7/implementer/measure-osr82/r16-records.xml
+33554478 total

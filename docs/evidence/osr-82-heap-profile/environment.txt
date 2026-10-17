@@ -1,0 +1,4 @@
+revision de8ba0eeb39c9f35cb9dff2ecb576b689efd0fd4
+compiler gcc (Debian 14.2.0-19) 14.2.0
+valgrind valgrind-3.24.0
+time time (GNU Time) UNKNOWN
