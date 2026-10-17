@@ -67,6 +67,7 @@ required=(
     .github/workflows/ci.yml .github/workflows/release.yml .github/pull_request_template.md .gitignore
     .github/ISSUE_TEMPLATE/config.yml .github/ISSUE_TEMPLATE/bug_report.yml
     .github/ISSUE_TEMPLATE/memory_regression.yml
+    docs/adr/0001-font-script-addons.md
     docs/contract.md docs/license-decision.md docs/profile-decision.md
     docs/release-checklist.md docs/report-v1.md docs/mapper-guide.md
     src/convert.c src/convert.h src/font.c src/font.h src/geometry.c src/geometry.h src/info.c src/info.h
