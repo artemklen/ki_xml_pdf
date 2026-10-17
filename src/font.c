@@ -5,7 +5,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
+
+static void (*font_touch_fn)(const char *path);
+
+void font_debug_touch(void (*fn)(const char *path)) {
+    font_touch_fn = fn;
+}
 
 static unsigned ru16(const unsigned char *p) {
     return ((unsigned)p[0] << 8) | p[1];
@@ -311,115 +318,187 @@ static int read_name(const unsigned char *t, size_t len, char *name) {
 }
 
 /* FNV-1a over the whole file, so equal bytes always get the same fallback. */
-static void fallback_name(FontFace *face, const unsigned char *data, size_t len) {
-    uint32_t h = 2166136261u;
-    for (size_t i = 0; i < len; i++) {
-        h = (h ^ data[i]) * 16777619u;
+static int hash_file(FILE *fp, size_t len, uint32_t *out) {
+    if (fseeko(fp, 0, SEEK_SET) != 0) {
+        return -1;
     }
+    uint32_t h = 2166136261u;
+    unsigned char buf[16384];
+    size_t left = len;
+    while (left > 0) {
+        size_t n = left > sizeof buf ? sizeof buf : left;
+        if (fread(buf, 1, n, fp) != n) {
+            return -1;
+        }
+        for (size_t i = 0; i < n; i++) {
+            h = (h ^ buf[i]) * 16777619u;
+        }
+        left -= n;
+    }
+    *out = h;
+    return 0;
+}
+
+static void fallback_name(FontFace *face, uint32_t h) {
     snprintf(face->name, sizeof face->name, "KiFont-%08X", (unsigned)h);
     face->name_fallback = 1;
+}
+
+static int read_span(FILE *fp, size_t file_len, size_t off, size_t n, unsigned char **out) {
+    *out = NULL;
+    if (!span_ok(file_len, off, n)) {
+        return -1;
+    }
+    unsigned char *buf = malloc(n > 0 ? n : 1);
+    if (buf == NULL) {
+        return -1;
+    }
+    if (n > 0 && (fseeko(fp, (off_t)off, SEEK_SET) != 0 || fread(buf, 1, n, fp) != n)) {
+        free(buf);
+        return -1;
+    }
+    *out = buf;
+    return 0;
+}
+
+int font_stream_matches(FontFace *face) {
+    if (font_touch_fn != NULL && face->source_path != NULL) {
+        font_touch_fn(face->source_path);
+    }
+    struct stat st;
+    if (face->fp == NULL || fstat(fileno(face->fp), &st) != 0 || st.st_size < 0) {
+        return -1;
+    }
+    if ((size_t)st.st_size != face->ttf_len) {
+        return -1;
+    }
+    uint32_t h = 0;
+    if (hash_file(face->fp, face->ttf_len, &h) != 0 || h != face->bytes_hash) {
+        return -1;
+    }
+    return 0;
 }
 
 int font_load(FontFace *face, const char *path) {
     memset(face, 0, sizeof *face);
     FILE *fp = fopen(path, "rb");
+    unsigned char *dir = NULL;
+    unsigned char *head = NULL;
+    unsigned char *cmap = NULL;
+    unsigned char *hhea = NULL;
+    unsigned char *hmtx = NULL;
+    unsigned char *maxp = NULL;
+    unsigned char *name = NULL;
+    unsigned char *glyf = NULL;
+    unsigned char *loca = NULL;
     if (fp == NULL) {
         return -1;
     }
-    if (fseek(fp, 0, SEEK_END) != 0) {
+    if (fseeko(fp, 0, SEEK_END) != 0) {
         fclose(fp);
         return -1;
     }
-    long sz = ftell(fp);
-    if (sz < 12 || sz > 8 * 1024 * 1024) {
+    off_t sz_off = ftello(fp);
+    if (sz_off < 12 || sz_off > 8 * 1024 * 1024) {
         fclose(fp);
         return -1;
     }
-    if (fseek(fp, 0, SEEK_SET) != 0) {
+    size_t sz = (size_t)sz_off;
+    if (fseeko(fp, 0, SEEK_SET) != 0) {
         fclose(fp);
         return -1;
     }
-    unsigned char *data = malloc((size_t)sz);
-    if (data == NULL || fread(data, 1, (size_t)sz, fp) != (size_t)sz) {
-        free(data);
+    unsigned char hdr[12];
+    if (fread(hdr, 1, 12, fp) != 12) {
         fclose(fp);
         return -1;
     }
-    fclose(fp);
+    unsigned ntab = ru16(hdr + 4);
+    size_t dir_len = 12 + 16 * (size_t)ntab;
+    if (ntab == 0 || !span_ok(sz, 0, dir_len)) {
+        fclose(fp);
+        return -1;
+    }
+    dir = malloc(dir_len);
+    if (dir == NULL) {
+        fclose(fp);
+        return -1;
+    }
+    memcpy(dir, hdr, 12);
+    if (fread(dir + 12, 1, dir_len - 12, fp) != dir_len - 12) {
+        goto fail;
+    }
 
     size_t hoff = 0, hlen = 0, cmap_off = 0, cmap_len = 0, hhea_off = 0, hhea_len = 0;
     size_t hmtx_off = 0, hmtx_len = 0;
-    if (find_table(data, (size_t)sz, "head", &hoff, &hlen) != 0 || hlen < 54 ||
-        find_table(data, (size_t)sz, "cmap", &cmap_off, &cmap_len) != 0 ||
-        find_table(data, (size_t)sz, "hhea", &hhea_off, &hhea_len) != 0 || hhea_len < 36 ||
-        find_table(data, (size_t)sz, "hmtx", &hmtx_off, &hmtx_len) != 0) {
-        free(data);
-        return -1;
+    if (find_table(dir, sz, "head", &hoff, &hlen) != 0 || hlen < 54 ||
+        find_table(dir, sz, "cmap", &cmap_off, &cmap_len) != 0 ||
+        find_table(dir, sz, "hhea", &hhea_off, &hhea_len) != 0 || hhea_len < 36 ||
+        find_table(dir, sz, "hmtx", &hmtx_off, &hmtx_len) != 0 ||
+        read_span(fp, sz, hoff, hlen, &head) != 0 ||
+        read_span(fp, sz, cmap_off, cmap_len, &cmap) != 0 ||
+        read_span(fp, sz, hhea_off, hhea_len, &hhea) != 0 ||
+        read_span(fp, sz, hmtx_off, hmtx_len, &hmtx) != 0) {
+        goto fail;
     }
     size_t sublen = 0;
-    const unsigned char *sub = format4(data + cmap_off, cmap_len, &sublen);
+    const unsigned char *sub = format4(cmap, cmap_len, &sublen);
     if (sub == NULL) {
-        free(data);
-        return -1;
+        goto fail;
     }
-    face->units = (int)ru16(data + hoff + 18);
+    face->units = (int)ru16(head + 18);
     if (face->units <= 0) {
-        free(data);
-        return -1;
+        goto fail;
     }
-    face->bbox[0] = s16(data + hoff + 36);
-    face->bbox[1] = s16(data + hoff + 38);
-    face->bbox[2] = s16(data + hoff + 40);
-    face->bbox[3] = s16(data + hoff + 42);
-    face->ascent = s16(data + hhea_off + 4);
-    face->descent = s16(data + hhea_off + 6);
-    unsigned num_h = ru16(data + hhea_off + 34);
+    face->bbox[0] = s16(head + 36);
+    face->bbox[1] = s16(head + 38);
+    face->bbox[2] = s16(head + 40);
+    face->bbox[3] = s16(head + 42);
+    face->ascent = s16(hhea + 4);
+    face->descent = s16(hhea + 6);
+    unsigned num_h = ru16(hhea + 34);
     if (num_h == 0 || hmtx_len / 4 < num_h) {
-        free(data);
-        return -1;
+        goto fail;
     }
-    const unsigned char *hmtx = data + hmtx_off;
-    /* maxp is optional for the loader; when present a GID at or past
-       numGlyphs is a missing glyph, not a present one. */
     unsigned num_glyphs = 0x10000;
     size_t maxp_off = 0, maxp_len = 0;
-    if (find_table(data, (size_t)sz, "maxp", &maxp_off, &maxp_len) == 0) {
-        if (maxp_len < 6 || ru16(data + maxp_off + 4) == 0) {
-            free(data);
-            return -1;
+    if (find_table(dir, sz, "maxp", &maxp_off, &maxp_len) == 0) {
+        if (maxp_len < 6 || read_span(fp, sz, maxp_off, maxp_len, &maxp) != 0 || ru16(maxp + 4) == 0) {
+            goto fail;
         }
-        num_glyphs = ru16(data + maxp_off + 4);
+        num_glyphs = ru16(maxp + 4);
     }
     size_t name_off = 0, name_len = 0;
-    if (find_table(data, (size_t)sz, "name", &name_off, &name_len) == 0 &&
-        read_name(data + name_off, name_len, face->name) != 0) {
-        free(data);
-        return -1;
+    if (find_table(dir, sz, "name", &name_off, &name_len) == 0) {
+        if (read_span(fp, sz, name_off, name_len, &name) != 0 || read_name(name, name_len, face->name) != 0) {
+            goto fail;
+        }
+    }
+    uint32_t file_hash = 0;
+    if (hash_file(fp, sz, &file_hash) != 0) {
+        goto fail;
     }
     if (face->name[0] == '\0') {
-        fallback_name(face, data, (size_t)sz);
+        fallback_name(face, file_hash);
     }
 
-    /* glyf and loca come together or not at all; with both, every
-       repertoire glyph's loca range and header must lie inside them. */
     Outlines outl;
     memset(&outl, 0, sizeof outl);
     size_t glyf_off = 0, glyf_len = 0, loca_off = 0, loca_len = 0;
-    int has_glyf = find_table(data, (size_t)sz, "glyf", &glyf_off, &glyf_len) == 0;
-    int has_loca = find_table(data, (size_t)sz, "loca", &loca_off, &loca_len) == 0;
+    int has_glyf = find_table(dir, sz, "glyf", &glyf_off, &glyf_len) == 0;
+    int has_loca = find_table(dir, sz, "loca", &loca_off, &loca_len) == 0;
     if (has_glyf != has_loca) {
-        free(data);
-        return -1;
+        goto fail;
     }
     if (has_glyf) {
-        int fmt = s16(data + hoff + 50);
-        if (fmt != 0 && fmt != 1) {
-            free(data);
-            return -1;
+        int fmt = s16(head + 50);
+        if ((fmt != 0 && fmt != 1) || read_span(fp, sz, glyf_off, glyf_len, &glyf) != 0 ||
+            read_span(fp, sz, loca_off, loca_len, &loca) != 0) {
+            goto fail;
         }
-        outl.glyf = data + glyf_off;
+        outl.glyf = glyf;
         outl.glyf_len = glyf_len;
-        outl.loca = data + loca_off;
+        outl.loca = loca;
         outl.loca_len = loca_len;
         outl.long_loca = fmt == 1;
         face->outlines = 1;
@@ -432,17 +511,49 @@ int font_load(FontFace *face, const char *path) {
         bad = add_glyph(face, sub, sublen, num_glyphs, hmtx, hmtx_len, num_h, &outl, cp);
     }
     if (bad || face->gid[0x41] == 0 || face->gid[0x20] == 0) {
-        free(data);
-        return -1;
+        goto fail;
     }
-    face->ttf = data;
-    face->ttf_len = (size_t)sz;
+    face->source_path = malloc(strlen(path) + 1);
+    if (face->source_path == NULL) {
+        goto fail;
+    }
+    memcpy(face->source_path, path, strlen(path) + 1);
+    face->fp = fp;
+    face->ttf_len = sz;
+    face->bytes_hash = file_hash;
+    free(dir);
+    free(head);
+    free(cmap);
+    free(hhea);
+    free(hmtx);
+    free(maxp);
+    free(name);
+    free(glyf);
+    free(loca);
     return 0;
+
+fail:
+    free(dir);
+    free(head);
+    free(cmap);
+    free(hhea);
+    free(hmtx);
+    free(maxp);
+    free(name);
+    free(glyf);
+    free(loca);
+    fclose(fp);
+    memset(face, 0, sizeof *face);
+    return -1;
 }
 
 void font_free(FontFace *face) {
-    free(face->ttf);
-    face->ttf = NULL;
+    if (face->fp != NULL) {
+        fclose(face->fp);
+        face->fp = NULL;
+    }
+    free(face->source_path);
+    face->source_path = NULL;
     face->ttf_len = 0;
 }
 

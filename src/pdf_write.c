@@ -159,6 +159,69 @@ static int flate_emit(PdfWriter *w, const unsigned char *data, size_t len, unsig
     return 0;
 }
 
+/* Same compressed bytes as flate_emit of the whole file, read 16 KiB at a time. */
+static int flate_emit_fp(PdfWriter *w, FILE *fp, size_t len, unsigned long *out_len) {
+    if (fseeko(fp, 0, SEEK_SET) != 0) {
+        return -1;
+    }
+    z_stream *zs = w->zs;
+    unsigned long total = 0;
+    unsigned char in[16384];
+    size_t left = len;
+    zs->avail_in = 0;
+    for (;;) {
+        if (zs->avail_in == 0 && left > 0) {
+            size_t n = left > sizeof in ? sizeof in : left;
+            if (fread(in, 1, n, fp) != n) {
+                return -1;
+            }
+            zs->next_in = in;
+            zs->avail_in = (uInt)n;
+            left -= n;
+        }
+        int flush = left == 0 && zs->avail_in == 0 ? Z_FINISH : Z_NO_FLUSH;
+        zs->next_out = w->zbuf;
+        zs->avail_out = FLATE_CHUNK;
+        int rc = deflate(zs, flush);
+        if (rc != Z_OK && rc != Z_STREAM_END && rc != Z_BUF_ERROR) {
+            return flate_fail(w, rc);
+        }
+        size_t have = FLATE_CHUNK - zs->avail_out;
+        if (have > 0 && fwrite(w->zbuf, 1, have, w->fp) != have) {
+            return -1;
+        }
+        total += have;
+        if (rc == Z_STREAM_END) {
+            break;
+        }
+        if (rc == Z_BUF_ERROR && have == 0) {
+            return flate_fail(w, rc);
+        }
+    }
+    *out_len = total;
+    return 0;
+}
+
+static int write_flate_fp(PdfWriter *w, int num, FILE *fp, size_t len, const char *extra) {
+    if (flate_ready(w) != 0 || begin_obj(w, num) != 0) {
+        return -1;
+    }
+    if (fprintf(w->fp, "<< /Length %d 0 R /Filter /FlateDecode%s >>\nstream\n", num + 1, extra) < 0) {
+        return -1;
+    }
+    unsigned long zlen = 0;
+    if (flate_emit_fp(w, fp, len, &zlen) != 0) {
+        return -1;
+    }
+    if (fputs("\nendstream\nendobj\n", w->fp) < 0 || begin_obj(w, num + 1) != 0) {
+        return -1;
+    }
+    if (fprintf(w->fp, "%lu\nendobj\n", zlen) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
 /* Object num holds the FlateDecode stream; object num + 1 holds its length. */
 static int write_flate_obj(PdfWriter *w, int num, const void *data, size_t len, const char *extra) {
     if (flate_ready(w) != 0 || begin_obj(w, num) != 0) {
@@ -335,7 +398,11 @@ static int write_font_objects(PdfWriter *w) {
     FontFace *face = &w->font;
     char length1[32];
     snprintf(length1, sizeof length1, " /Length1 %zu", face->ttf_len);
-    if (write_flate_obj(w, OBJ_FILE, face->ttf, face->ttf_len, length1) != 0) {
+    if (font_stream_matches(face) != 0) {
+        w->fail_kind = PDF_FAIL_FONT;
+        return -1;
+    }
+    if (write_flate_fp(w, OBJ_FILE, face->fp, face->ttf_len, length1) != 0) {
         return -1;
     }
     if (begin_obj(w, OBJ_DESC) != 0) {

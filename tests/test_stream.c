@@ -3591,6 +3591,7 @@ int main(void) {
         {"report_v1", test_report_v1},
         {"font_bounds", test_font_bounds},
         {"font_names", test_font_names},
+        {"font_replaced_before_embed", test_font_replaced_before_embed},
         {"font_zero_advance", test_font_zero_advance},
         {"font_mark_runs", test_font_mark_runs},
         {"xml_char_contexts", test_xml_char_contexts},

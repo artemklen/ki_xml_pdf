@@ -574,3 +574,54 @@ static int test_font_mark_runs(void) {
     unlink(path);
     return 0;
 }
+
+static void fm_smash_font(const char *path) {
+    FILE *fp = fopen(path, "wb");
+    if (fp != NULL) {
+        fputs("not-a-font", fp);
+        fclose(fp);
+    }
+}
+
+static int test_font_replaced_before_embed(void) {
+    char font[] = "/tmp/ki-font-swap-XXXXXX";
+    char dest[] = "/tmp/ki-font-dest-XXXXXX";
+    int fd = mkstemp(font);
+    CHECK(fd >= 0);
+    FILE *src = fopen("fonts/DejaVuSans.ttf", "rb");
+    CHECK(src != NULL);
+    FILE *copy = fdopen(fd, "wb");
+    CHECK(copy != NULL);
+    char buf[8192];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof buf, src)) > 0) {
+        CHECK(fwrite(buf, 1, n, copy) == n);
+    }
+    fclose(src);
+    fclose(copy);
+    int dfd = mkstemp(dest);
+    CHECK(dfd >= 0);
+    CHECK(write(dfd, "PREVIOUS", 8) == 8);
+    close(dfd);
+
+    font_debug_touch(fm_smash_font);
+    KiOptions opt;
+    ki_options_init(&opt);
+    opt.font_path = font;
+    KiResult res;
+    memset(&res, 0, sizeof res);
+    int rc = ki_convert_file("tests/fixture.xml", dest, &opt, &res);
+    font_debug_touch(NULL);
+    CHECK(rc != 0);
+    CHECK(res.cause == KI_CAUSE_FONT);
+    FILE *kept = fopen(dest, "rb");
+    CHECK(kept != NULL);
+    char got[16];
+    memset(got, 0, sizeof got);
+    CHECK(fread(got, 1, 8, kept) == 8);
+    fclose(kept);
+    CHECK(memcmp(got, "PREVIOUS", 8) == 0);
+    unlink(font);
+    unlink(dest);
+    return 0;
+}
