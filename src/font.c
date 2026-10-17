@@ -1,5 +1,6 @@
 #define _XOPEN_SOURCE 700
 
+#include "platform.h"
 #include "font.h"
 
 #include <stdio.h>

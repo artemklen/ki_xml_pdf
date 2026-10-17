@@ -8,9 +8,19 @@ The built-in [report-v1](docs/report-v1.md) profile renders a sequential report 
 
 Project source and original examples use [MIT](LICENSE). DejaVu Sans has a [separate license notice](fonts/DejaVuSans.copyright). See the [repository](https://github.com/artemklen/ki_xml_pdf) and [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) for source and checks tied to a specific commit. Community expectations are in the [code of conduct](CODE_OF_CONDUCT.md). Vulnerability reports use [SECURITY.md](SECURITY.md).
 
+## Supported platforms
+
+ki_xml_pdf runs on 64-bit Linux with glibc, GCC or Clang, and GNU ld. The build depends on interfaces that are not portable C:
+
+- `fopencookie`, used for the counted PDF sink (`src/pdf_write.c`, `src/convert.c`)
+- `/proc/self/exe`, used to find the bundled font (`src/font.c`)
+- a GNU ld version script and soname (`Makefile`, `CMakeLists.txt`)
+
+macOS, musl (including Alpine), BSD, and Windows are not supported. On those systems the build stops at the first compiled file with `ki_xml_pdf supports only Linux with glibc`. A pull request that ports the library is not accepted without a prior maintainer decision; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Build and convert
 
-The supported environment is **64-bit Linux with glibc**, GCC or Clang, GNU Make, a GNU-compatible linker and zlib development files (Debian/Ubuntu `zlib1g-dev`). The implementation uses GNU/POSIX APIs. Other operating systems have not been validated. CMake and pkg-config are needed for their respective integration workflows.
+The supported environment is **64-bit Linux with glibc**, GCC or Clang, GNU Make, a GNU-compatible linker and zlib development files (Debian/Ubuntu `zlib1g-dev`). The implementation uses GNU/POSIX APIs. Other systems are listed under [Supported platforms](#supported-platforms). CMake and pkg-config are needed for their respective integration workflows.
 
 Run these commands from the source directory:
 

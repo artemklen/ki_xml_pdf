@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "platform.h"
 #include "pdf_write.h"
 
 #include "font.h"
