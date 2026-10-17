@@ -41,7 +41,14 @@ jobs:
           archive=$(make -s print-dist-name)
           sha256sum "$archive" > SHA256SUMS
           git rev-parse HEAD > SOURCE_COMMIT
-          gzip -dc "$archive" | git get-tar-commit-id | cmp - SOURCE_COMMIT
+          # git get-tar-commit-id exits after the pax header, so gzip gets
+          # SIGPIPE. pipefail would fail the job on that signal.
+          set +o pipefail
+          gzip -dc "$archive" | git get-tar-commit-id > tar-commit-id
+          tar_rc=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$tar_rc" -eq 0
+          cmp tar-commit-id SOURCE_COMMIT
           echo "archive=${archive}" >> "$GITHUB_ENV"
 
       - name: changelog section
