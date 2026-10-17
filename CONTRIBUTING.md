@@ -15,7 +15,7 @@ Do not attach someone else's documents. A synthetic reproducer is preferable whe
 
 ## Report a security issue privately
 
-Send security reports directly to Artem Klen at **artem.klen@icloud.com**. Include the affected version/commit, impact, reproduction steps, and the smallest shareable input. Use this private route for security details rather than opening a public issue with them. Do not send private source documents or secrets.
+Send security reports directly to Artem Klen at **artem.klen@icloud.com**. Include the affected version/commit, impact, reproduction steps, and the smallest shareable input. Use this private route for security details rather than opening a public issue with them. Do not send private source documents or secrets. Supported versions and the same contact are in [SECURITY.md](SECURITY.md).
 
 ## Build and check a change
 
@@ -34,3 +34,7 @@ File output must remain atomic: late XML/profile failures, I/O errors, quotas, a
 Custom-schema examples should use only the public API and explain borrowed event pointers and bounded mapper state; see the [mapper guide](docs/mapper-guide.md). Do not imply support for untested third-party XML schemas or operating systems.
 
 Document intentional schema or public API changes in the relevant reference and [CHANGELOG.md](CHANGELOG.md). Keep header, CLI, CMake metadata, pkg-config metadata, and archive versions consistent. Include applicable regression/check evidence in a pull request, together with any checks that could not run and the reason. A passing CI run does not automatically create a version tag or GitHub Release.
+
+## Code of conduct
+
+Participation follows the [Contributor Covenant 2.1](CODE_OF_CONDUCT.md). Reports of unacceptable behavior go to Artem Klen at **artem.klen@icloud.com**, the same contact as [SECURITY.md](SECURITY.md). An open question for the maintainer: whether conduct reports should use a different address. This file does not invent one.

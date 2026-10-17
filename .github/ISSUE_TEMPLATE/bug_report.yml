@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a defect with the version, the command, and a small XML input you can share.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach someone else's documents. A synthetic reproducer is preferable when the original contains private or customer data. Keep a partial stdout or callback PDF separate from a successful result, and include the failure status.
+
+        Security reports do not belong here. Use the private contact in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version from `xml2pdf --version`.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or SHA-256
+      description: A commit ID or the SHA-256 of the source archive.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+    validations:
+      required: true
+  - type: input
+    id: arch
+    attributes:
+      label: Architecture
+    validations:
+      required: true
+  - type: input
+    id: compiler
+    attributes:
+      label: Compiler
+      description: GCC or Clang, and its version.
+    validations:
+      required: true
+  - type: dropdown
+    id: linkage
+    attributes:
+      label: Static or shared
+      options:
+        - static
+        - shared
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The command or minimal public API call, its return code, and the relevant stderr or KiResult diagnostic.
+    validations:
+      required: true
+  - type: textarea
+    id: xml
+    attributes:
+      label: Minimal XML
+      description: A small reproducible XML input that you have permission to share, and the expected result.
+      render: xml
+    validations:
+      required: true
