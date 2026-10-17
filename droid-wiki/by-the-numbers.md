@@ -172,12 +172,12 @@ Measured 2026-10-07 on revision `7c62fe4` (Linux 64-bit, GCC, Poppler), as recor
 
 Derived from those rows:
 
-- The 2,372 KiB peak is 3.6% of the 64 MiB acceptance ceiling and 0.22% of the 1 GiB input; the input-to-RSS ratio is roughly 442 to 1.
+- The 2,372 KiB peak is 3.6% of the 64 MiB ceiling that applied to that revision, and 0.22% of the 1 GiB input; the input-to-RSS ratio is roughly 442 to 1. The current acceptance gate is 4096 KiB (4 MiB).
 - The 1 GiB conversion took 7.61 seconds, about 141 MB/s of input.
 - The offset spool costs 8 bytes per PDF object: about 16 bytes per page in the full `records-v1` run.
 - The `records-v1` run expands 16 MiB of XML into a 173.5 MB PDF, a factor of about 10.3.
 
-The scripted gate in `tests/verify.sh` goes beyond the 64 MiB ceiling: it also requires the large-run RSS to stay under half the input size and within 4 MiB of a small run's RSS. See [how the checks work](how-to-contribute/testing.md).
+The scripted gate in `tests/verify.sh` requires large-run RSS at most 4096 KiB, under half the input size, and within 4 MiB of a small run's RSS. See [how the checks work](how-to-contribute/testing.md).
 
 ## Related pages
 

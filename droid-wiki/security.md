@@ -78,7 +78,7 @@ The library installs no signal handlers; it polls the caller's `cancelled` callb
 
 - **Sanitizers**: `make test-san` compiles the whole library plus `tests/test_stream.c` with AddressSanitizer and UndefinedBehaviorSanitizer, halting on the first error with leak detection. CI runs this in dedicated gcc and clang jobs (`.github/workflows/ci.yml`).
 - **Fuzz**: `tests/fuzz_smoke.py` runs 24 seeded mutants of `examples/report-v1.xml` (1 to 8 random byte flips, truncated to 4096 bytes), truncations at 0, 1, 4095, 4096, 4097 and the last byte, and mutated or truncated font files including `tests/corpus/truncated-hmtx.ttf`. Every run executes under `ulimit -v` of 256 MiB with a 5-second timeout. Exit codes must be documented ones (0 to 4), a success must be readable by Poppler, and a failure must preserve the old destination exactly and leave no temp or spool file behind. Crash inputs are saved under `fuzz-crash/` for triage.
-- **Resource gate**: the CI resources job runs `make check` and `tests/large_proof.py` on the ordinary binary, measuring converter RSS with `/usr/bin/time` against the 64 MiB ceiling, separately from the XML generator and the PDF reader.
+- **Resource gate**: the CI resources job runs `make check` and `tests/large_proof.py` on the ordinary binary, measuring converter RSS with `/usr/bin/time` against the 4096 KiB (4 MiB) ceiling, separately from the XML generator and the PDF reader.
 - **Independent reading**: `tests/verify.sh` and the other check scripts read produced PDFs through Poppler, so a structurally complete but textually wrong PDF still fails.
 
 ## Reporting

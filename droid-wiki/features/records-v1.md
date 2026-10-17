@@ -52,7 +52,7 @@ Measured on 7 October 2026 on the first public revision [`7c62fe4`](https://gith
 | Peak RSS | 2360 KiB |
 | Offset spool | 671,168 bytes |
 
-Commands were `make check` and `python3 tests/large_proof.py 1073741824`. These are measurements of one revision and one synthetic workload, not a promise for arbitrary inputs; the RSS acceptance gate is 64 MiB. See [Resource limits](resource-limits.md).
+Commands were `make check` and `python3 tests/large_proof.py 1073741824`. These are measurements of one revision and one synthetic workload, not a promise for arbitrary inputs; the RSS acceptance gate is 4096 KiB (4 MiB). See [Resource limits](resource-limits.md).
 
 ## Input limits inherited from the pipeline
 

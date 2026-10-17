@@ -21,7 +21,7 @@ The library is built to convert very large XML with bounded memory. Nothing in t
 | `pdf_end` | `src/pdf_write.c` | Cancellation checks while finishing |
 | Parser bounds | `src/xml_parse.h` | Depth, attribute, name, text and window sizes |
 | Font and layout bounds | `src/font.h`, `src/layout.h` | Repertoire tables and line storage |
-| `tests/verify.sh` | | RSS gate on a 16 MiB input |
+| `tests/verify.sh` | | 16 MiB input: RSS ≤4096 KiB, below half the input, and within the small run plus 4 MiB |
 | `tests/large_proof.py` | | 4096 KiB (4 MiB) RSS, page, PDF and spool budgets |
 
 ## How it works
@@ -73,7 +73,7 @@ A cancelled run returns status 4 with `KI_CAUSE_CANCEL`. After a successful `ren
 
 ### RSS gate
 
-The memory gate measures the converter process alone. `tests/verify.sh` runs `/usr/bin/time -v` on `./xml2pdf` for a generated input of at least 16 MiB and a small fixture, and reads the `Maximum resident set size (kbytes)` line from each report. The XML generator and `pdftotext` are outside the measurement. The gate passes when the large run's RSS is below half the large input size and at or below the small run's RSS plus 4 MiB, and when the output PDF is larger than the converter's RSS.
+The memory gate measures the converter process alone. `tests/verify.sh` runs `/usr/bin/time -v` on `./xml2pdf` for a generated input of at least 16 MiB and a small fixture, and reads the `Maximum resident set size (kbytes)` line from each report. The XML generator and `pdftotext` are outside the measurement. The gate passes when the large run's RSS is at most 4096 KiB, below half the large input size, and at or below the small run's RSS plus 4 MiB, and when the output PDF is larger than the converter's RSS.
 
 `tests/large_proof.py` measures with `/usr/bin/time -f "rss_kib=%M elapsed=%e"` and applies fixed budgets: RSS at most 4096 KiB (4 MiB), at most 10000 pages, at most 256 MiB of PDF and at most 64 MiB of offset spool. It then reads selected pages with `pdftotext` under its own `ulimit -v` of 1 GiB and compares the text against a generator oracle. `--self-test` checks the gate logic without a large file. The documented historical measurement on revision `7c62fe4` is 2372 KiB of RSS for a 1 GiB `report-v1` input; see `docs/contract.md`.
 

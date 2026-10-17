@@ -20,7 +20,7 @@ Terms used in the code, the docs and this wiki.
 | **Status / exit code** | 0 OK, 1 XML/profile/font, 2 usage, 3 I/O, 4 resource or cancel (`XML2PDF_ERR_*` in `src/convert.h`). |
 | **Repertoire** | The code points the layout accepts: U+0009, U+000A, U+000D, U+0020–U+04FF, U+2010–U+2027. Anything else is a font error with its `U+` code. |
 | **Oracle** | An independently produced expected text (for example `examples/report-v1.expected.txt`) that tests compare against `pdftotext` output. |
-| **RSS gate** | The acceptance rule that peak resident memory of `xml2pdf` stays at or below 64 MiB on the synthetic workloads. |
+| **RSS gate** | The acceptance rule that peak resident memory of `xml2pdf` stays at or below 4096 KiB (4 MiB) on the synthetic workloads. |
 | **distcheck** | `make distcheck`: build, install and test from the `git archive` of HEAD, without a Git checkout (`tests/distcheck.sh`). |
 | **OSR-n / KW-n** | Task identifiers from the owner's tracker that appear in commit messages and docs (for example `OSR-4`, `KW-1022`). |
 | **Page sink** | Removed older fixed byte-grid page buffer (`src/page_sink.c`). Not used by the conversion path. |

@@ -56,7 +56,7 @@ Each stage has a fixed footprint:
 - **Font**: `FontFace` holds glyph IDs and advances for code points below U+0500 plus 24 punctuation slots (`src/font.h`), alongside the font file bytes.
 - **PDF writer**: pages are written and dropped; each object offset is written as 8 bytes into a spool file (`note_offset` in `src/pdf_write.c`). The object count is capped at 8,000,000.
 
-The resource gate in CI requires converter RSS of at most 64 MiB. The historical measurement on revision `7c62fe4` was 2372 KiB for a 1 GiB synthetic report (see [By the numbers](../by-the-numbers.md)).
+The resource gate in CI requires converter RSS of at most 4096 KiB (4 MiB). The historical measurement on revision `7c62fe4` was 2372 KiB for a 1 GiB synthetic report (see [By the numbers](../by-the-numbers.md)).
 
 ## Output modes
 

@@ -18,7 +18,7 @@ This section is the lookup shelf: every option, flag, environment variable and c
 | Exit codes | 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel | `src/convert.h`, `src/main.c` |
 | Causes | `KI_CAUSE_NONE/XML/USAGE/IO/RESOURCE/FONT/CANCEL/PROFILE` = 0 to 7 | `include/ki_xml_pdf.h` |
 | Profiles | `records-v1` (default), `report-v1` | `include/ki_xml_pdf.h`, `src/main.c` |
-| Memory ceiling | 64 MiB converter RSS on the documented synthetic workload | `tests/large_proof.py` |
+| Memory ceiling | 4096 KiB (4 MiB) converter RSS on the documented synthetic workload | `tests/large_proof.py` |
 
 ## Where to look next
 

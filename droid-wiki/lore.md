@@ -37,7 +37,7 @@ These have not changed since the first public commit and, for the ones in `basel
 - `src/xml_parse.c` (1,163 lines): the whole streaming parser, including the 4096-byte read window and the 64-element name stack. It appears in exactly one commit, the drop.
 - `src/pdf_write.c` (774 lines), `src/font.c` (340), `src/report.c` (263), `src/layout.c` (225) and `src/page_sink.c` (206): one commit each.
 - Atomic file publication (temporary file beside the destination, `fsync`, `rename`), in `src/convert.c` since the drop and carried through the OSR-4 rewrite with its contract intact.
-- The 64 MiB RSS ceiling and the measurement protocol in `docs/contract.md`.
+- The historical 64 MiB RSS ceiling and the measurement protocol in `docs/contract.md`. The current gate is 4096 KiB (4 MiB).
 - The parser limits, unchanged in `src/xml_parse.h`: 64 open elements, 63-byte names, 8 attributes, 255-byte attribute values, 1023-byte text fragments.
 
 Across all of history only three production files ever changed: `src/convert.c`, `src/main.c` and `include/ki_xml_pdf.h`.

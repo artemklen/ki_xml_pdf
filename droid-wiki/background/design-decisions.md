@@ -8,7 +8,7 @@ The project keeps its own C pipeline rather than embedding an XML formatter such
 
 ## Bounded memory as the organizing rule
 
-Every stage holds fixed state: a 4096-byte parser window and a 64x64 element stack (`src/xml_parse.h`), a 64-entry mapper stack (`MapState` in `src/convert.c`), counters plus a 256-byte pending name for report-v1 (`src/report.h`), 50 lines of at most 1024 bytes in layout (`src/layout.h`), fixed glyph tables for a fixed repertoire (`src/font.h`), and a PDF writer that drops each page when it is written. The acceptance rule is measured, not inferred: CI's resources job measures converter RSS with `/usr/bin/time` against a 64 MiB ceiling; the recorded measurement on revision `7c62fe4` was 2372 KiB for a 1 GiB input.
+Every stage holds fixed state: a 4096-byte parser window and a 64x64 element stack (`src/xml_parse.h`), a 64-entry mapper stack (`MapState` in `src/convert.c`), counters plus a 256-byte pending name for report-v1 (`src/report.h`), 50 lines of at most 1024 bytes in layout (`src/layout.h`), fixed glyph tables for a fixed repertoire (`src/font.h`), and a PDF writer that drops each page when it is written. The acceptance rule is measured, not inferred: CI's resources job measures converter RSS with `/usr/bin/time` against a 4096 KiB (4 MiB) ceiling; the recorded measurement on revision `7c62fe4` was 2372 KiB for a 1 GiB input.
 
 One consequence is deliberate scope exclusion. Anything that needs document-wide state, such as tables, global sorting, aggregates, forward references or unique-ID checks, is outside the contract (`docs/contract.md`). The design rule is stated up front so feature requests can be answered with a reason.
 
