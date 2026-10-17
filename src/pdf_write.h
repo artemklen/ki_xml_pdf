@@ -77,11 +77,23 @@ typedef struct PdfWriter {
     /* One deflate state and output window, reused by every Flate stream. */
     struct z_stream_s *zs;
     unsigned char *zbuf;
+    /* One content-stream buffer for every page of this conversion. */
+    char *page_buf;
+    size_t page_cap;
+    size_t page_o;
+    int page_lines;
+    int page_any;
+    long long page_prev_shift;
 } PdfWriter;
 
 int pdf_begin(PdfWriter *w, FILE *fp);
 int pdf_begin_cfg(PdfWriter *w, FILE *fp, const PdfConfig *cfg);
+int pdf_page_begin(PdfWriter *w);
+int pdf_page_line(PdfWriter *w, const char *text, size_t len);
+int pdf_page_end(PdfWriter *w);
 int pdf_add_page(PdfWriter *w, const char *text, size_t len);
+/* How many times a conversion allocated its page-content buffer. */
+int pdf_page_content_allocs(void);
 /* 0 disables. n > 0 makes the nth pdf_add_page fail before writing. */
 void pdf_debug_fail_at_page(int n);
 int pdf_end(PdfWriter *w);
