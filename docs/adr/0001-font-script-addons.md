@@ -27,14 +27,16 @@ Ranges may abut. Overlapping ranges are allowed and resolved by list order, so t
 
 Font objects are written at the start today (`write_font_objects` from `pdf_begin_cfg`), before the first character is known. An addon must not be opened there.
 
-On the first character that selects an addon, before that page is flushed:
+On the first character that selects an addon, before that page's objects are written:
 
-1. Open the file with the same streaming `font_load` as the base face (OSR-83): table spans are read and freed, the TTF bytes are not kept, and the file is checked again by size and FNV-1a before FontFile2 is deflated in 16 KiB chunks.
-2. Assign the next object numbers and a font resource name `/F2`, `/F3`, … in first-use order.
-3. Write that face's objects then: FontFile2 plus its length, FontDescriptor, CIDFontType2, ToUnicode, and Type0. `/W` and ToUnicode list the addon's repertoire, not every code point of Unicode. ToUnicode is a direct `/Length` stream counted then written, the same shape as the base CMap after OSR-84, not Flate and not an indirect length.
-4. The page resource dictionary of a page names only the faces that page used. Earlier pages do not gain a new font.
+1. Open the file with the same streaming `font_load` as the base face (OSR-83): table spans are read and freed, the TTF bytes are not kept, and the file is checked again by size and FNV-1a before FontFile2 is deflated in 16 KiB chunks. The 8 MiB cap is this check. It is not a check in `pdf_begin_cfg`.
+2. Take the next ids from a running object counter, and a font resource name `/F2`, `/F3`, … in first-use order.
+3. Write that face's objects then: FontFile2 plus its length, FontDescriptor, CIDFontType2, ToUnicode, and Type0. `/W` and ToUnicode list the addon's repertoire, not every code point of Unicode. ToUnicode stays a direct `/Length` and is not Flate. On this tree the base CMap is still assembled in a 256 KiB buffer and an 8 KiB bitmap, then freed (`write_tounicode`). An addon must not keep that buffer. Count-then-write with nothing retained is the OSR-84 approach; this ADR does not assume that commit has landed.
+4. The page content switches font when the face changes. GIDs from two faces do not share one show string. The page resource dictionary names only the faces that page used. Earlier pages do not gain a new font.
 
-The xref is already an offset spool written at the end, so an object emitted mid-document is valid. Object numbers are taken when the face is first used, not reserved for addons that never occur. A configured addon that no character hits is never opened and adds no PDF object.
+Today's numbering cannot do step 2. `pdf_add_page` sets the page's three ids from `OBJ_FIRST + 3 * page_index`, and `pdf_end` rebuilds `/Kids` with the same formula. The xref is one dense subsection `0 .. nobj+1`; a slot whose offset is `<= 0` fails. A six-object font block inserted after a flushed page collides with the next page's content id, and a hole left for a later page fails the xref. The offset spool already lets the catalog and the page tree be written at the end. It does not let a font block be inserted between pages under that formula.
+
+The implementation therefore stores each page id instead of recomputing it from the index, takes every new id from one counter, and writes every id from 1 through `nobj` before `pdf_end`. Unused addons are not opened and add no object.
 
 ## 4. Memory
 
@@ -46,7 +48,7 @@ A used addon whose range holds N code points:
 
 - metrics the library keeps until `pdf_free`: `N` glyph ids and `N` advances, 4N bytes, plus outline ink of 5N bytes when the font has `glyf`/`loca`. This is the range, not a BMP of 65536 slots and not the whole CJK block unless the caller asked for that range.
 - the open file: one `FILE`, the path string, the length, and the 32-bit hash. Not the TTF.
-- the 8 KiB GID-seen map and the CMap text are stack or a count-then-write pass. They are not retained.
+- the base CMap on this tree is a 256 KiB buffer freed before the next page. An addon implementation must not keep an equivalent buffer; that is a requirement of the future task, not a claim that OSR-84 is already on this branch.
 - example: U+3040–U+30FF is 192 code points, 768 bytes of gid/adv, or 1728 bytes with ink. U+4E00–U+9FFF is 20992 code points, about 84 KiB of gid/adv, or about 189 KiB with ink. A 20 MiB CJK file is not part of that sum; it is read from disk while FontFile2 is written, and it is rejected if it is over the 8 MiB cap.
 
 ## 5. Relation to OSR-83
@@ -57,7 +59,7 @@ Addon FontFile2 uses the OSR-83 path: the face keeps the open file, checks size 
 
 OSR-10 measured a GID-preserving subset of DejaVu Sans after Flate and decided no-go for the large-report goal: the subset removed under 3% of the 16 MiB report PDF, and an internal subsetter would be new C plus a visual oracle (`docs/evidence/osr-10-font-spike/README.md`). That decision stands for the base face.
 
-A CJK file of tens of megabytes does not fit the existing 8 MiB font cap, so embedding it whole fails with `KI_CAUSE_FONT` before any page. This design does not add a subsetter to get past that cap. Subsetting, if it is ever wanted, is a separate task that must keep the subsetter off the base path, preserve CID = GID or redesign `/W` and ToUnicode together, and check renders rather than `pdftotext` alone (OSR-10's `.notdef` control still extracts the same text). It is not part of implementing this ADR.
+A CJK file of tens of megabytes does not fit the existing 8 MiB font cap. The check runs at first use, before that page's objects are written, and fails with `KI_CAUSE_FONT`. Earlier pages may already have been handed to a `write_bytes` callback; OSR-10 recorded that late font failure as a reason the base font stays at the start. A file destination is still not published: `rename` runs only after success. This design does not add a subsetter to get past the cap, and it does not move the base font off the start of the file. Subsetting, if it is ever wanted, is a separate task that must keep the subsetter off the base path, preserve CID = GID or redesign `/W` and ToUnicode together, and check renders rather than `pdftotext` alone (OSR-10's `.notdef` control still extracts the same text). It is not part of implementing this ADR.
 
 ## 7. API and ABI
 
@@ -72,7 +74,9 @@ No change in this task. A later implementation extends `KiConfig` at the end, th
 
 ## 8. Layout and limits
 
-Layout asks the selected face for advance and ink. Widths are not taken from the base face for an addon character. Wrap, the 1023-byte line, and the 50-line page do not change. There is no shaping, no bidi, and no composition: an Arabic addon draws the font's cmap glyphs one by one, the same way the base face draws Cyrillic. A run that mixes faces is still one line of glyph widths.
+Layout must not add an addon's raw advance to the base face's advance. `PageFrame.units` is fixed from the base face in `geom_frame`, and `run_add` / `geom_fits` scale by that one value. Before a mixed run is measured, each advance is converted to one unit: PDF thousandths, or the base face's `unitsPerEm`. Vertical frame fitting stays on the base face unless the implementation also folds addon ink into `font_ink_vertical`.
+
+The page stream is one `/F1 Tf` and one hex show string today. Naming `/F2` in the resource dictionary does not draw the addon glyph. When the face changes, the content stream selects the new font and starts a new show string. GIDs from two faces never share one string. Wrap, the 1023-byte line, and the 50-line page do not change. There is no shaping, no bidi, and no composition: an Arabic addon draws the font's cmap glyphs one by one, the same way the base face draws Cyrillic.
 
 Limits that stay:
 
@@ -91,7 +95,7 @@ Limits that stay:
 
 ## Decision
 
-Caller-supplied addons with explicit ranges, base face first, first match wins, `KI_CAUSE_FONT` otherwise. Open and embed an addon only on first use, through the OSR-83 stream, with streamed ToUnicode. Zero library bytes on the base path. No subsetter, no shaping, no public-header change in this task.
+Caller-supplied addons with explicit ranges, base face first, first match wins, `KI_CAUSE_FONT` otherwise. Open and embed an addon only on first use, through the OSR-83 stream. ToUnicode stays a direct `/Length` and is not kept after the face is written; this tree still buffers the base CMap, and dropping that buffer is OSR-84, not a premise of this ADR. Page ids are stored, not recomputed from the page index, so the new font objects can take the next ids from one counter. Mixed-face widths share one unit, and the content stream switches font. Zero library bytes on the base path. No subsetter, no shaping, no public-header change in this task.
 
 ## Future tasks
 
@@ -99,6 +103,6 @@ These are not started here and do not add code in this change:
 
 1. Add `KiFontAddon` and the size-checked `KiConfig` tail. Old `cfg->size` values stay valid.
 2. Select a face per code point in layout, with `KI_CAUSE_FONT` when none covers it.
-3. Stream-embed the chosen addon on first use and name it on that page's resources.
+3. Store page ids, take object numbers from one counter, and stream-embed the chosen addon on first use. Switch font in the content stream. Do not insert objects into the current `OBJ_FIRST + 3 * page_index` sequence.
 4. Tests use a synthetic second TTF from `tests/font_fixtures.py` covering a private range. No real CJK or Arabic document.
 5. Revisit subsetting only as its own task if the 8 MiB cap is raised. Keep it off the Latin/Cyrillic path.
