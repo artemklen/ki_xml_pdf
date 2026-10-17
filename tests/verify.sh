@@ -383,6 +383,7 @@ small_pages = page_count(Path(scratch / "small.pdf").read_bytes())
 
 half = large_in // 2
 cap = small_rss + 4 * 1024 * 1024
+budget_kib = 4096
 ok = (
     large_rc == 0
     and small_rc == 0
@@ -397,6 +398,7 @@ ok = (
     and last_on_later
     and large_rss < half
     and large_rss <= cap
+    and large_kb <= budget_kib
     and large_pdf > large_rss
 )
 lines = []
@@ -406,6 +408,7 @@ lines.append(f"large_input_bytes {large_in}")
 lines.append(f"small_input_bytes {small_in}")
 lines.append(f"large_pdf_bytes {large_pdf}")
 lines.append(f"large_rss_kbytes {large_kb}")
+lines.append(f"rss_budget_kib {budget_kib}")
 lines.append(f"small_rss_kbytes {small_kb}")
 lines.append(f"large_rss_bytes {large_rss}")
 lines.append(f"small_rss_bytes {small_rss}")
