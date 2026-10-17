@@ -1,0 +1,36 @@
+name: Memory regression
+description: Report a change in converter RSS with the command, the input recipe, and before/after measurements.
+title: "memory: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Measure converter RSS on an ordinary binary, separately from ASan/UBSan, the input generator, and the PDF reader. Use a synthetic input. Do not attach private documents.
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact converter command, including the font, profile, and quotas.
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input or generation recipe
+      description: The input itself is not required when a recipe reproduces it. Example `python3 tests/resource_recipe.py --profile report-v1 --target-bytes N --out rN.xml`, or a path to a repository fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: rss_before
+    attributes:
+      label: RSS before
+      description: Output of `/usr/bin/time -f %M` before the change, with the revision.
+    validations:
+      required: true
+  - type: textarea
+    id: rss_after
+    attributes:
+      label: RSS after
+      description: Output of `/usr/bin/time -f %M` after the change, with the revision.
+    validations:
+      required: true

@@ -63,7 +63,10 @@ required=(
     cmake/ki_xml_pdf.pc.in cmake/ki_xml_pdfConfig.cmake.in
     cmake/ki_xml_pdfConfigVersion.cmake.in cmake/ki_xml_pdfMakeTargets.cmake.in
     README.md README.ru.md CONTRIBUTING.md CHANGELOG.md LICENSE baseline-manifest.json
-    .github/workflows/ci.yml .gitignore
+    SECURITY.md CODE_OF_CONDUCT.md
+    .github/workflows/ci.yml .github/pull_request_template.md .gitignore
+    .github/ISSUE_TEMPLATE/config.yml .github/ISSUE_TEMPLATE/bug_report.yml
+    .github/ISSUE_TEMPLATE/memory_regression.yml
     docs/contract.md docs/license-decision.md docs/profile-decision.md
     docs/release-checklist.md docs/report-v1.md docs/mapper-guide.md
     src/convert.c src/convert.h src/font.c src/font.h src/geometry.c src/geometry.h src/info.c src/info.h

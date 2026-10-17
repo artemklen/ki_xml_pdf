@@ -6,7 +6,7 @@ A C library and command-line tool for converting large XML inputs to PDF with bo
 
 The built-in [report-v1](docs/report-v1.md) profile renders a sequential report with named fields and explicit record selection. The default `records-v1` profile prints element names, attributes, and text for diagnostic use. Other schemas require a mapper; start with the [mapper guide](docs/mapper-guide.md).
 
-Project source and original examples use [MIT](LICENSE). DejaVu Sans has a [separate license notice](fonts/DejaVuSans.copyright). See the [repository](https://github.com/artemklen/ki_xml_pdf) and [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) for source and checks tied to a specific commit.
+Project source and original examples use [MIT](LICENSE). DejaVu Sans has a [separate license notice](fonts/DejaVuSans.copyright). See the [repository](https://github.com/artemklen/ki_xml_pdf) and [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) for source and checks tied to a specific commit. Community expectations are in the [code of conduct](CODE_OF_CONDUCT.md). Vulnerability reports use [SECURITY.md](SECURITY.md).
 
 ## Build and convert
 
