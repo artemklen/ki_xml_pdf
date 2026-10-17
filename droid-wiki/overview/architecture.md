@@ -14,7 +14,7 @@ ki_xml_pdf is a single streaming pipeline. Bytes flow from an input source throu
 | Font | `src/font.c`, `src/font.h` | Minimal TrueType reader (`cmap`, `hmtx`, metrics) for a fixed repertoire |
 | PDF writer | `src/pdf_write.c`, `src/pdf_write.h` | Append-only PDF, embedded CID font, offsets spooled to a temp file |
 | CLI | `src/main.c` | `xml2pdf` argument parsing, signals, file/stdin/stdout selection |
-| Legacy page sink | `src/page_sink.c`, `src/page_sink.h` | Fixed byte-grid page buffer; compiled into the library but only exercised by tests |
+| Legacy page sink | removed | Fixed byte-grid page buffer. No longer compiled; see [Page sink](../systems/page-sink.md) |
 
 ## Data flow
 

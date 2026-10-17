@@ -2,11 +2,11 @@
 
 Active contributors: Artem Klen
 
-`src/page_sink.c` is the earlier output model: a fixed byte-grid page buffer that renders `XmlEvent` records back into text and hands finished pages to a callback. It is compiled into the library, but no production code calls it; only `tests/test_stream.c` exercises it. The `XML2PDF_PAGE_*` constants in `src/convert.h` describe the page grid it was built around.
+Removed. `src/page_sink.c`, `src/page_sink.h` and `test_page_sink_flushes` are not in the tree. Dynamic `nm -D` did not list `page_sink` symbols, which matches `local: *` in `libki_xml_pdf.map`. `XML2PDF_PAGE_COLS`, `XML2PDF_PAGE_LINES` and `XML2PDF_PAGE_CAP` in `src/convert.h` stay, because `tests/test_stream.c` still uses the cap. The rest of this page describes the module as it was: a fixed byte-grid page buffer.
 
 ## Purpose
 
-The shipped pipeline renders documents through the layout engine with measured DejaVu Sans glyph widths ([Layout and fonts](layout-and-fonts.md)) and writes real PDF pages ([PDF writer](pdf-writer.md)). The page sink implements a simpler model: a page is a grid of columns and lines counted in bytes, and the job is to flush full buffers. The sizing comment in `src/convert.h` still describes that grid as "a letter page in Helvetica 10pt", while the current code embeds DejaVu Sans and measures advances instead of counting columns. The module stays in the tree because it is compiled into the library and covered by a test, and it is listed as dead code in [Cleanup opportunities](../cleanup-opportunities.md).
+The shipped pipeline renders documents through the layout engine with measured DejaVu Sans glyph widths ([Layout and fonts](layout-and-fonts.md)) and writes real PDF pages ([PDF writer](pdf-writer.md)). The page sink implemented a simpler model: a page is a grid of columns and lines counted in bytes, and the job was to flush full buffers. The sizing comment in `src/convert.h` still describes that grid as "a letter page in Helvetica 10pt", while the current code embeds DejaVu Sans and measures advances instead of counting columns.
 
 ## Key abstractions
 

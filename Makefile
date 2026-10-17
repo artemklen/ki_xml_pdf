@@ -9,7 +9,7 @@ VERSION_MINOR := $(word 2,$(subst ., ,$(VERSION)))
 DIST_VERSION = $(shell git show HEAD:include/ki_xml_pdf.h 2>/dev/null | sed -n 's/^\#define KI_XML_PDF_VERSION "\([0-9.]*\)"/\1/p')
 DIST_ARCHIVE = ki_xml_pdf-$(DIST_VERSION).tar.gz
 
-LIB_SRCS = src/xml_parse.c src/font.c src/geometry.c src/info.c src/page_sink.c src/pdf_write.c src/layout.c src/report.c src/convert.c
+LIB_SRCS = src/xml_parse.c src/font.c src/geometry.c src/info.c src/pdf_write.c src/layout.c src/report.c src/convert.c
 LIB_OBJS = $(LIB_SRCS:.c=.o)
 
 PDFTOTEXT ?= pdftotext

@@ -68,7 +68,7 @@ required=(
     docs/release-checklist.md docs/report-v1.md docs/mapper-guide.md
     src/convert.c src/convert.h src/font.c src/font.h src/geometry.c src/geometry.h src/info.c src/info.h
     src/layout.c src/layout.h
-    src/main.c src/page_sink.c src/page_sink.h src/pdf_write.c src/pdf_write.h
+    src/main.c src/pdf_write.c src/pdf_write.h
     src/report.c src/report.h src/xml_parse.c src/xml_parse.h
     examples/consume.c examples/consume.cpp examples/hello.xml
     examples/report.c examples/report-v1.xml examples/report-v1.expected.txt

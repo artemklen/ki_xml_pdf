@@ -8,7 +8,7 @@ The library in `src/` is a chain of small modules. Each one has a fixed-size sta
 | [XML parser](xml-parser.md) | `src/xml_parse.c`, `src/xml_parse.h` | Bounded pull parser for a documented XML subset |
 | [Layout and fonts](layout-and-fonts.md) | `src/layout.c`, `src/font.c` | UTF-8 decoding, glyph-width wrapping, TrueType metrics |
 | [PDF writer](pdf-writer.md) | `src/pdf_write.c`, `src/pdf_write.h` | Append-only PDF with an embedded font and a disk-spooled xref |
-| [Page sink](page-sink.md) | `src/page_sink.c`, `src/page_sink.h` | Older byte-grid page buffer, now exercised only by tests |
+| [Page sink](page-sink.md) | removed | Older byte-grid page buffer. Sources and its unit test are gone; `XML2PDF_PAGE_CAP` remains for other tests |
 
 ```mermaid
 graph LR
