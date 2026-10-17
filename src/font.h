@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /* Fixed tables for the records-v1 repertoire. The face does not grow when a
    document uses more of that repertoire. */
@@ -14,8 +15,11 @@
 #define FONT_NAME_MAX 63
 
 typedef struct FontFace {
-    unsigned char *ttf;
+    /* Open file the tables were read from. The bytes are not kept. */
+    FILE *fp;
+    char *source_path;
     size_t ttf_len;
+    uint32_t bytes_hash;
     int units;
     int ascent;
     int descent;
@@ -45,6 +49,10 @@ typedef struct FontFace {
 
 int font_load(FontFace *face, const char *path);
 void font_free(FontFace *face);
+/* Re-read the open file. 0 when size and checksum still match. */
+int font_stream_matches(FontFace *face);
+/* Test hook: called from font_stream_matches before the re-read. */
+void font_debug_touch(void (*fn)(const char *path));
 /* 0 = found, -1 = not in the repertoire or missing from the font (GID 0 or
    at/past maxp numGlyphs). A present glyph may have a zero advance. */
 int font_lookup(const FontFace *face, unsigned cp, uint16_t *gid, uint16_t *adv);
