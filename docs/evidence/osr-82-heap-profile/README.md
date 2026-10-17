@@ -64,7 +64,7 @@ The peak snapshot is the first page flush, after `pdf_begin_cfg` has returned. T
 
 ## Top heap allocations at the report-v1 peak
 
-The records-v1 and `--record-limit 1000` trees have the same callers and the same byte counts (heap 1534121 and 1534130).
+The named blocks match in the other two peaks: 759720, 416256, four 65536-byte zlib blocks, 51250 and 16384. The below-threshold remainder is 28366 bytes in 14 places for report-v1, 28367 for records-v1 and 28376 for `--record-limit 1000`. That remainder is the whole useful-heap gap (1534120, 1534121, 1534130). records-v1 reaches `pdf_add_page` and `flush_page` through `map_event` (`src/convert.c:83`) and `convert_streams` at line 672. report-v1 and the selection path call `convert_streams` at line 670.
 
 | Bytes | Where | What |
 | --- | --- | --- |
