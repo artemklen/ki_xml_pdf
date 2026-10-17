@@ -77,22 +77,6 @@ static int begin_obj(PdfWriter *w, int num) {
     return 0;
 }
 
-static int write_stream_obj(PdfWriter *w, int num, const char *data, size_t len) {
-    if (begin_obj(w, num) != 0) {
-        return -1;
-    }
-    if (fprintf(w->fp, "<< /Length %zu >>\nstream\n", len) < 0) {
-        return -1;
-    }
-    if (fwrite(data, 1, len, w->fp) != len) {
-        return -1;
-    }
-    if (fputs("\nendstream\nendobj\n", w->fp) < 0) {
-        return -1;
-    }
-    return 0;
-}
-
 static int flate_fail(PdfWriter *w, int zrc) {
     if (w->fail_kind == 0) {
         w->fail_kind = zrc == Z_MEM_ERROR ? PDF_FAIL_LIMIT : PDF_FAIL_FLATE;
@@ -261,41 +245,22 @@ static void pdf_name(const char *raw, char *out) {
     out[o] = '\0';
 }
 
-static int write_tounicode(PdfWriter *w, const FontFace *face) {
-    size_t cap = 256 * 1024;
-    char *buf = malloc(cap);
-    if (buf == NULL) {
-        return -1;
+/* fp NULL counts bytes and writes nothing. A bfchar group header is always
+   16 bytes, so the length is known before the stream is opened. */
+static int tu_out(FILE *fp, const void *data, size_t n) {
+    if (fp == NULL) {
+        return 0;
     }
-    size_t o = 0;
-    const char *head =
-        "/CIDInit /ProcSet findresource begin\n"
-        "12 dict begin\n"
-        "begincmap\n"
-        "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def\n"
-        "/CMapName /Adobe-Identity-UCS def\n"
-        "/CMapType 2 def\n"
-        "1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n";
-    size_t hlen = strlen(head);
-    if (hlen >= cap) {
-        free(buf);
-        return -1;
-    }
-    memcpy(buf, head, hlen);
-    o = hlen;
+    return fwrite(data, 1, n, fp) == n ? 0 : -1;
+}
 
-    int in_group = 0;
-    int count = 0;
-    size_t count_at = 0;
+/* Same CMap bytes as the former 256 KiB assembly: one Unicode value per GID,
+   the lowest code point, in groups of 100. The body is not buffered. */
+static int tounicode_body(FILE *fp, const FontFace *face, size_t *out_len) {
+    unsigned char seen[65536 / 8];
+    memset(seen, 0, sizeof seen);
     unsigned cps[FONT_BMP_MAX + FONT_PUNCT_COUNT];
     int ncp = 0;
-    /* A GID shared by several code points maps back to the lowest one only,
-       so every glyph has exactly one Unicode value. */
-    unsigned char *seen = calloc(65536 / 8, 1);
-    if (seen == NULL) {
-        free(buf);
-        return -1;
-    }
     for (unsigned k = 0; k < FONT_BMP_MAX + FONT_PUNCT_COUNT; k++) {
         unsigned cp = k < FONT_BMP_MAX ? k : FONT_PUNCT_BASE + (k - FONT_BMP_MAX);
         unsigned g = k < FONT_BMP_MAX ? face->gid[k] : face->punct_gid[k - FONT_BMP_MAX];
@@ -304,7 +269,50 @@ static int write_tounicode(PdfWriter *w, const FontFace *face) {
             cps[ncp++] = cp;
         }
     }
-    free(seen);
+    enum { MAX_GROUPS = (FONT_BMP_MAX + FONT_PUNCT_COUNT) / 100 + 1 };
+    int group_n[MAX_GROUPS];
+    int ng = 0;
+    int count = 0;
+    int in_group = 0;
+    for (int i = 0; i < ncp; i++) {
+        uint16_t gid = 0;
+        uint16_t adv = 0;
+        if (font_lookup(face, cps[i], &gid, &adv) != 0) {
+            continue;
+        }
+        if (count == 0) {
+            in_group = 1;
+        }
+        count++;
+        if (count == 100 || i + 1 == ncp) {
+            if (ng >= MAX_GROUPS || count < 1 || count > 100) {
+                return -1;
+            }
+            group_n[ng++] = count;
+            count = 0;
+            in_group = 0;
+        }
+    }
+    if (in_group) {
+        return -1;
+    }
+
+    const char *head =
+        "/CIDInit /ProcSet findresource begin\n"
+        "12 dict begin\n"
+        "begincmap\n"
+        "/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> def\n"
+        "/CMapName /Adobe-Identity-UCS def\n"
+        "/CMapType 2 def\n"
+        "1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n";
+    const char *tail = "endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n";
+    size_t n = strlen(head);
+    if (tu_out(fp, head, n) != 0) {
+        return -1;
+    }
+    int gi = 0;
+    int emitted = 0;
+    int expect = ng > 0 ? group_n[0] : 0;
     for (int i = 0; i < ncp; i++) {
         unsigned cp = cps[i];
         uint16_t gid = 0;
@@ -312,58 +320,59 @@ static int write_tounicode(PdfWriter *w, const FontFace *face) {
         if (font_lookup(face, cp, &gid, &adv) != 0) {
             continue;
         }
-        if (count == 0) {
-            count_at = o;
-            if (o + 32 >= cap) {
-                free(buf);
+        if (emitted == 0) {
+            char hdr[16];
+            hdr[0] = (char)('0' + expect / 100);
+            hdr[1] = (char)('0' + (expect / 10) % 10);
+            hdr[2] = (char)('0' + expect % 10);
+            memcpy(hdr + 3, " beginbfchar\n", 13);
+            if (tu_out(fp, hdr, 16) != 0) {
                 return -1;
             }
-            memcpy(buf + o, "000 beginbfchar\n", 16);
-            o += 16;
-            in_group = 1;
+            n += 16;
         }
-        if (o + 24 >= cap) {
-            free(buf);
+        char line[16];
+        int wrote = sprintf(line, "<%04X> <%04X>\n", gid, cp);
+        if (wrote != 14 || tu_out(fp, line, 14) != 0) {
             return -1;
         }
-        o += (size_t)sprintf(buf + o, "<%04X> <%04X>\n", gid, cp);
-        count++;
-        if (count == 100 || i + 1 == ncp) {
-            char num[4];
-            if (count < 1 || count > 100) {
-                free(buf);
+        n += 14;
+        emitted++;
+        if (emitted == expect) {
+            if (tu_out(fp, "endbfchar\n", 10) != 0) {
                 return -1;
             }
-            num[0] = (char)('0' + count / 100);
-            num[1] = (char)('0' + (count / 10) % 10);
-            num[2] = (char)('0' + count % 10);
-            num[3] = '\0';
-            memcpy(buf + count_at, num, 3);
-            if (o + 16 >= cap) {
-                free(buf);
-                return -1;
-            }
-            memcpy(buf + o, "endbfchar\n", 10);
-            o += 10;
-            count = 0;
-            in_group = 0;
+            n += 10;
+            emitted = 0;
+            gi++;
+            expect = gi < ng ? group_n[gi] : 0;
         }
     }
-    if (in_group) {
-        free(buf);
-        return -1;
-    }
-    const char *tail = "endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n";
     size_t tlen = strlen(tail);
-    if (o + tlen >= cap) {
-        free(buf);
+    if (tu_out(fp, tail, tlen) != 0) {
         return -1;
     }
-    memcpy(buf + o, tail, tlen);
-    o += tlen;
-    int rc = write_stream_obj(w, OBJ_CMAP, buf, o);
-    free(buf);
-    return rc;
+    n += tlen;
+    *out_len = n;
+    return 0;
+}
+
+static int write_tounicode(PdfWriter *w, const FontFace *face) {
+    size_t len = 0;
+    if (tounicode_body(NULL, face, &len) != 0 || begin_obj(w, OBJ_CMAP) != 0) {
+        return -1;
+    }
+    if (fprintf(w->fp, "<< /Length %zu >>\nstream\n", len) < 0) {
+        return -1;
+    }
+    size_t wrote = 0;
+    if (tounicode_body(w->fp, face, &wrote) != 0 || wrote != len) {
+        return -1;
+    }
+    if (fputs("\nendstream\nendobj\n", w->fp) < 0) {
+        return -1;
+    }
+    return 0;
 }
 
 static int write_widths(FILE *fp, const FontFace *face) {
