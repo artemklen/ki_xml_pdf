@@ -18,7 +18,7 @@ The writer owns everything that is PDF-specific: the header, the embedded CID fo
 | `pdf_add_page` | `src/pdf_write.c` | Render one page of lines as two objects |
 | `pdf_end` | `src/pdf_write.c` | Pages and Catalog objects, xref, trailer |
 | `pdf_free` | `src/pdf_write.c` | Close, unlink the spool, free the font |
-| `note_offset`, `begin_obj`, `write_stream_obj` | `src/pdf_write.c` | Object plumbing |
+| `note_offset`, `begin_obj` | `src/pdf_write.c` | Object plumbing |
 | `cap_write` | `src/pdf_write.c` | fopencookie layer that counts and caps bytes |
 | `pdf_live_page_bytes`, `pdf_page_count`, `pdf_object_count`, `pdf_hit_object_limit` | `src/pdf_write.h` | Observation hooks for tests |
 
@@ -54,7 +54,7 @@ Object offsets live in a temp file created with `mkstemp` in `cfg->temp_dir` (de
 - Object 6: FontFile2, the raw TrueType bytes as a stream.
 - Object 5: FontDescriptor for `/DejaVuSans`, flags 32, FontBBox, Ascent, Descent and CapHeight scaled by 1000/units per em (`pdf_scale`), StemV 80.
 - Object 4: CIDFontType2 with Adobe-Identity CIDSystemInfo, `CIDToGIDMap /Identity`, default width 500, and a `/W` array built by `write_widths` from the same repertoire tables the layout stage uses.
-- Object 7: the ToUnicode CMap stream built by `write_tounicode` in a 256 KiB buffer: a FEFF BOM, codespace `<0000> <FFFF>`, and `beginbfchar` groups of at most 100 entries, each mapping a glyph ID to its Unicode value.
+- The ToUnicode CMap stream from `write_tounicode`: codespace `<0000> <FFFF>` and `beginbfchar` groups of at most 100 entries, each mapping a glyph ID to its Unicode value. The body is counted, then written with a direct `/Length`. It is not kept in a heap buffer and it is not Flate.
 - Object 3: Type0 font with `Identity-H` encoding pointing at objects 4 and 7.
 
 ### Page content
