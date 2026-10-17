@@ -23,4 +23,14 @@ The [CI workflow](../.github/workflows/ci.yml) runs once for the prepared PR hea
 
 Historical measurements remain attached to revision [`7c62fe4`](https://github.com/artemklen/ki_xml_pdf/commit/7c62fe4af72b097885d76a7f9f897492f5c4c2d5) in [the report contract](report-v1.md) and [core contract](contract.md). Current acceptance uses current CI metrics; earlier numbers are not substituted for them.
 
-Rollback is a revert of the common merge commit. No release tag or registry action is part of this acceptance.
+Rollback is a revert of the common merge commit. No release tag or registry action is part of this 0.3.0 acceptance.
+
+## Release procedure
+
+A tag and a GitHub Release are not created by merging to `main`. Place a tag only on a commit that is already on `main` and whose full CI workflow is green on that exact commit. The tag name is `v` plus the output of `make -s print-version` (for 0.3.0, `v0.3.0`). Pushing a `v*` tag runs [`.github/workflows/release.yml`](../.github/workflows/release.yml), which:
+
+1. Fails the job when the tag is not exactly `v$(make -s print-version)`. The only exception is the fork proof tag `v0.0.0-test`, which does not claim to be the header version.
+2. Runs `make dist`, writes `SHA256SUMS` and `SOURCE_COMMIT`, and checks `git get-tar-commit-id` against that commit.
+3. Creates a GitHub Release containing the archive, `SHA256SUMS`, `SOURCE_COMMIT`, and the matching `CHANGELOG.md` section. `v0.0.0-test` creates a draft. A tag that matches the header version creates the release.
+
+`contents: write` is granted only in that workflow. Package registries (vcpkg, Conan, Homebrew, Debian, and others) stay out of scope. Pushing the tag is a separate maintainer action; this checklist does not push one.

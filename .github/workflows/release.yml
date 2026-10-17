@@ -1,0 +1,106 @@
+name: release
+
+# Tag push only. contents: write exists so this workflow can create a GitHub
+# Release. The CI workflow keeps contents: read.
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: tag matches the header version
+        id: version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          ver=$(make -s print-version)
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+          if [ "$tag" = "v0.0.0-test" ]; then
+            echo "proof=1" >> "$GITHUB_OUTPUT"
+            echo "fork proof tag v0.0.0-test; header version is ${ver}; equality is not required"
+          elif [ "$tag" != "v${ver}" ]; then
+            echo "tag ${tag} does not match make -s print-version (v${ver})" >&2
+            exit 1
+          else
+            echo "proof=0" >> "$GITHUB_OUTPUT"
+            echo "tag ${tag} matches header version"
+          fi
+
+      - name: source archive
+        run: |
+          set -euo pipefail
+          make dist
+          archive=$(make -s print-dist-name)
+          sha256sum "$archive" > SHA256SUMS
+          git rev-parse HEAD > SOURCE_COMMIT
+          # git get-tar-commit-id exits after the pax header, so gzip gets
+          # SIGPIPE. pipefail would fail the job on that signal.
+          set +o pipefail
+          gzip -dc "$archive" | git get-tar-commit-id > tar-commit-id
+          tar_rc=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$tar_rc" -eq 0
+          cmp tar-commit-id SOURCE_COMMIT
+          echo "archive=${archive}" >> "$GITHUB_ENV"
+
+      - name: changelog section
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import pathlib
+          ver = os.environ["KI_VERSION"]
+          proof = os.environ["KI_PROOF"] == "1"
+          lines = pathlib.Path("CHANGELOG.md").read_text().splitlines()
+          start = None
+          for i, line in enumerate(lines):
+              if line.startswith(f"## {ver}"):
+                  start = i
+                  break
+          body = []
+          if start is not None:
+              for line in lines[start + 1:]:
+                  if line.startswith("## "):
+                      break
+                  body.append(line)
+          notes = []
+          if proof:
+              notes.append("Draft created by the fork proof tag `v0.0.0-test`.")
+              notes.append(f"The library header version is {ver}. This tag is not a release of that version.")
+              notes.append("")
+          if body:
+              notes.append(f"## {ver}")
+              notes.append("")
+              notes.extend(body)
+          else:
+              notes.append(f"CHANGELOG.md has no section for {ver}.")
+          pathlib.Path("RELEASE_NOTES.md").write_text("\n".join(notes).strip() + "\n")
+          PY
+        env:
+          KI_VERSION: ${{ steps.version.outputs.version }}
+          KI_PROOF: ${{ steps.version.outputs.proof }}
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          args=()
+          title="ki_xml_pdf ${{ steps.version.outputs.version }}"
+          if [ "${{ steps.version.outputs.proof }}" = "1" ]; then
+            args+=(--draft)
+            title="ki_xml_pdf fork proof v0.0.0-test"
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            "${args[@]}" \
+            --title "$title" \
+            --notes-file RELEASE_NOTES.md \
+            "$archive" SHA256SUMS SOURCE_COMMIT
