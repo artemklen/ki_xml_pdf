@@ -657,6 +657,7 @@ static int test_pdf_appends_and_releases(void) {
     CHECK(page1 != NULL && page2 != NULL);
     memcpy(page1, "ONLY_ON_PAGE_ONE", 17);
     memcpy(page2, "ONLY_ON_PAGE_TWO", 17);
+    int allocs = pdf_page_content_allocs();
     CHECK(pdf_add_page(&w, page1, 16) == 0);
     CHECK(pdf_live_page_bytes(&w) == 0);
     memset(page1, 0xA5, 32);
@@ -668,6 +669,7 @@ static int test_pdf_appends_and_releases(void) {
     free(page2);
     page2 = NULL;
     CHECK(pdf_page_count(&w) == 2);
+    CHECK(pdf_page_content_allocs() == allocs + 1);
     CHECK(pdf_end(&w) == 0);
     pdf_free(&w);
     CHECK(pdf_live_page_bytes(&w) == 0);

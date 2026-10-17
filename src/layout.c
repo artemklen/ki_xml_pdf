@@ -58,23 +58,23 @@ static int utf8_next(const char *s, size_t n, size_t *i, unsigned *cp, size_t *c
     return 1;
 }
 
+/* Lines stay in page[] until the page is full: one content stream is deflated
+   from them in order, and the first-line shift is known only while that walk
+   runs. The array is fixed, not allocated per page. */
 static int flush_page(Layout *lay) {
     if (lay->nlines == 0) {
         return 0;
     }
-    size_t cap = (size_t)lay->nlines * (LAYOUT_LINE + 1);
-    char *buf = malloc(cap);
-    if (buf == NULL) {
+    if (pdf_page_begin(lay->pdf) != 0) {
         return -1;
     }
-    size_t o = 0;
     for (int i = 0; i < lay->nlines; i++) {
-        memcpy(buf + o, lay->page[i], lay->plen[i]);
-        o += lay->plen[i];
-        buf[o++] = '\n';
+        if (pdf_page_line(lay->pdf, lay->page[i], lay->plen[i]) != 0) {
+            lay->nlines = 0;
+            return -1;
+        }
     }
-    int rc = pdf_add_page(lay->pdf, buf, o);
-    free(buf);
+    int rc = pdf_page_end(lay->pdf);
     lay->nlines = 0;
     return rc;
 }

@@ -90,7 +90,10 @@ static int flate_ready(PdfWriter *w) {
         return rc == Z_OK ? 0 : flate_fail(w, rc);
     }
     if (w->zbuf == NULL) {
-        w->zbuf = malloc(FLATE_CHUNK);
+        /* glibc's fwrite walks a full stdio block past the bytes it was
+           asked to copy. deflate only fills FLATE_CHUNK; the spare bytes
+           stay inside this allocation instead of an address-sanitizer guard. */
+        w->zbuf = malloc((size_t)FLATE_CHUNK + 16384);
     }
     z_stream *zs = calloc(1, sizeof *zs);
     if (w->zbuf == NULL || zs == NULL) {
@@ -128,6 +131,9 @@ static int flate_emit(PdfWriter *w, const unsigned char *data, size_t len, unsig
             return flate_fail(w, rc);
         }
         size_t have = FLATE_CHUNK - zs->avail_out;
+        if (have > FLATE_CHUNK) {
+            return flate_fail(w, Z_STREAM_ERROR);
+        }
         if (have > 0 && fwrite(w->zbuf, 1, have, w->fp) != have) {
             return -1;
         }
@@ -171,6 +177,9 @@ static int flate_emit_fp(PdfWriter *w, FILE *fp, size_t len, unsigned long *out_
             return flate_fail(w, rc);
         }
         size_t have = FLATE_CHUNK - zs->avail_out;
+        if (have > FLATE_CHUNK) {
+            return flate_fail(w, Z_STREAM_ERROR);
+        }
         if (have > 0 && fwrite(w->zbuf, 1, have, w->fp) != have) {
             return -1;
         }
@@ -640,6 +649,9 @@ void pdf_free(PdfWriter *w) {
     }
     free(w->zbuf);
     w->zbuf = NULL;
+    free(w->page_buf);
+    w->page_buf = NULL;
+    w->page_cap = 0;
     if (w->fp != NULL && w->fp != w->raw) {
         fclose(w->fp);
         w->fp = NULL;
@@ -832,7 +844,30 @@ void pdf_debug_fail_at_page(int n) {
     (void)n;
 }
 
-int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
+static int page_content_allocs;
+
+int pdf_page_content_allocs(void) {
+    return __atomic_load_n(&page_content_allocs, __ATOMIC_RELAXED);
+}
+
+/* Worst case per line: four hex digits per byte in both ActualText and the
+   glyph string, plus operators and a line move. One buffer per conversion. */
+static int ensure_page_buf(PdfWriter *w) {
+    if (w->page_buf != NULL) {
+        return 0;
+    }
+    size_t cap = 256 + (size_t)GEOM_MAX_LINES * (8 * PDF_LINE_BYTES + 128);
+    char *buf = malloc(cap);
+    if (buf == NULL) {
+        return -1;
+    }
+    w->page_buf = buf;
+    w->page_cap = cap;
+    __atomic_fetch_add(&page_content_allocs, 1, __ATOMIC_RELAXED);
+    return 0;
+}
+
+int pdf_page_begin(PdfWriter *w) {
     w->debug_pages++;
     if (w->debug_fail_page > 0 && w->debug_pages >= w->debug_fail_page) {
         w->fail_kind = PDF_FAIL_IO;
@@ -843,30 +878,130 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
         w->fail_kind = PDF_FAIL_LIMIT;
         return -1;
     }
-    /* Worst case per line: four hex digits per byte in both ActualText and
-       the glyph string, plus operators and a line move. */
-    size_t cap = 256 + (size_t)GEOM_MAX_LINES * (8 * PDF_LINE_BYTES + 128);
-    char *stream = malloc(cap);
-    if (stream == NULL) {
+    if (ensure_page_buf(w) != 0) {
         return -1;
     }
     const PageFrame *f = &w->frame;
-    char font_pt[32], lead[32], left[32], base[32];
-    if (geom_fmt(font_pt, sizeof font_pt, f->g.font) < 0 || geom_fmt(lead, sizeof lead, f->g.leading) < 0 ||
-        geom_fmt(base, sizeof base, f->baseline) < 0) {
-        free(stream);
+    char font_pt[32], lead[32];
+    if (geom_fmt(font_pt, sizeof font_pt, f->g.font) < 0 || geom_fmt(lead, sizeof lead, f->g.leading) < 0) {
         return -1;
     }
-    int npre = snprintf(stream, cap, "BT\n/F1 %s Tf\n%s TL\n", font_pt, lead);
-    if (npre < 0 || (size_t)npre >= cap) {
-        free(stream);
+    int npre = snprintf(w->page_buf, w->page_cap, "BT\n/F1 %s Tf\n%s TL\n", font_pt, lead);
+    if (npre < 0 || (size_t)npre >= w->page_cap) {
         return -1;
     }
-    size_t o = (size_t)npre;
+    w->page_o = (size_t)npre;
+    w->page_lines = 0;
+    w->page_any = 0;
+    w->page_prev_shift = 0;
+    return 0;
+}
+
+int pdf_page_line(PdfWriter *w, const char *text, size_t len) {
+    if (w->page_buf == NULL) {
+        return -1;
+    }
+    const PageFrame *f = &w->frame;
+    InkRun run;
+    if (line_run(&w->font, text, len, &run) != 0 || !geom_fits(f, &run)) {
+        return -1;
+    }
+    if (w->page_lines >= f->max_lines || w->page_lines >= GEOM_MAX_LINES) {
+        return -1;
+    }
+    char left[32], base[32], lead[32];
+    long long shift = geom_shift(f, &run);
+    int moved;
+    size_t o = w->page_o;
+    size_t cap = w->page_cap;
+    if (!w->page_any) {
+        if (geom_fmt(base, sizeof base, f->baseline) < 0) {
+            return -1;
+        }
+        moved = geom_fmt(left, sizeof left, f->g.left + shift) < 0
+                    ? -1
+                    : snprintf(w->page_buf + o, cap - o, "%s %s Td\n", left, base);
+    } else if (shift == w->page_prev_shift) {
+        moved = snprintf(w->page_buf + o, cap - o, "T*\n");
+    } else {
+        if (geom_fmt(lead, sizeof lead, f->g.leading) < 0) {
+            return -1;
+        }
+        moved = geom_fmt(left, sizeof left, shift - w->page_prev_shift) < 0
+                    ? -1
+                    : snprintf(w->page_buf + o, cap - o, "%s -%s Td\n", left, lead);
+    }
+    if (moved < 0 || (size_t)moved >= cap - o) {
+        return -1;
+    }
+    o += (size_t)moved;
+    if (append_actual_text(w->page_buf, cap, &o, text, len) != 0 ||
+        append_hex_line(w->page_buf, cap, &o, w, shift, text, len) != 0) {
+        return -1;
+    }
+    if (o + 4 >= cap) {
+        return -1;
+    }
+    memcpy(w->page_buf + o, "EMC\n", 4);
+    o += 4;
+    w->page_o = o;
+    w->page_prev_shift = shift;
+    w->page_any = 1;
+    w->page_lines++;
+    return 0;
+}
+
+int pdf_page_end(PdfWriter *w) {
+    if (w->page_buf == NULL) {
+        return -1;
+    }
+    size_t o = w->page_o;
+    size_t cap = w->page_cap;
+    if (!w->page_any) {
+        if (o + 6 >= cap) {
+            return -1;
+        }
+        memcpy(w->page_buf + o, "<> Tj\n", 6);
+        o += 6;
+    }
+    if (o + 3 >= cap) {
+        return -1;
+    }
+    memcpy(w->page_buf + o, "ET\n", 3);
+    o += 3;
+    w->live_page_bytes = o;
+
+    const PageFrame *f = &w->frame;
+    int cid = OBJ_FIRST + PAGE_OBJS * w->npages;
+    int pid = cid + 2;
+    char media_w[32], media_h[32];
+    if (geom_fmt(media_w, sizeof media_w, f->g.width) < 0 || geom_fmt(media_h, sizeof media_h, f->g.height) < 0) {
+        w->live_page_bytes = 0;
+        return -1;
+    }
+    if (write_flate_obj(w, cid, w->page_buf, o, "") != 0 || begin_obj(w, pid) != 0) {
+        w->live_page_bytes = 0;
+        return -1;
+    }
+    if (fprintf(w->fp,
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s]\n"
+                "/Contents %d 0 R\n"
+                "/Resources << /Font << /F1 %d 0 R >> >> >>\nendobj\n",
+                media_w, media_h, cid, OBJ_TYPE0) < 0) {
+        w->live_page_bytes = 0;
+        return -1;
+    }
+    w->npages++;
+    w->nobj = pid;
+    w->live_page_bytes = 0;
+    return 0;
+}
+
+int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
+    if (pdf_page_begin(w) != 0) {
+        return -1;
+    }
     size_t i = 0;
-    int lines = 0;
-    int any = 0;
-    long long prev_shift = 0;
     while (i < len) {
         size_t start = i;
         while (i < len && text[i] != '\n') {
@@ -876,91 +1011,11 @@ int pdf_add_page(PdfWriter *w, const char *text, size_t len) {
         if (i < len && text[i] == '\n') {
             i++;
         }
-        InkRun run;
-        if (line_run(&w->font, text + start, n, &run) != 0 || !geom_fits(f, &run)) {
-            free(stream);
+        if (pdf_page_line(w, text + start, n) != 0) {
             return -1;
         }
-        if (lines >= f->max_lines || lines >= GEOM_MAX_LINES) {
-            free(stream);
-            return -1;
-        }
-        long long shift = geom_shift(f, &run);
-        int moved;
-        if (!any) {
-            moved = geom_fmt(left, sizeof left, f->g.left + shift) < 0
-                        ? -1
-                        : snprintf(stream + o, cap - o, "%s %s Td\n", left, base);
-        } else if (shift == prev_shift) {
-            moved = snprintf(stream + o, cap - o, "T*\n");
-        } else {
-            moved = geom_fmt(left, sizeof left, shift - prev_shift) < 0
-                        ? -1
-                        : snprintf(stream + o, cap - o, "%s -%s Td\n", left, lead);
-        }
-        if (moved < 0 || (size_t)moved >= cap - o) {
-            free(stream);
-            return -1;
-        }
-        o += (size_t)moved;
-        prev_shift = shift;
-        any = 1;
-        if (append_actual_text(stream, cap, &o, text + start, n) != 0 ||
-            append_hex_line(stream, cap, &o, w, shift, text + start, n) != 0) {
-            free(stream);
-            return -1;
-        }
-        if (o + 4 >= cap) {
-            free(stream);
-            return -1;
-        }
-        memcpy(stream + o, "EMC\n", 4);
-        o += 4;
-        lines++;
     }
-    if (!any) {
-        if (o + 6 >= cap) {
-            free(stream);
-            return -1;
-        }
-        memcpy(stream + o, "<> Tj\n", 6);
-        o += 6;
-    }
-    if (o + 3 >= cap) {
-        free(stream);
-        return -1;
-    }
-    memcpy(stream + o, "ET\n", 3);
-    o += 3;
-    w->live_page_bytes = o;
-
-    int cid = OBJ_FIRST + PAGE_OBJS * w->npages;
-    int pid = cid + 2;
-    int rc = -1;
-    char media_w[32], media_h[32];
-    if (geom_fmt(media_w, sizeof media_w, f->g.width) < 0 || geom_fmt(media_h, sizeof media_h, f->g.height) < 0) {
-        goto done;
-    }
-    if (write_flate_obj(w, cid, stream, o, "") != 0) {
-        goto done;
-    }
-    if (begin_obj(w, pid) != 0) {
-        goto done;
-    }
-    if (fprintf(w->fp,
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s]\n"
-                "/Contents %d 0 R\n"
-                "/Resources << /Font << /F1 %d 0 R >> >> >>\nendobj\n",
-                media_w, media_h, cid, OBJ_TYPE0) < 0) {
-        goto done;
-    }
-    w->npages++;
-    w->nobj = pid;
-    rc = 0;
-done:
-    free(stream);
-    w->live_page_bytes = 0;
-    return rc;
+    return pdf_page_end(w);
 }
 
 static int stop_pdf(PdfWriter *w) {
