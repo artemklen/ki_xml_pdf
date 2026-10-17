@@ -1,80 +1,105 @@
 # Debugging
+Active contributors: Artem
 
-Almost every failure reports itself with a message string: `KiResult.message` for library callers, stderr lines for the CLI. This page maps those messages to causes and fixes, then covers fonts, partial stream output, leftover temporaries, the log callback and sanitizer runs.
+Start with `KiResult.status`, `cause` and `message`, or the CLI's exit status and stderr. Preserve the exact source revision and synthetic reproducer before changing options.
 
-## Status, cause, message
+## Status is not cause
 
-Every public call fills a `KiResult` (reset first, even for early usage errors). The status matches the CLI exit code; the cause is finer.
-
-| Status | CLI exit | Meaning |
+| Status / CLI exit | Meaning | Causes |
 | --- | --- | --- |
-| 0 | 0 | Success, destination published |
-| 1 (`XML2PDF_ERR_XML`) | 1 | XML, profile or font failure |
-| 2 (`XML2PDF_ERR_USAGE`) | 2 | Invalid options or arguments |
-| 3 (`XML2PDF_ERR_IO`) | 3 | I/O failure |
-| 4 (`XML2PDF_ERR_RESOURCE`) | 4 | Quota or cancellation |
+| 0 | Successful conversion | `KI_CAUSE_NONE` |
+| 1 | XML, profile or font failure | `KI_CAUSE_XML`, `KI_CAUSE_PROFILE`, `KI_CAUSE_FONT` |
+| 2 | Invalid arguments/configuration | `KI_CAUSE_USAGE` |
+| 3 | I/O or non-memory compressor failure | `KI_CAUSE_IO` |
+| 4 | Quota, allocation or cancellation failure | `KI_CAUSE_RESOURCE`, `KI_CAUSE_CANCEL` |
 
-Causes: `KI_CAUSE_NONE`, `XML`, `USAGE`, `IO`, `RESOURCE`, `FONT`, `CANCEL`, `PROFILE` (numbers 0 to 7, defined in `include/ki_xml_pdf.h`). On success the CLI logs `xml2pdf: pages=%d objects=%d offset_bytes=%ld` to stderr; everything else goes there too, never to stdout.
+Cause enum values are NONE=0, XML=1, USAGE=2, IO=3, RESOURCE=4, FONT=5, CANCEL=6, PROFILE=7.
+Do not confuse cause 6 with an exit code.
+Conversion entry points reset a non-NULL result even on early usage failures.
+Progress counters on failure do not mean that a file was published.
 
-## Error messages
+## Consumed positions
 
-Messages are set in `src/convert.c` (`set_result`, `fail_from_pdf`, the `convert_streams` exit paths).
+XML/profile errors, including `ki_doc_fail`, end with `at line L, column C, byte B`.
+Positions describe **consumed input**, not the beginning of the offending token:
 
-| Message | Cause | What happened | Likely fix |
-| --- | --- | --- | --- |
-| `cancelled` | CANCEL (4) | The `cancelled` callback fired; checked in the read path, the event loop, while finishing the PDF, and around `fflush`/`fsync`/`close`/`rename` | Expected on SIGINT/SIGTERM; the destination is untouched |
-| `read error` | IO (3) | `read_bytes` returned a negative value, or `fread` failed | Check the input; a callback must return 0 only at EOF and negative only on error |
-| `xml: ...` | XML (1) | The parser rejected the input; its own text follows the prefix | Fix the XML; compare with the subset rules in `src/xml_parse.c` |
-| `profile: ... at byte N` | PROFILE (1) | A report-v1 or custom mapper rule failed; `src/report.c` names the rule and the input byte offset | Fix the element/attribute, or adjust the mapper rule |
-| `font: U+XXXX` | FONT (1) | A code point is outside the repertoire (U+0009, U+000A, U+000D, U+0020 to U+04FF, U+2010 to U+2027) or missing from the font | Remove or replace the character; see the font section below |
-| `font: cannot load` | FONT (1) | The font file could not be opened or parsed (`fail_kind` 3 in `src/pdf_write.c`) | Check the font path and file; use the bundled `fonts/DejaVuSans.ttf` |
-| `resource limit` | RESOURCE (4) | `max_pages`, `max_output_bytes` or `max_spool_bytes` quota hit, or the 8,000,000 object cap | Raise the quota, or select fewer records |
-| `temp path too long` | IO (3) | Creating the temp file failed with `ENAMETOOLONG` | Shorten the destination path, or pass `--temp-dir` |
-| `cannot create offset file` | IO (3) | The spool temp file could not be created (`errno` was set) | Check `--temp-dir` exists and is writable, or `/tmp` |
-| `pdf write failed` | IO (3) | A write to the output failed | Check disk space and the output stream |
-| `empty document` | XML (1) | Zero pages were produced, typically no text at all | Check that the profile emits text for this input |
-| `pdf publish failed` | IO (3) | `fflush` or `fsync` failed while publishing | Check disk health and space; the destination is preserved |
-| `cannot replace output ...` | IO (3) | The final `rename` over the destination failed | Check permissions on the destination directory |
-| `input and output are the same file` | IO (3) | Both paths resolve to one inode, including hard or symbolic links | Write to a different file |
-| `options size mismatch` | USAGE (2) | `KiOptions.size` differs from `sizeof(KiOptions)` | Call `ki_options_init` on the options and rebuild against the same header |
-| `invalid option` | USAGE (2) | A negative quota/selection value or an unknown profile number | Reject negative values before setting options |
+- Line and column start at 1; columns count Unicode scalars, and a tab is one column.
+- Bytes start at 0 and include the UTF-8 BOM; the leading BOM adds no column.
+- CR, LF and CRLF each count as one line break.
+- References and CDATA count their source spelling, not just the decoded output.
+- An empty element's synthetic END reuses its START position.
+- `KiEvent` exposes only `byte_offset`; line/column remain internal and appear in diagnostics.
 
-Rarer messages from the same file: `missing path`, `read callback is required` (`ki_convert_to_file`), `read and write callbacks are required` (`ki_convert`), `cannot open input ...`, `cannot read input ...` (the path is a directory), `cannot create temporary output for ...` (also `RESOURCE` on `ENOSPC`/`EDQUOT`), `cannot open temporary output ...`, `out of memory`, `cannot open write callback`, `parser init failed`, `layout init failed`, `page write failed`, `page flush failed`, `pdf end failed`, `pdf close failed`.
+Malformed UTF-8 can be reported after a reference's semicolon or a tag's closing `>`, because those constructs perform the validity check after consumption.
+A syntax/reference error detected first takes precedence.
+For example, the header documents `<r>\xC3&amp;</r>` as line 1, column 10, byte 9.
+Use `tests/test_xml_coords.c` for exact position regressions, not a guessed token-start offset.
 
-## Font troubleshooting
+## Common diagnoses
 
-`font_open_default` in `src/font.c` resolves the font in this order when no explicit path is given: the `KI_XML_PDF_FONT` environment variable, then the compiled `XML2PDF_FONT_PATH`, then `fonts/DejaVuSans.ttf`, `../fonts/DejaVuSans.ttf` or `../share/ki_xml_pdf/DejaVuSans.ttf` beside the executable (resolved through `/proc/self/exe`), then `fonts/DejaVuSans.ttf` in the working directory.
+| Message or symptom | Check |
+| --- | --- |
+| `options size mismatch` / `config size mismatch` | Use the matching header and initializer; keep supported size values |
+| `page geometry: ...` | Finite point values, named/custom-size rules, margin sums and room for the loaded font's ink |
+| Invalid document information | UTF-8/control/length rules or explicit Gregorian date/time syntax |
+| `font: U+...` | Body repertoire and nonzero mapped GID; zero advance alone is not missing |
+| `font: cannot load` | Path, 8 MiB cap, table spans, name/metrics and font mutation before embedding |
+| `resource limit` | Page/output/spool quotas, hard object cap and xref ceiling |
+| `layout: line over 1023 bytes` | An indivisible base-plus-mark cluster exceeded bounded line storage |
+| `layout: glyph cluster wider than the line` | Cluster ink/advance cannot fit the validated frame |
+| `pdf compression failed` | zlib failure; not an XML error |
+| `read error` | Callback negative/over-count return or file read failure |
+| `pdf publish failed` / `pdf close failed` | Flush, fsync or close failure before rename |
+| `input and output are the same file` | Same inode, including links |
+| Partial callback/stdout PDF | Inspect failure status; accepted output is not rolled back |
 
-Rules that bite:
+`--temp-dir` controls the **offset spool**, not the temporary PDF beside the destination.
+Changing it will not fix an unwritable destination directory.
 
-- An explicit font (`--font`, `KiOptions.font_path`, or the environment variable) is never replaced if it fails. You get `font: cannot load`, not a silent fallback. `tests/prefix_switch.sh` and `tests/build_integration.sh` both assert this.
-- The compiled path comes from `PREFIX` at build time. Build and install with the same `PREFIX`; the `src/.font_prefix` stamp forces `src/font.o` to rebuild when `PREFIX` changes. A stale stamp is what `tests/prefix_switch.sh` exists to catch.
-- Distinguish the two font errors: `font: cannot load` means the file is missing or malformed (the reader needs `cmap` format 4 and `hmtx`; `tests/corpus/truncated-hmtx.ttf` is a truncated-hmtx sample that must be rejected). `font: U+XXXX` means the font loaded but the code point is outside the accepted repertoire.
-- The bundled font is `fonts/DejaVuSans.ttf` with its notice in `fonts/DejaVuSans.copyright`. The reader keeps glyph tables for code points below U+0500 plus 24 punctuation slots at U+2010 (`FONT_BMP_MAX`, `FONT_PUNCT_BASE`, `FONT_PUNCT_COUNT` in `src/font.h`).
+## Font lifecycle
 
-## Partial stdout PDFs
+An explicit `KiOptions.font_path` or nonempty `KI_XML_PDF_FONT` is authoritative: failure does not trigger fallback.
+Otherwise `src/font.c` tries the compiled install path, executable-relative candidates and the source-tree working-directory font.
+`DESTDIR` stages an installation without changing its runtime prefix.
 
-Output written to stdout or a `write_bytes` callback cannot be rolled back. A late XML or profile error, I/O error, quota or cancellation leaves the bytes already accepted, so the output is an incomplete PDF: it starts with `%PDF-` but lacks the trailing `%%EOF`. This is contract, not a bug; the help text says so and `tests/cli_pipeline.py` asserts the shape. Check the exit status before using streamed output, and when reporting a problem keep a partial PDF separate from successful results, with the status attached.
+`FontFace` retains an open font file and fixed metrics, not the entire TTF.
+Immediately before embedding, size and FNV-1a are checked again on that open file.
+A pathname replacement does not reopen the new path; in-place mutation can fail the check.
+Keep fonts stable throughout a call.
 
-## Leftover temp files after SIGKILL
+## Output and cancellation
 
-Handled failures unlink the temporary PDF beside the destination and the offset spool in `--temp-dir` or `/tmp`. `SIGKILL` cannot run that cleanup, so after a kill you may find `<destination>.XXXXXX` next to the destination and a spool file in the temp directory. Delete them by hand. The destination itself is still the previous file, because publication only happens on the `rename`. See [Atomic output](../features/atomic-output.md).
+File routes publish only after full input validation, writer completion, flush, fsync and close, followed by rename.
+Handled failure removes temporaries and preserves the previous destination.
+Callback output may already contain font bytes before the first input read.
+The first failed write is latched: the library never retries the caller's callback afterward.
+`KiResult.output_bytes` counts accepted callback bytes, including a positive short write.
 
-## Using the log callback
+The library does not install signal handlers.
+The CLI translates SIGINT/SIGTERM to cancellation and temporarily ignores SIGPIPE for stdout output.
+SIGKILL cannot run cleanup; inspect abandoned temporaries rather than assuming cleanup ran.
+A successful rename is not rolled back by later cancellation.
 
-The library prints nothing unless `KiOptions.log` is set. `say()` in `src/convert.c` forwards every stage message to that callback, which is how the CLI produces its stderr lines (`cli_log` in `src/main.c`). Attach your own callback to capture the same messages in an application log, or to observe which stage produced a failure. `KiResult.message` holds the same last message after the call returns.
+## Instrumentation
 
-For fault injection there are static debug hooks: `xml2pdf_debug_fail_at_page`, `xml2pdf_debug_fail_before_publish` and `xml2pdf_debug_fail_after_bytes` (declared in `src/convert.h`) and `pdf_debug_fail_at_page` (in `src/pdf_write.h`). They are test hooks, reset when a conversion returns, and not exported by the shared library.
+Set `KiOptions.log` to capture diagnostics; the library is otherwise silent.
+Not every early validation return calls the logger, so always inspect the result too.
+Run `make test-san` for fatal ASan/UBSan diagnostics.
+For stepping, use a clean debug build with `-O0 -g` and invoke `gdb --args ./xml2pdf input.xml output.pdf`.
 
-## Sanitizer and debugger runs
+Internal failure hooks declared in `src/convert.h` and `src/pdf_write.h` are not public shared-library API.
+The conversion hooks are process globals; public `ki_*` calls do not automatically clear them.
+Tests must explicitly reset hooks and must not arm them during concurrent conversions.
+Do not infer current memory ownership from the historical `de8ba0e` heap snapshot.
 
-- `make test-san` runs the unit binary under ASan and UBSan with `halt_on_error=1` and leak detection, stopping at the first error with a stack trace. Use it for any memory-touching change.
-- For stepping, build unoptimized with symbols: `make CFLAGS="-std=c99 -Wall -Wextra -Wpedantic -O0 -g -fPIC -D_POSIX_C_SOURCE=200809L"`, then `gdb --args ./xml2pdf --profile report-v1 input.xml out.pdf` or `gdb ./test_stream`.
-- In-process RSS gates in `tests/test_stream.c` disable themselves under ASan, so a sanitizer run never doubles as a memory measurement; keep the two separate as `CONTRIBUTING.md` requires.
+## Key source files
 
-## Related pages
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h` | Public status/cause and position contract |
+| `src/convert.c` | Error precedence, callbacks and publication |
+| `src/xml_parse.c`, `src/xml_parse.h` | Consumed-coordinate formatting and parser state |
+| `src/font.c`, `src/pdf_write.c` | Font, quota and compression failures |
+| `src/main.c` | CLI diagnostics and signals |
 
-- [Testing](testing.md) for the suites that reproduce failures.
-- [Conversion pipeline](../systems/conversion-pipeline.md) for where each message is produced.
-- [Resource limits](../features/resource-limits.md) and [Pitfalls](../background/pitfalls.md) for quota and known-trap behavior.
-- [Configuration](../reference/configuration.md) for every option, flag and constant.
+Related: [C API](../api/c-api.md), [Testing](testing.md), [Pitfalls](../background/pitfalls.md).

@@ -1,79 +1,54 @@
 # Architecture
 
-ki_xml_pdf is a single streaming pipeline. Bytes flow from an input source through a pull parser, a mapper, a layout engine and a PDF writer into an output sink. No stage keeps a list that grows with the document.
-
-## Components
-
-| Component | Files | Role |
-| --- | --- | --- |
-| Public API | `include/ki_xml_pdf.h` | `KiOptions`, `KiResult`, `KiEvent`, `ki_convert*`, `ki_doc_*` |
-| Conversion driver | `src/convert.c`, `src/convert.h` | Validates options, wires the stages, maps errors to causes, publishes output |
-| XML parser | `src/xml_parse.c`, `src/xml_parse.h` | Bounded pull parser for a documented XML subset |
-| Mappers | `src/convert.c` (`map_event`), `src/report.c` | `records-v1` and `report-v1`; a user `map` callback replaces both |
-| Layout | `src/layout.c`, `src/layout.h` | UTF-8 decoding, glyph-width wrapping, page assembly |
-| Font | `src/font.c`, `src/font.h` | Minimal TrueType reader (`cmap`, `hmtx`, metrics) for a fixed repertoire |
-| PDF writer | `src/pdf_write.c`, `src/pdf_write.h` | Append-only PDF, embedded CID font, offsets spooled to a temp file |
-| CLI | `src/main.c` | `xml2pdf` argument parsing, signals, file/stdin/stdout selection |
-| Legacy page sink | removed | Fixed byte-grid page buffer. No longer compiled; see [Page sink](../systems/page-sink.md) |
-
-## Data flow
-
-```mermaid
-graph LR
-    In[File / read_bytes callback] -->|4096-byte reads| Parser[XmlParser]
-    Parser -->|XmlEvent| Driver[convert_streams]
-    Driver -->|KiEvent| Mapper{Mapper}
-    Mapper -->|records-v1| MapEvent[map_event]
-    Mapper -->|report-v1| Report[report_map]
-    Mapper -->|custom| User[opt.map callback]
-    MapEvent -->|text, breaks| Layout
-    Report -->|ki_doc_text / ki_doc_break| Layout
-    User -->|ki_doc_text / ki_doc_break| Layout
-    Layout -->|one page of lines| PDF[PdfWriter]
-    PDF -->|bytes| Out[Temp file or write_bytes]
-    PDF -->|object offsets| Spool[(Offset spool file)]
-```
-
-The driver is `convert_streams` in `src/convert.c`. All three public entry points end up there:
+One conversion pulls bounded XML events, maps them to text, lays out a fixed-size page, then appends PDF objects. File and callback entry points share the driver in `src/convert.c`; the CLI in `src/main.c` supplies paths, callbacks, cancellation and diagnostics.
 
 ```mermaid
 graph TD
-    A[ki_convert_file] -->|fopen input, mkstemp output| F[convert_file_stream]
-    B[ki_convert_to_file] -->|read_bytes, mkstemp output| F
-    C[ki_convert] -->|fopencookie over write_bytes| S[convert_streams]
-    F --> S
-    S -->|success + file output| R[fflush, fsync, close, rename]
-    S -->|success + callback output| D[done, bytes already delivered]
+    CLI["CLI: src/main.c"] --> API["C API: src/convert.c"]
+    Caller["Application callbacks"] --> API
+    API --> Setup["Geometry and Info validation"]
+    API --> Parser["XML parser: 4096-byte window"]
+    Parser --> Mapper["records-v1 / report-v1 / custom mapper"]
+    Mapper --> Layout["Layout: word and page buffers"]
+    Setup --> Layout
+    Layout --> Writer["Append-only PDF writer"]
+    Font["Open TTF and fixed metrics"] --> Writer
+    Writer --> Spool["Disk offset spool"]
+    Writer --> Sink["Counted output sink"]
+    Sink --> Temp["Temporary PDF beside destination"]
+    Temp --> Rename["Publish by rename"]
+    Sink --> Callback["Callback / stdout, may remain partial"]
 ```
 
-## Memory bounds
+## Components
 
-Each stage has a fixed footprint:
+| Component | Main source | Responsibility |
+| --- | --- | --- |
+| Conversion driver | `src/convert.c` | Validate options/config, drive events, map failures, manage publication and callback ownership |
+| XML parser | `src/xml_parse.c`, `src/xml_parse.h` | Pull events, validate every consumed UTF-8/XML scalar, track consumed positions |
+| Report mapper | `src/report.c`, `src/report.h` | Grammar, selection counters and field whitespace |
+| Layout | `src/layout.c`, `src/layout.h` | Word wrapping, zero-advance mark grouping, fixed 50-line page |
+| Geometry | `src/geometry.c`, `src/geometry.h` | Shared thousandth-point geometry and glyph-ink fitting |
+| Document information | `src/info.c`, `src/info.h` | Validate/copy metadata and emit safe PDF strings |
+| Font reader | `src/font.c`, `src/font.h` | Bounded table reads, fixed metrics, name extraction, open-file consistency checks |
+| PDF writer | `src/pdf_write.c`, `src/pdf_write.h` | Font/page objects, Flate streams, disk-spooled offsets, xref and quotas |
 
-- **Parser**: `XmlParser` holds a 4096-byte buffer and a 64 × 64-byte stack of open element names (`src/xml_parse.h`).
-- **Mapper**: `MapState` is a 64-entry `xml:space` stack; `Report` is a handful of counters and a 256-byte pending name (`src/report.h`).
-- **Layout**: `Layout` holds at most 50 lines of up to 1024 bytes (`src/layout.h`).
-- **Font**: `FontFace` holds glyph IDs and advances for code points below U+0500 plus 24 punctuation slots (`src/font.h`), alongside the font file bytes.
-- **PDF writer**: pages are written and dropped; each object offset is written as 8 bytes into a spool file (`note_offset` in `src/pdf_write.c`). The object count is capped at 8,000,000.
+## Memory and disk
 
-The resource gate in CI requires converter RSS of at most 4096 KiB (4 MiB). The historical measurement on revision `7c62fe4` was 2372 KiB for a 1 GiB synthetic report (see [By the numbers](../by-the-numbers.md)).
+`XmlParser` retains a 4096-byte input window and a 64-element nesting stack (`src/xml_parse.h`). `Layout` retains a 1024-byte line buffer, including its pending word, and 50 × 1024 bytes of page text (`src/layout.h`).
 
-## Output modes
+The writer lazily allocates **one reusable page-content buffer** for a conversion, rather than allocating and joining a page at every flush. Layout calls `pdf_page_begin`, `pdf_page_line` and `pdf_page_end` directly (`src/layout.c`, `src/pdf_write.c`). A single zlib state is reset between streams, with a fixed output window and font-input scratch space. The font reader keeps an open file and fixed repertoire tables, not the complete TTF (`src/font.h`, `src/pdf_write.c`).
 
-| Entry point | Input | Output | On failure |
-| --- | --- | --- | --- |
-| `ki_convert_file` | path | temp file + `rename` | destination preserved, temp removed |
-| `ki_convert_to_file` | `read_bytes` | temp file + `rename` | destination preserved, temp removed |
-| `ki_convert` | `read_bytes` | `write_bytes` via `fopencookie` | already accepted bytes stay |
+ToUnicode is counted once and written on a second deterministic pass. It uses a fixed 8 KiB stack bitmap, with no heap-backed CMap or heap-backed seen-GID bitmap, and retains the first-code-point-per-GID rule (`src/pdf_write.c`). Offset metadata grows on disk, subject to the spool quota. These changes supersede the allocations profiled on `de8ba0e`; that historical profile is not a current-tree measurement (`docs/evidence/osr-82-heap-profile/README.md`).
 
-The CLI picks one of these based on whether the input or output argument is `-` (`src/main.c`). See [Atomic output](../features/atomic-output.md) and [Streaming I/O](../features/streaming-io.md).
+## Output and failure boundaries
 
-## Language breakdown
+All output passes a counted sink. Page and font streams use `/FlateDecode` and an indirect length object, so output never needs to seek. The hard total-byte ceiling is 9,999,999,999, independently of user quotas (`src/pdf_write.c`, `src/pdf_write.h`).
 
-The repository is about 10,900 lines across C, shell, Python, Markdown and CMake. C library code in `src/` is roughly 4,500 lines; the largest test file, `tests/test_stream.c`, is 3,259 lines on its own. Details are on [By the numbers](../by-the-numbers.md).
+A file output is flushed, synced, closed and renamed only after full input validation. A callback output cannot be rolled back. Its first failed write is latched, prevents further callback calls and becomes `KI_CAUSE_IO`; `KiResult.output_bytes` counts accepted callback bytes (`src/convert.c`).
 
-## Related pages
+## Build boundaries
 
-- [Conversion pipeline](../systems/conversion-pipeline.md) for the driver loop and error mapping.
-- [XML parser](../systems/xml-parser.md), [Layout and fonts](../systems/layout-and-fonts.md), [PDF writer](../systems/pdf-writer.md) for each stage.
-- [Design decisions](../background/design-decisions.md) for why the project uses its own pipeline.
+The eight core C translation units are shared by Make and CMake. The CLI is a ninth C source file; the public header supports C++ consumers. C99 implementation code, C/C++ tests, Python oracles and shell integration scripts are counted in [By the numbers](../by-the-numbers.md). There is one library, not a workspace of independently versioned packages (`Makefile`, `CMakeLists.txt`).
+
+The removed `page_sink` experiment is not part of the build. Font addons, UTF-16 and tables remain design/research topics, not extra runtime components. See [Design decisions](../background/design-decisions.md).

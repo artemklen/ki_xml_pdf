@@ -1,119 +1,97 @@
 # CLI
+Active contributors: Artem
 
-Active contributors: Artem Klen
+`xml2pdf` is a thin command-line adapter over the library's configured conversion calls. `src/main.c` handles arguments, stdin/stdout, diagnostics and signals; the library owns parsing, mapping, layout and PDF output.
 
-`xml2pdf` is the command-line front end of the library: a thin argument parser in `src/main.c` over the three public conversion entry points. It supports the same two profiles, quotas and atomic publication as the library, plus stdin/stdout pipelines, `-` placeholders and signal-driven cancellation.
+## Invocation
 
-## Purpose
-
-Give operators and scripts direct access to the converter: convert files, pipe XML through stdin, write PDF bytes to stdout, select records, cap resources, and get distinguishable exit codes. The CLI adds no conversion logic of its own; every behavior comes from `KiOptions` and the functions declared in `include/ki_xml_pdf.h`.
-
-## Key abstractions
-
-| Abstraction | Path | Role |
-| --- | --- | --- |
-| `main` | `src/main.c` | Argument loop, mode selection, exit codes |
-| `usage` | `src/main.c` | Help text; prints profile names, bounds and exit codes |
-| `take_long` | `src/main.c` | Decimal option parsing; rejects negatives, overflow and trailing characters |
-| `cli_read` / `cli_write` | `src/main.c` | `KiOptions.read_bytes` / `write_bytes` adapters over stdio |
-| `cli_cancelled` | `src/main.c` | `KiOptions.cancelled` polling a `sig_atomic_t` flag set by `on_stop` |
-| `cli_log` | `src/main.c` | `KiOptions.log` adapter; every library message goes to stderr |
-
-## Command line
-
-```
+```text
 xml2pdf [options] [--] input.xml output.pdf
 xml2pdf -h | --help | --version
 ```
 
-Options are parsed only until the first argument that does not begin with `-`, or that is exactly `-` (the stream placeholder). `--` ends option parsing so paths may begin with a hyphen. Options after the first path argument are treated as paths, and `-h`, `--help` and `--version` are recognized only while options are being parsed. After options, exactly two positional arguments are required: input and output.
+Options end at the first positional argument, `-`, or `--`; exactly two paths follow. Put options before paths. `--` allows filenames beginning with a hyphen. Help/version print to stdout and return 0; current version output is `xml2pdf 0.3.0 records-v1`.
+
+### Profile and resource options
 
 | Option | Meaning |
 | --- | --- |
-| `--profile NAME` | `records-v1` (default) or `report-v1`; any other name is a usage error |
-| `--record-offset N` | Skip the first N `report-v1` records |
-| `--record-limit N` | Select at most N records after the offset (0: all) |
-| `--font PATH` | Use only this font, with no fallback |
-| `--max-pages N` | Page quota (0: no separate quota) |
-| `--max-output-bytes N` | PDF byte quota |
-| `--max-spool-bytes N` | Offset-spool quota (0: 64 MiB) |
-| `--temp-dir DIR` | Directory for the offset spool file |
+| `--profile records-v1|report-v1` | Diagnostic default or report grammar |
+| `--record-offset N` | Skip the first N report records |
+| `--record-limit N` | Select at most N after the offset; 0 means all remaining |
+| `--font PATH` | Explicit font, no silent fallback if loading fails |
+| `--max-pages N` | Separate page quota; 0 disables it |
+| `--max-output-bytes N` | PDF quota; 0 retains only the 9,999,999,999-byte hard ceiling |
+| `--max-spool-bytes N` | Offset-file quota; 0 means 64 MiB |
+| `--temp-dir DIR` | Offset spool directory, not the temporary PDF location |
 
-`take_long` accepts decimal numbers only: an empty string, trailing characters, a negative value, or a value that does not fit in `long` (for example a 100-digit number) is a usage error with exit 2. `--max-pages` must also fit in an `int`, so 2147483648 is rejected. `--record-offset` and `--record-limit` are meaningful only for `report-v1`; `records-v1` ignores them.
+These numeric options use `strtol` validation for a nonnegative decimal `long`; page count must also fit `int`. Invalid/trailing/overflowing values return 2. Selection is meaningful only to [report-v1](report-v1.md).
 
-## How it works
+### Geometry and document information
 
-1. Parse options as above. Any problem prints the usage text to stderr and returns exit 2, with nothing on stdout.
-2. Fill a `KiOptions` through `ki_options_init`, then set `font_path`, `record_offset`, `record_limit`, `profile`, `temp_dir`, `max_pages`, `max_output_bytes`, `max_spool_bytes`, the `cancelled` and `log` callbacks.
-3. Choose the entry point from the `-` placeholders:
+| Option | Meaning |
+| --- | --- |
+| `--page-size letter|a4` | Named dimensions |
+| `--orientation portrait|landscape` | Orientation for named sizes |
+| `--page-width PT --page-height PT` | Custom size; excludes both named-size and orientation options |
+| `--margin PT` or `--margin T,R,B,L` | All margins or top/right/bottom/left |
+| `--font-size PT` | Type size, 1–144 pt |
+| `--title TEXT`, `--producer TEXT` | Optional 1–1024-byte UTF-8 Info strings |
+| `--creation-date DATE` | Explicit timestamp with `Z` or signed `HH:MM` offset |
 
-| Arguments | API called | Publication |
+Each geometry/metadata option may appear once. Points accept plain unsigned decimals, at most 32 characters, with digits on both sides of a supplied dot. Signs, exponent notation, units, whitespace, NaN and infinity are rejected. Metadata is validated by the library before input is read. See [Page geometry](page-geometry.md) and [Document information](document-information.md).
+
+## Four I/O routes
+
+| Input / output | Configured API in `src/main.c` | Result |
 | --- | --- | --- |
-| file to file | `ki_convert_file` | Temporary PDF beside the destination, then `rename` |
-| `-` to file | `ki_convert_to_file` with `read_bytes` reading stdin | Same atomic file lifecycle |
-| file to `-` | `ki_convert` with `read_bytes` over a `FILE*` opened for the input path and `write_bytes` writing stdout | PDF bytes on stdout; a failure may leave a partial PDF |
-| `-` to `-` | `ki_convert` with both callbacks on stdin/stdout | Same as above |
+| File → file | `ki_convert_file_cfg` | Atomic replacement |
+| stdin (`-`) → file | `ki_convert_to_file_cfg` | Atomic replacement |
+| File → stdout (`-`) | `ki_convert_cfg` | Non-rollback stream |
+| stdin (`-`) → stdout (`-`) | `ki_convert_cfg` | Non-rollback stream |
 
-When either side is a stream, the input is opened as a `FILE*` (stdin itself for `-`); if that open fails the CLI prints `cannot open input <path>` and returns exit 3. For stdout output, `setvbuf(stdout, NULL, _IONBF, 0)` makes the stream unbuffered so write errors surface during the conversion, and a final `fflush(stdout)` is checked; on failure the CLI prints `stdout write failed` and returns exit 3. The `cli_write` callback fails on any short write.
+For callback routes, `cli_read` opens a named input lazily on the first read. This lets invalid configuration fail before opening that input. Stdout is unbuffered during conversion, `cli_write` rejects short writes, and a final flush is checked.
 
-4. Install signal handlers, convert, restore the previous handlers, and return the library status as the exit code.
+Conversion stdout contains only PDF bytes; diagnostics and the success counters go to stderr. Late failures can leave partial stdout output. A shell redirect can itself create/truncate its target before the converter runs, so stdout redirection is not an atomic file destination.
 
-## Signals and cancellation
+## Signals and exit status
 
-`SIGINT` and `SIGTERM` handlers set a flag; the library polls it through the `cancelled` callback at its documented checkpoints, so a conversion stops as status 4 with `KI_CAUSE_CANCEL` and, for file destinations, the previous file survives. A `SIGTERM` that interrupts a blocked `fread` on stdin is caught the same way: the read returns, the cancel check runs, and the process exits 4 instead of dying by signal. `SIGPIPE` is ignored when the output is stdout, so a closed or full pipe becomes an I/O error (exit 3) rather than process death. Handlers are installed only after argument validation and are restored before exit.
+`SIGINT`/`SIGTERM` set a `sig_atomic_t` flag polled through cancellation. `SIGPIPE` is ignored only for stdout conversion, turning a closed pipe into an I/O failure. Prior handlers are restored after conversion. The library does not install handlers itself.
 
-## Diagnostics and exit codes
-
-All conversion diagnostics, including the success summary `xml2pdf: pages=... objects=... offset_bytes=...`, go to stderr through `cli_log`. stdout carries only PDF bytes. The usage text states the contract plainly: `Exit codes: 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel.` Files are replaced atomically; stdout may contain a partial PDF on failure, so check the exit status before using streamed output.
-
-`-h` and `--help` print the help text to stdout and return 0. `--version` prints one line, for example `xml2pdf 0.2.0 records-v1` (version from `KI_XML_PDF_VERSION`, default profile from `KI_XML_PDF_PROFILE`).
+| Exit | Meaning |
+| --- | --- |
+| 0 | Success |
+| 1 | XML, profile or font error |
+| 2 | Usage/configuration error |
+| 3 | I/O/compression/publication error |
+| 4 | Resource limit or cancellation |
 
 ## Examples
 
 ```sh
 ./xml2pdf --profile report-v1 examples/report-v1.xml report.pdf
-cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - from-stdin.pdf
-./xml2pdf --profile report-v1 examples/report-v1.xml - > from-file.pdf
-cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - - > pipeline.pdf
-
-# Paths that begin with hyphens
+./xml2pdf --page-size a4 --orientation landscape --title "Export" input.xml a4.pdf
+./xml2pdf --page-width 360 --page-height 504 --margin 24 --font-size 12 input.xml small.pdf
+cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - - > streamed.pdf
 ./xml2pdf --profile report-v1 -- --input.xml --output.pdf
-
-# Selection with quotas for a large input
-./xml2pdf --profile report-v1 --record-offset 0 --record-limit 1000 \
-  --max-pages 10000 --max-output-bytes 268435456 \
-  --max-spool-bytes 67108864 input.xml report.pdf
 ```
 
-## Tested behaviors
+Use [Atomic output](atomic-output.md) when failure must preserve an existing destination.
 
-`tests/cli_pipeline.py` drives the binary through Poppler and checks:
+## Change entry points and checks
 
-- All four stream combinations (file or stdin to file or stdout) match the `examples/report-v1.expected.txt` oracle, diagnostics stay on stderr, and the spool directory is left empty.
-- Help goes to stdout and explains the partial-stdout caveat; invalid arguments (missing or unknown options, bad profile names, negative, huge or non-numeric numbers, wrong argument counts) return 2 with diagnostics on stderr only.
-- A late XML error returns 1, and page, output-byte and spool quotas return 4; each failure preserves an existing destination byte-for-byte, removes the temporary PDF and leaves no spool behind.
-- `SIGTERM` while the process waits on stdin returns 4, keeps the old destination and cleans up temporary files.
-- stdout to `/dev/full` or a closed pipe returns 3 with diagnostics; the closed pipe returns an error rather than killing the process with `SIGPIPE`.
-- A late XML error with stdout output returns 1 and leaves a partial PDF on stdout that lacks `%%EOF`.
-- The default profile converts `<doc>Hello</doc>` to the lines `doc` and `Hello`.
+Argument branches, `take_long`, `take_points`, `take_margins`, `usage` and route selection all live in `src/main.c`. Keep help, public config validation and CLI rejection behavior aligned.
 
-## Integration points
-
-- The CLI links `ki_xml_pdf::ki_xml_pdf` and inherits every conversion behavior from the pipeline in [Conversion pipeline](../systems/conversion-pipeline.md); profile behavior lives in [records-v1](records-v1.md), [report-v1](report-v1.md) and [Custom mappers](custom-mappers.md).
-- Quotas and the spool directory are enforced by the PDF writer; see [Resource limits](resource-limits.md). Stream behavior and atomic publication are on [Streaming I/O](streaming-io.md) and [Atomic output](atomic-output.md).
-- The installed CLI and its rpath are part of [Packaging](packaging.md).
-
-## Entry points for modification
-
-- New options: add the argument in `main`, map it to a `KiOptions` field, extend `usage`, and keep validation in `take_long` or a sibling helper. Extend the invalid-argument list in `tests/cli_pipeline.py`.
-- New profiles: extend the profile name check and `usage`; the library side change belongs in `src/convert.c` and `include/ki_xml_pdf.h`.
-- Help text and version output: `usage` and the `--version` branch in `main`.
+The CLI is one C implementation unit with one dedicated scenario runner (`tests/cli_pipeline.py`, a 1:1 file ratio, not code coverage). Geometry/info/wrap runners and `tests/integration_check.py` add independent Poppler checks and route-byte-equivalence tests.
 
 ## Key source files
 
-| File | Contents |
+| File | Role |
 | --- | --- |
-| `src/main.c` | The entire CLI: parsing, callbacks, signals, exit codes |
-| `include/ki_xml_pdf.h` | Option and result structs the CLI fills |
-| `tests/cli_pipeline.py` | CLI scenario suite used by `make check` and CTest |
-| `README.md` | User-facing CLI documentation |
+| `src/main.c` | Arguments, lazy input adapter, stdout and signals |
+| `include/ki_xml_pdf.h` | Configured API, version and options |
+| `tests/cli_pipeline.py` | Routes, usage, partial output, signals and preservation |
+| `tests/geometry_check.py`, `tests/info_check.py` | New-option validation before stdin/output |
+| `tests/integration_check.py` | Combined features through all routes |
+
+Related: [Streaming I/O](streaming-io.md), [Resource limits](resource-limits.md), [Packaging](packaging.md).

@@ -1,46 +1,32 @@
-# ki_xml_pdf overview
+# ki_xml_pdf
 
-ki_xml_pdf is a C99 library and command-line tool (`xml2pdf`) that converts very large XML inputs to text PDFs while keeping converter memory bounded. The parser, the mapper, the layout and the PDF writer all use fixed-size state, so a 1 GiB XML file converts in a few megabytes of RSS.
+ki_xml_pdf is a C99 library and the `xml2pdf` command-line tool. It converts a documented UTF-8 XML subset into sequential PDF text without retaining the input document or a growing list of pages. The current version is 0.3.0, defined in `include/ki_xml_pdf.h`.
 
-## What it does
+## Capabilities
 
-- Reads XML through a 4096-byte window and emits start, end and text events (`src/xml_parse.c`).
-- Maps those events to text with one of two built-in profiles (`records-v1`, `report-v1`) or a caller-supplied mapper callback (`src/convert.c`, `src/report.c`).
-- Wraps text with real glyph widths from the bundled DejaVu Sans font and fills Letter pages (`src/layout.c`, `src/font.c`).
-- Writes an append-only PDF with an embedded TrueType font, spooling object offsets to a temporary file instead of keeping them in RAM (`src/pdf_write.c`).
-- Publishes file output atomically: a temporary PDF next to the destination, then `fsync` and `rename` (`src/convert.c`).
+- [Report rendering](../features/report-v1.md) validates a small report grammar and supports record offset/limit selection. Skipped records and the rest of the input are still validated.
+- [Diagnostic rendering](../features/records-v1.md) prints element names, attributes and text.
+- [Custom mappers](../features/custom-mappers.md) adapt other schemas through borrowed parser events and the public text API.
+- [Streaming I/O](../features/streaming-io.md) accepts callbacks and stdin/stdout. [File destinations](../features/atomic-output.md) are published only after successful completion.
+- [Page geometry](../features/page-geometry.md), word wrapping and optional [document information](../features/document-information.md) are configured separately from the older options structure.
+- Page content and the complete embedded font use Flate compression. Object offsets are spooled to disk. See the [PDF writer](../systems/pdf-writer.md).
 
-Version 0.2.0 is declared in `include/ki_xml_pdf.h` and is the single version source for the CLI, CMake, pkg-config and the source archive.
+The implementation lives in `src/`; its public contract is `include/ki_xml_pdf.h`. Working examples are in `examples/`, and `docs/report-v1.md` and `docs/mapper-guide.md` describe the supported grammars.
 
-## Who uses it
+## Supported environment
 
-- **Application developers** embed `libki_xml_pdf` (static or shared) through the public header `include/ki_xml_pdf.h`, CMake (`find_package(ki_xml_pdf)`) or pkg-config.
-- **Operators and scripts** run `xml2pdf` with files or stdin/stdout pipelines (`src/main.c`).
-- **Schema owners** write a mapper callback for their own XML format, following `docs/mapper-guide.md` and the catalog example in `examples/catalog_map.c`.
+The supported platform is **64-bit Linux with glibc**, GCC or Clang, and a GNU-compatible linker. zlib is required. GNU cookie streams, `/proc/self/exe` font discovery and ELF symbol versioning are deliberate platform dependencies. macOS, musl/Alpine, BSD and Windows are unsupported; see `README.md`, `src/platform.h` and `CMakeLists.txt`.
 
-The supported platform is 64-bit Linux with glibc. The CMake build refuses other targets because `ki_convert` depends on glibc's `fopencookie`.
+The converter RSS acceptance ceiling is **4096 KiB on the documented synthetic workloads and Linux environment**, not a guarantee for arbitrary fonts, inputs or machines. Historical measurements remain tied to their source revisions. Start with [Resource limits](../features/resource-limits.md).
 
-## Quick links
+## Non-goals
 
-| Topic | Page |
-| --- | --- |
-| How the pieces fit together | [Architecture](architecture.md) |
-| Build, run and test | [Getting started](getting-started.md) |
-| Terms such as profile, mapper, spool | [Glossary](glossary.md) |
-| The conversion core | [Systems](../systems/index.md) |
-| CLI, profiles, atomic output, quotas | [Features](../features/index.md) |
-| Public C API | [API](../api/index.md) |
-| How to change the code | [How to contribute](../how-to-contribute/index.md) |
+The current library does not provide tables, sorting, XSL-FO, UTF-16 input, shaping, bidi or automatic support for arbitrary schemas. Optional font-script addons are an accepted **design only**, not a public API or implemented feature (`docs/adr/0001-font-script-addons.md`).
 
-## Documentation in the repository
+## Navigation
 
-| File | Contents |
-| --- | --- |
-| `README.md` / `README.ru.md` | English and Russian onboarding, install and API summary |
-| `CONTRIBUTING.md` | Bug and security reporting, check expectations |
-| `docs/report-v1.md` | Grammar and rendering contract for the `report-v1` profile |
-| `docs/mapper-guide.md` | How to write a custom-schema mapper |
-| `docs/contract.md` | Historical `records-v1` contract and measurements (Russian) |
-| `docs/release-checklist.md` | Source distribution acceptance gates for 0.2.0 |
-| `docs/profile-decision.md`, `docs/license-decision.md` | Recorded decisions on the profile and MIT license (Russian) |
-| `CHANGELOG.md` | Release notes for 0.1.0 and 0.2.0 |
+- [Architecture](architecture.md) and [Getting started](getting-started.md)
+- [Systems](../systems/index.md) and [Features](../features/index.md)
+- [C API](../api/c-api.md) and [Configuration](../reference/configuration.md)
+- [Contribution workflow](../how-to-contribute/index.md) and [Testing](../how-to-contribute/testing.md)
+- [History](../lore.md) and [Codebase statistics](../by-the-numbers.md)

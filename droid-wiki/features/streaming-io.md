@@ -1,102 +1,90 @@
 # Streaming I/O
+Active contributors: Artem
 
-Active contributors: Artem Klen
+Callback I/O lets applications supply XML incrementally and receive PDF bytes without a seekable destination. The library owns its adapters, not caller resources; callback output is never rolled back, and `output_bytes` counts bytes the callback actually accepted.
 
-`ki_convert` and `ki_convert_to_file` read and write through caller callbacks instead of paths, and the CLI uses the same callbacks for stdin and stdout. This page covers the callback contract, the pull reader, the `fopencookie` sink, the CLI modes and the partial-output rule.
+## Choose a route
 
-## Purpose
-
-Callback I/O lets a caller stream XML from a socket, a decompressor or an in-memory buffer, and deliver the PDF to a socket or another consumer without a file. It also lets the CLI read stdin and write stdout. The library never owns the caller's resources, and it never closes or frees callback state.
-
-## Key abstractions
-
-| Abstraction | Path | Role |
+| API, with optional `_cfg` variant | Input | Output |
 | --- | --- | --- |
-| `read_bytes`, `write_bytes`, `io_user` | `include/ki_xml_pdf.h` | Callback fields in `KiOptions` |
-| `conv_read` | `src/convert.c` | Pull adapter the parser reads through |
-| `ReadState` | `src/convert.c` | File or callback reader plus failure flags |
-| `ByteSink`, `sink_write`, `sink_close` | `src/convert.c` | Write callback behind `fopencookie` |
-| `ki_convert_to_file` | `src/convert.c` | Callback input to an atomic file |
-| `ki_convert` | `src/convert.c` | Callback input to callback output |
-| `CliIo`, `cli_read`, `cli_write` | `src/main.c` | stdin/stdout callbacks for the CLI |
-| `test_callback_to_file` | `tests/test_stream.c` | Short reads, write failure, ownership checks |
-| CLI stream cases | `tests/cli_pipeline.py` | stdin/stdout, closed pipe, partial stdout |
+| `ki_convert_file` | Paths, ignores both I/O callbacks | Atomic file |
+| `ki_convert_to_file` | Required read callback | Atomic file, ignores write callback |
+| `ki_convert` | Required read callback | Required write callback |
 
-## How it works
+`include/ki_xml_pdf.h` defines all contracts. Configured variants accept separate geometry/Info state; original calls use the defaults.
 
-### Callback contract
+## Callback rules
 
-`read_bytes(user, dst, max)` returns 0 only at end of input, returns 1 through `max` for data, and returns a negative value for an error. A short read is not EOF: the parser asks again, so a caller may return one byte at a time. `write_bytes(user, src, n)` must return `n` after accepting the entire count, or a negative value for an error. A short write also fails. The `io_user` pointer is passed to both. Accepted bytes are never rolled back.
+```c
+int read_bytes(void *user, char *dst, int max);
+int write_bytes(void *user, const char *src, int n);
+```
 
-`ki_convert_file` ignores both callbacks. `ki_convert_to_file` uses `read_bytes` and ignores `write_bytes`. `ki_convert` needs both.
+Both receive `KiOptions.io_user`.
 
-### The pull reader
+| Callback result | Interpretation |
+| --- | --- |
+| Read `1..max` | Data; short positive reads are not EOF |
+| Read `0` | EOF only |
+| Read negative or greater than `max` | I/O failure |
+| Write exactly `n` | Entire chunk accepted |
+| Write negative, zero, short or greater than `n` | I/O failure, conversion cannot succeed |
 
-`conv_read` in `src/convert.c` is the `XmlReadFn` the parser pulls through. It checks `opt->cancelled` first and returns -1 with `cancelled` set. The `xml2pdf_debug_fail_after_bytes` hook fails the read after a byte budget. A `max` of zero or less returns 0.
+Buffers are borrowed for the callback. Copy/write bytes before returning if they are needed later. The library neither closes nor frees user state, FILE handles, sockets or other resources hidden behind the callbacks.
 
-- With a `FILE` (file input), it uses `fread`. A zero-byte result is EOF unless `ferror` is set or `errno` is `EINTR`, in which case it is an I/O failure.
-- With `read_bytes`, it calls the callback and treats a return below 0 or above `max` as an I/O failure. A return of 0 is EOF.
+## Reader flow
 
-It adds each served count to `ReadState.bytes`. The driver reads `reader.cancelled` and `reader.io_failed` when the parser reports an error, which is how a cancellation or read failure becomes cause `KI_CAUSE_CANCEL` or `KI_CAUSE_IO`.
+`conv_read` in `src/convert.c` checks cancellation before/after reading, validates callback counts and records I/O/cancel flags. The [XML parser](../systems/xml-parser.md) repeatedly fills its 4096-byte window, so one-byte readers work across tags, references and UTF-8 sequences.
 
-### The write sink
+The library validates all input through EOF. Reaching a report record limit is not a reason to stop supplying data, and returning zero early means a truncated document rather than successful selection.
 
-`ki_convert` in `src/convert.c` allocates a `ByteSink {write_bytes, user}` and calls `fopencookie` with `sink_write` and `sink_close`. `sink_write` rejects a count above `INT_MAX`, calls the callback, and returns `-1` with `errno = EIO` when the callback returns a negative value or a count other than the requested one. `sink_close` frees the sink; it does not touch caller state. The driver then runs `convert_streams(NULL, out, NULL, NULL, opt, result)`: there is no destination path, so nothing is renamed and the temp-file logic does not run.
+## Writer flow and failure latch
 
-### Callback input to a file
+`ki_convert_cfg` wraps the callback in `ByteSink` behind GNU `fopencookie`. The [PDF writer](../systems/pdf-writer.md) adds its own counted/quota cookie above it; stdio buffering means writer-side byte counts alone do not prove callback delivery.
 
-`ki_convert_to_file` in `src/convert.c` requires `opt` and `opt->read_bytes`, rejects a NULL path, and calls `convert_file_stream(NULL, ...)`. The read side is the callback, the write side is the same temp-file and rename path as a file conversion. The previous destination is preserved on failure and the temp is removed. See [Atomic output](atomic-output.md).
+`sink_write` in `src/convert.c` maintains:
 
-### CLI stdin and stdout modes
+- `accepted`: add a valid positive result no larger than the requested count, including a short accepted prefix.
+- `failed`: latch the first invalid/error write. The callback is never invoked again for that conversion, even if later writes would succeed.
 
-`src/main.c` chooses the entry point by whether each positional argument is `-`:
+After `convert_streams` flushes and closes its adapters, `ki_convert_cfg` sets `KiResult.output_bytes = accepted`, including bytes delivered during cleanup flushes. A callback claiming `n+1` is invalid and not counted; callers must report honestly what they accepted. A negative result cannot communicate an accepted prefix.
 
-| Input | Output | Callbacks set | Entry point |
-| --- | --- | --- | --- |
-| file | file | no | `ki_convert_file` |
-| `-` (stdin) | file | `cli_read` (and `cli_write`, ignored) | `ki_convert_to_file` |
-| file or `-` | `-` (stdout) | `cli_read`, `cli_write` | `ki_convert` |
+`sink_close` does not free caller state or the `ByteSink`; the entry wrapper keeps the sink alive through all closing flushes, reads its counter, then frees its own allocation. A subsequent conversion with reset caller state can reuse the same options/result.
 
-When either argument is `-`, the CLI sets `opt.read_bytes`, `opt.write_bytes` and `opt.io_user`. `io.input` is stdin for a stdin argument, otherwise the opened input file. `cli_read` in `src/main.c` uses `fread` and returns -1 on `ferror` or on a zero-byte read with `errno == EINTR`. `cli_write` uses `fwrite` to stdout and returns -1 on a short write.
+The first failure returns status 3 / `KI_CAUSE_IO`, not success with broken xref offsets. `tests/test_callback_io.c` covers one-shot and persistent negative/short/zero/over-count failures at early, middle and final writes, with and without a result, and exact accepted-prefix/reuse checks.
 
-For stdout output the CLI makes stdout unbuffered with `setvbuf(stdout, NULL, _IONBF, 0)` so errors surface during the conversion, and ignores `SIGPIPE` for the duration. Without that, a closed pipe would kill the process; with it, `cli_write` returns -1 and the run ends with status 3. After `ki_convert` returns success the CLI flushes stdout and turns a flush failure into status 3.
+## Partial-output boundary
 
-The CLI installs `SIGINT` and `SIGTERM` handlers that set a `sig_atomic_t` stop flag read by `cli_cancelled`, and restores the previous handlers before returning. Conversion diagnostics go to stderr through `cli_log`, so stdout carries only PDF bytes.
+A later XML/schema/quota/cancellation error can leave an incomplete PDF, including previously emitted font/page bytes. A byte prefix is not a usable PDF merely because Poppler can recover text from it. Check the return status and arrange application-level staging if the consumer needs all-or-nothing delivery.
 
-### Caller ownership and partial output
+Use `ki_convert_to_file` when the desired boundary is an [atomic file destination](atomic-output.md). Only the metadata offset spool still needs temporary disk storage for a pure callback conversion.
 
-The library never closes or frees callback state, and it does not close a caller-owned `FILE` passed as a file path. `tests/test_stream.c` in `test_callback_to_file` checks that a caller's input `FILE` and output `FILE` remain open and usable after both a success and a late XML error.
+## CLI streams
 
-`ki_convert` has no destination to protect, so bytes already accepted by `write_bytes` stay when the run fails. The CLI can therefore leave an incomplete PDF on stdout after a late XML error, and `tests/cli_pipeline.py` asserts exactly that: the output starts with `%PDF-`, does not end with `%%EOF`, and diagnostics appear on stderr. `tests/cli_pipeline.py` also checks that writing to `/dev/full` and to a closed pipe both return status 3 instead of dying.
+`src/main.c` maps `-` input to stdin and `-` output to stdout:
 
-## Integration points
+```sh
+cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - report.pdf
+./xml2pdf --profile report-v1 examples/report-v1.xml - > streamed.pdf
+```
 
-- The read callback is consumed by `conv_read`, which the parser calls; see [XML parser](../systems/xml-parser.md).
-- The write callback receives the writer's bytes; see [PDF writer](../systems/pdf-writer.md).
-- File destinations use the same driver; see [Conversion pipeline](../systems/conversion-pipeline.md).
-- Cancellation and quota causes are on [Resource limits](../features/resource-limits.md).
-- CLI argument and signal handling are on [CLI](../features/cli.md).
+The CLI opens named callback input lazily, makes stdout unbuffered, ignores SIGPIPE for stdout output, and reports conversion diagnostics on stderr. A closed pipe or `/dev/full` becomes exit 3; SIGINT/SIGTERM drive cancellation. Redirection is done by the shell and does not gain file rollback.
 
-## Entry points for modification
+## Modification and tests
 
-- Change read validation in `conv_read` in `src/convert.c`.
-- Change write validation in `sink_write` in `src/convert.c`.
-- Change stdin/stdout selection, buffering or signal setup in `src/main.c`.
-- Change the documented contract in the `read_bytes` / `write_bytes` comment in `include/ki_xml_pdf.h` and in `docs/contract.md`.
+This feature is implemented inside `src/convert.c`, with one dedicated C fault suite (`tests/test_callback_io.c`) plus ownership, short-read and accepted-byte groups in `tests/test_stream.c`. Change `conv_read`, `sink_write` and wrapper cleanup together; keep the header contract aligned.
+
+`tests/cli_pipeline.py` checks all four CLI routes, real signals, failed pipes and partial stdout. `tests/integration_check.py` requires byte-identical successful output across file/stdin and file/stdout for combined features. See [Testing](../how-to-contribute/testing.md).
 
 ## Key source files
 
 | File | Role |
 | --- | --- |
-| `include/ki_xml_pdf.h` | Callback fields and the written contract |
-| `src/convert.c` | `conv_read`, `ByteSink`, `ki_convert`, `ki_convert_to_file` |
-| `src/main.c` | `cli_read`, `cli_write`, stdin/stdout modes, signals |
-| `tests/test_stream.c` | Short reads, write modes, caller-owned `FILE`s |
-| `tests/cli_pipeline.py` | stdin/stdout, closed pipe, partial stdout |
-| `docs/contract.md` | Stated callback and partial-output behavior |
+| `include/ki_xml_pdf.h` | Callback signatures, ownership and failure contract |
+| `src/convert.c` | Pull reader, ByteSink latch, accepted-byte result and routes |
+| `src/pdf_write.c` | Counted/quota stream above the callback sink |
+| `src/main.c` | stdin/stdout adapters, lazy input and SIGPIPE behavior |
+| `tests/test_callback_io.c`, `tests/test_stream.c` | Fault, ownership and callback result regressions |
+| `tests/cli_pipeline.py`, `tests/integration_check.py` | CLI failure and route-equivalence checks |
 
-## Related pages
-
-- [Conversion pipeline](../systems/conversion-pipeline.md), [XML parser](../systems/xml-parser.md), [PDF writer](../systems/pdf-writer.md).
-- [Atomic output](atomic-output.md), [Resource limits](resource-limits.md), [CLI](cli.md).
-- [C API](../api/c-api.md), [Glossary](../overview/glossary.md), [Testing](../how-to-contribute/testing.md).
+Related: [C API](../api/c-api.md), [Conversion pipeline](../systems/conversion-pipeline.md), [Resource limits](resource-limits.md).

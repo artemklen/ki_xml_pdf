@@ -1,116 +1,122 @@
 # Data models
+Active contributors: Artem
 
-Every struct in the pipeline has a fixed size, and most carry their data inline. This page lists the public types from `include/ki_xml_pdf.h` and the internal ones from `src/` and `examples/`, with their fields. The 0.x ABI is unstable until 1.0: a 0.y bump may change `KiOptions`, so `size` is checked on every call.
+There is no database or retained document tree. Public structures describe one call; private structures hold bounded parser, mapper, font, page and writer state.
 
-## Public types
+## ABI and size checks
 
-### `KiOptions` (`include/ki_xml_pdf.h`)
+`include/ki_xml_pdf.h` defines public types with C/C++ linkage support.
+Version 0.3 retains the 0.2 `KiOptions`, `KiResult` and `KiEvent` layouts.
+Do not assume the same ABI across all future pre-1.0 minor versions.
 
-The per-call configuration. Call `ki_options_init` before filling it; `size` must stay `sizeof(KiOptions)` or the call fails with a usage error.
+`KiOptions.size` must equal `sizeof(KiOptions)`.
+`KiConfig.size` accepts the full current size or `KI_CONFIG_SIZE_GEOMETRY`, the prefix ending before `title`.
+Use the initializers and symbolic sizes, not hardcoded byte counts.
+No public addon-font or table structures exist.
 
-| Field | Type | Role |
+## Public call state
+
+| Type | Fields / role | Lifetime |
 | --- | --- | --- |
-| `size` | `size_t` | Struct size check, set by `ki_options_init` |
-| `font_path` | `const char *` | Explicit font; no fallback if it fails |
-| `temp_dir` | `const char *` | Spool temp directory; NULL means `/tmp` |
-| `max_pages` | `int` | Page quota |
-| `max_output_bytes` | `long` | PDF byte quota |
-| `max_spool_bytes` | `long` | Spool quota; 0 selects the 64 MiB default |
-| `profile` | `int` | `KI_PROFILE_RECORDS` or `KI_PROFILE_REPORT` |
-| `record_offset`, `record_limit` | `long` | report-v1 selection |
-| `cancelled`, `cancel_user` | callbacks | Cancellation poll |
-| `map`, `map_user` | callbacks | Custom mapper, replaces built-in profiles |
-| `log`, `log_user` | callbacks | Diagnostic sink |
-| `read_bytes`, `write_bytes`, `io_user` | callbacks | Stream I/O; caller keeps ownership |
+| `KiOptions` | Size, font/temp paths, quotas, profile, record offset/limit, cancellation/map/log/I/O callbacks and user pointers | Caller-owned for the synchronous call |
+| `KiConfig` | Size, page-size/orientation enums, custom dimensions, four margins, font size, optional Title/Producer/CreationDate pointers | Caller-owned; geometry validated and metadata copied at call start |
+| `KiResult` | Status/cause/message, page/object/output/spool counts, report counters | Caller storage, reset by every conversion when non-NULL |
+| `KiEvent` | Kind, name, attribute pointers, text fragment, CDATA flag and consumed byte offset | Borrowed for one map callback |
+| `KiDoc` | Opaque text/break/failure handle | Only used during mapping; implementation remains private |
 
-Semantics of each field are on [Configuration](configuration.md).
+See [Configuration](configuration.md) for option defaults and limits.
 
-### `KiResult` (`include/ki_xml_pdf.h`)
+## Result fields
 
-Reset at the start of every public call, including early usage errors, so a reused result never carries stale counters.
+| Fields | Meaning |
+| --- | --- |
+| `status`, `cause` | Coarse return/exit status plus finer `KI_CAUSE_*` |
+| `message[160]` | Human-readable diagnostic or success summary |
+| `pages`, `objects` | Counts from conversion, not proof of publication on failure |
+| `output_bytes` | Bytes written; callback route reports exactly bytes accepted by the caller |
+| `offset_bytes`, `spool_bytes` | Offset spool usage; both report the same spool measure |
+| `report_total`, `report_selected`, `report_skipped` | `unsigned long long` counters, filled only for built-in report-v1 |
 
-| Field | Type | Role |
+All counters are per call.
+A reused result does not retain previous success counts on an early usage error.
+A custom mapper owns its own domain counters; the built-in report counters remain zero.
+
+## Mapper events
+
+`KiEvent.kind` is START=1, END=2 or TEXT=3.
+`nattr` is at most eight; `attr_name[8]` and `attr_val[8]` point into temporary event storage.
+TEXT uses `text` plus `text_len`; a long value arrives in multiple fragments.
+`from_cdata` distinguishes literal CDATA text.
+
+`byte_offset` is raw consumed input bytes, including a BOM.
+An empty element's synthetic END uses its START position.
+There are no public line/column members.
+Those positions live in the parser and opaque document handle and appear in XML/profile diagnostics.
+
+`KiDoc` in `src/convert.c` holds a layout pointer, error/cause and current line/column/byte.
+`ki_doc_fail` uses that event position when formatting its profile failure.
+A mapper must not retain `KiEvent` pointers or the `KiDoc` handle after the callback.
+
+## Parser and mapper state
+
+| Private type | Source | Bounded contents |
 | --- | --- | --- |
-| `status` | `int` | `XML2PDF_OK` or one of the four error codes; matches the CLI exit code |
-| `cause` | `int` | `KI_CAUSE_*`, finer than the status |
-| `message` | `char[160]` | Last diagnostic, the same string the log callback receives |
-| `pages` | `int` | Page count |
-| `objects` | `int` | PDF object count |
-| `offset_bytes` | `long` | Spool bytes used (same value as `spool_bytes`) |
-| `output_bytes` | `long` | PDF bytes written |
-| `spool_bytes` | `long` | Spool bytes used |
-| `report_total`, `report_selected`, `report_skipped` | `unsigned long long` | report-v1 counters; zero for other profiles and mappers |
+| `XmlParser` | `src/xml_parse.h` | Read callback, 4096-byte window, 64×64-byte open-name stack, UTF-8/declaration/CDATA scanner flags and consumed counters |
+| `XmlEvent` | `src/xml_parse.h` | Inline name[64], attribute names[8][64], values[8][256], text[1024], scalar line/column and byte position |
+| `MapState` | `src/convert.c` | Depth and 64-entry inherited records `xml:space` preserve stack |
+| `Report` | `src/report.h` | Grammar/selection flags, index/total/selected counters, offset/limit and pending_name[256] |
+| `CatalogMap` | `examples/catalog_map.h` | Grammar state, value-started flag and item counter |
 
-### `KiEvent` (`include/ki_xml_pdf.h`)
+No field value is accumulated in the report mapper.
+Skipped records retain validation state without retained record objects.
+The custom catalog example similarly streams values rather than buffering an item.
 
-The event a mapper receives. All pointers are borrowed for the duration of the callback only; the data lives in the parser's `XmlEvent` until the next event.
+## Geometry, font and page state
 
-| Field | Type | Role |
+| Private type | Source | Role |
 | --- | --- | --- |
-| `kind` | `int` | `KI_EV_START`, `KI_EV_END` or `KI_EV_TEXT` |
-| `name` | `const char *` | Element name |
-| `nattr` | `int` | Attribute count, at most `KI_EVENT_ATTRS` (8) |
-| `attr_name`, `attr_val` | `const char *[8]` | Attribute names and decoded values |
-| `text`, `text_len` | `const char *`, `size_t` | Text fragment, at most 1023 bytes |
-| `from_cdata` | `int` | Set when the fragment came from a CDATA section |
-| `byte_offset` | `size_t` | Parser position after this event's bytes; a synthetic end of an empty element reuses the start's position, EOF is end of input |
+| `Geometry` | `src/geometry.h` | Width/height/margins/font/leading as integer thousandths of a point |
+| `PageFrame` | `src/geometry.h` | Fitted geometry, font units, first baseline and maximum line count |
+| `InkRun` | `src/geometry.h` | Advances, actual PDF-width pen, last non-space box and ink bounds |
+| `Layout` | `src/layout.h` | Current/pending word in one line[1024], base/mark split state, page[50][1024], lengths, UTF-8 hold[4] and error flags |
+| `FontFace` | `src/font.h` | Open file, owned path, size/hash, fixed GID/advance/ink tables, vertical metrics and safe PostScript-name data |
+| `PdfInfo` | `src/info.h` | Presence flags, copied title/producer[1025] and normalized PDF date[32] |
 
-### `KiDoc` (`src/convert.c`, opaque in `include/ki_xml_pdf.h`)
+`FontFace` has no retained full-TTF buffer.
+`src/font.c` frees temporary table spans after deriving metrics.
+`font_free` closes its own open file and releases the owned path.
+Ink tables account for negative bearings and vertical extremes, not merely glyph advances.
 
-The handle a mapper writes through: `Layout *lay`, `char error[160]`, `int cause`. `ki_doc_text` and `ki_doc_break` push text; `ki_doc_fail` records the rule text and cause that `convert_streams` later surfaces.
+## Writer and adapters
 
-## Internal types
+`PdfConfig` in `src/pdf_write.h` carries font/temp paths, quotas, cancellation, internal debug setting and geometry/Info references.
+`PdfWriter` owns the counted output wrapper, spool/path, `FontFace`, fitted frame and byte/object/page/failure counters.
+It also owns one reusable zlib state/window and one lazily allocated reusable page-content buffer.
+It retains no array of all pages or object offsets in RAM.
 
-### `XmlEvent` (`src/xml_parse.h`)
+ToUnicode uses fixed automatic scratch arrays in a count-then-write pass, not a retained CMap allocation.
+Layout passes page lines directly to the writer, avoiding an extra joined-page copy.
+Optional `PdfInfo` lives in the entry point's validated `Setup` until the writer completes.
 
-Unlike `KiEvent`, the storage is inline in the event: `kind`, `name[64]`, `nattr`, `attr_name[8][64]`, `attr_val[8][256]`, `text[1024]`, `text_len`, `from_cdata`, `byte_offset`, `error[160]`.
+`ReadState` in `src/convert.c` adapts owned file input or caller reads and latches I/O/cancellation state.
+`ByteSink` wraps caller output, records accepted bytes and latches the first failed write.
+Closing the cookie stream does not close/free caller resources.
 
-### `XmlParser` (`src/xml_parse.h`)
+## Ownership and concurrency
 
-The pull parser state: `read` callback plus `user`, the 4096-byte `buf` window (`len`, `pos`, `eof`), `depth` with the 64 × 64-byte open-element `stack` and `end_name`, scanner flags (`pending_end`, `failed`, `done`, `bom_checked`, `in_cdata`, `cdata_mark`, `seen_root`, `document_start`, `bracket_run`), UTF-8 decoding state (`utf8_need`, `utf8_bad`, `utf8_lead`), the running byte `offset`, and `errmsg[160]`.
+The library closes files it opened and frees internal allocations.
+Callback resources, option/config storage and user state remain caller-owned.
+Metadata is copied early; other pointers should remain valid throughout the call.
+Independent contexts may run concurrently; sharing mutable result/mapper/I/O state is not safe.
+Internal global failure hooks are test-only exceptions, not ordinary public context state.
 
-### `Layout` (`src/layout.h`)
+## Key source files
 
-The page under construction: the owning `PdfWriter *pdf`, the current `line[1024]` with `len` and glyph-width `units`, the finished `page[50][1024]` with per-line lengths `plen[50]` and `nlines`, a 4-byte UTF-8 continuation `hold` buffer, and `bad_cp` for the rejected code point.
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h` | Public layouts and ownership contract |
+| `src/convert.c` | Opaque document, validated setup and adapters |
+| `src/xml_parse.h`, `src/report.h`, `src/layout.h` | Parser/mapper/page storage |
+| `src/font.h`, `src/geometry.h`, `src/info.h`, `src/pdf_write.h` | Font, geometry, metadata and writer storage |
 
-### `FontFace` (`src/font.h`)
-
-The loaded TrueType face: the font file bytes `ttf` and `ttf_len` (the only heap allocation in the conversion path), metrics `units`, `ascent`, `descent`, `bbox[4]`, glyph and advance tables `gid`/`adv` for code points below `FONT_BMP_MAX` (0x500), and `punct_gid`/`punct_adv` for 24 punctuation slots at `FONT_PUNCT_BASE` (0x2010).
-
-### `PdfConfig` (`src/pdf_write.h`)
-
-Writer configuration filled from `KiOptions` by `convert_streams`: `font_path`, `temp_dir`, `max_pages`, `max_output`, `max_spool`, the `debug_fail_page` test hook, and the `cancelled`/`cancel_user` pair.
-
-### `PdfWriter` (`src/pdf_write.h`)
-
-The append-only writer: buffered output `fp` over the raw stream `raw`, the spool `offsets` file and its `off_path`, the embedded `FontFace`, counters `nobj`/`npages`/`written`/`spool_bytes`/`live_page_bytes`, quotas `max_pages`/`max_output`/`max_spool`, failure detail `hit_limit`/`fail_kind`/`fail_errno`, the `debug_fail_page`/`debug_pages` test hooks, and the cancellation pair.
-
-### `Report` (`src/report.h`)
-
-The report-v1 mapper state, fixed regardless of record count: flags `in_report`, `in_record`, `in_field`, `saw_field`, `skipping`, `value_started`; counters `index`, `total`, `selected`; selection `offset`, `limit`; the current byte position `at`; and the 256-byte `pending_name` for the field being collected.
-
-### `CatalogMap` (`examples/catalog_map.h`)
-
-The example mapper from the mapper guide: `state` (a grammar enum), `value_started`, and an `items` counter. One enum, one flag and one counter, no field or item storage; `catalog_map_init` prepares it and `catalog_map_event` is the `KiOptions.map` callback.
-
-### Small driver types (`src/convert.c`)
-
-`MapState` (a 64-entry `xml:space` preserve stack behind records-v1), `ReadState` (the parser's read adapter: input stream, options, byte count, I/O and cancellation flags) and `ByteSink` (the `fopencookie` adapter that turns `write_bytes` into a `FILE *` for `ki_convert`).
-
-### `PageSink` (`src/page_sink.h`)
-
-Removed. This was the older fixed byte-grid page buffer (`buf`, `cap`, `len`, `col`, `lines`, `max_cols`, `max_lines`, `pages_flushed`, `flush`, `user`). The conversion path did not use it, and the sources are gone.
-
-## Ownership rules
-
-- The caller owns callback resources, input streams, option strings and result storage. The library closes only what it created: the temp PDF, the spool file, and its internal `FILE *` handles.
-- `KiEvent` pointers die with the callback. Copy anything a mapper needs later.
-- The font bytes are heap-allocated by `font_load` and released by `font_free` inside `pdf_free`; everything else in the pipeline is stack or inline storage.
-- A context (options plus result) is not safe for concurrent use; two independent contexts may convert at once, which `tests/test_stream.c` exercises with pthreads.
-
-## Related pages
-
-- [C API](../api/c-api.md) for the functions that move these structs.
-- [Conversion pipeline](../systems/conversion-pipeline.md) for how `convert_streams` connects them.
-- [Configuration](configuration.md) for what the option fields do.
-- [Custom mappers](../features/custom-mappers.md) for writing a mapper against `KiEvent` and `KiDoc`.
+Related: [C API](../api/c-api.md), [Systems](../systems/index.md), [Conversion pipeline](../systems/conversion-pipeline.md).

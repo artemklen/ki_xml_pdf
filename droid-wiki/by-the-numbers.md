@@ -1,188 +1,143 @@
 # By the numbers
+By Artem.
 
-Data collected on 2026-10-13. Every count below was measured on `main` at commit `037e2bf` (version 0.2.0): `wc -l` over the files tracked by Git, `git log --numstat` for churn, and the historical measurements recorded in `docs/contract.md` and `README.md`. Line counts cover the 65 tracked text files; the two binary fonts (`fonts/DejaVuSans.ttf`, `tests/corpus/truncated-hmtx.ttf`) count as files but not as lines.
+Snapshot: **2026-10-17**, `d57306903d7a122f3abe84c4d5d9659799d6176f` (0.3.0). These are repository measurements, not a performance promise or an individual contributor ranking.
 
-## Size at a glance
+## Scope and reproducibility
+
+Inventory comes from `git ls-tree -rz d573069`; contents are the corresponding Git blobs, not build products or this wiki's uncommitted refresh. A binary is a blob containing NUL in its first 8,192 bytes: exactly `fonts/DejaVuSans.ttf`, `tests/corpus/truncated-hmtx.ttf` and `tests/corpus/truncated-cmap-184.ttf`.
+
+All size/language tables exclude **all** `droid-wiki/` and `docs/evidence/`, including evidence READMEs as well as generated logs. They retain ordinary documentation, the ADR, fixtures, examples, research harnesses, licenses and build files. Lines mean newline bytes (`wc -l` semantics), including comments/blanks; 13 XML fixtures lack a final newline. Bytes are uncompressed blob bytes. These are not logical source-line counts.
 
 | Measure | Value |
-| --- | --- |
-| Tracked files | 67 (65 text, 2 binary fonts) |
-| Tracked text lines | 11,726 |
-| Production C lines (`src/` plus `include/`) | 4,484 |
-| Test code lines (`tests/`) | 5,378 |
-| Commits | 9 (8 authored, 1 merge) |
-| Lifetime churn | 12,067 lines added, 340 removed |
-| Public exported symbols (`libki_xml_pdf.map`) | 9 |
-| Largest file by bytes | `fonts/DejaVuSans.ttf` (759,720 bytes) |
-| Largest file by lines | `tests/test_stream.c` (3,259 lines) |
+| --- | ---: |
+| All tracked files | 811 |
+| Excluded wiki / evidence files | 41 / 646 |
+| Binary assets excluded | 3 |
+| Measured text files / lines / bytes | 121 / 25,304 / 1,110,939 |
+| Production C and headers, `src/` + `include/` | 19 files / 6,437 lines |
+| Test/research code, `tests/` | 45 files / 16,147 lines |
+| Build/configuration files, defined below | 15 files / 844 lines |
+| Code across production, tests and examples | 22,980 lines |
+| Largest measured text file | `tests/test_stream.c`, 3,655 lines |
+
+Production is nine C translation units (eight library units plus `src/main.c`) and ten headers. Test code is 15 C files (9,646 lines), one C++ file (157), 21 Python files (5,076) and eight shell files (1,268); this includes research tools, not just shipped-feature regression tests. Their ratio is **2.51 test/research lines per production line**, not a coverage percentage.
+
+Build/config means `.github/`'s five YAML files, `CMakeLists.txt`, `tests/consumer/CMakeLists.txt`, all four `cmake/` templates, `Makefile`, `.gitignore`, `baseline-manifest.json` and `libki_xml_pdf.map`. Categories overlap: the consumer CMake file is also under `tests/`. “Code” means `.c`, `.h`, `.cpp`, `.py`, `.sh` only.
 
 ## Lines by language
 
-C dominates the tree. The single C test file `tests/test_stream.c` (3,259 lines) holds more lines than all shell, Python and Markdown combined.
-
 ```mermaid
-%%{init: {"xyChart": {"chartOrientation": "horizontal"}}}%%
-xychart-beta
-    title "Tracked lines by language"
-    x-axis ["C", "Shell", "Python", "Markdown", "C headers", "Other", "CMake", "CI YAML", "Make", "XML", "C++"]
-    y-axis "Lines" 0 --> 8000
-    bar [7730, 1161, 899, 752, 450, 251, 194, 137, 103, 33, 16]
+xychart-beta horizontal
+    title "Tracked text lines, wiki and evidence excluded"
+    x-axis ["C", "Python", "Markdown", "Shell", "C headers", "YAML", "CMake", "Other", "C++", "Make", "JSON", "XML"]
+    y-axis "Lines" 0 --> 16000
+    bar [15702, 5076, 1319, 1268, 761, 358, 215, 184, 173, 118, 97, 33]
 ```
 
-The scale hides the smaller groups, so here they are again without C:
+| Language/type | Files | Lines |
+| --- | ---: | ---: |
+| C | 28 | 15,702 |
+| Python | 21 | 5,076 |
+| Markdown | 14 | 1,319 |
+| Shell | 8 | 1,268 |
+| C headers | 11 | 761 |
+| YAML | 5 | 358 |
+| CMake | 5 | 215 |
+| Other | 8 | 184 |
+| C++ | 2 | 173 |
+| Make | 1 | 118 |
+| JSON | 1 | 97 |
+| XML | 17 | 33 |
+| **Total** | **121** | **25,304** |
 
-```mermaid
-%%{init: {"xyChart": {"chartOrientation": "horizontal"}}}%%
-xychart-beta
-    title "Lines by language, C source and headers excluded"
-    x-axis ["Shell", "Python", "Markdown", "Other", "CMake", "CI YAML", "Make", "XML", "C++"]
-    y-axis "Lines" 0 --> 1300
-    bar [1161, 899, 752, 251, 194, 137, 103, 33, 16]
-```
-
-| Language | Lines | Files | Where |
-| --- | --- | --- | --- |
-| C (`.c`) | 7,730 | 14 | `src/` 4,052, `tests/` 3,318, `examples/` 360 |
-| C headers (`.h`) | 450 | 9 | `src/` 288, `include/ki_xml_pdf.h` 144, `examples/catalog_map.h` 18 |
-| Shell | 1,161 | 6 | `tests/verify.sh` 556 plus five more harnesses |
-| Python | 899 | 4 | `tests/` harnesses: catalog, CLI pipeline, fuzz, large proof |
-| Markdown | 752 | 10 | 4 at the root, 6 in `docs/` |
-| CMake and pkg-config templates | 194 | 6 | `CMakeLists.txt`, `tests/consumer/CMakeLists.txt`, 4 templates in `cmake/` |
-| Other | 251 | 7 | license, `baseline-manifest.json`, linker map, font notice, expected text, `.gitignore` |
-| CI YAML | 137 | 1 | `.github/workflows/ci.yml` |
-| Make | 103 | 1 | `Makefile` |
-| XML fixtures and examples | 33 | 6 | `examples/` and `tests/` |
-| C++ | 16 | 1 | `examples/consume.cpp` |
-| Total | 11,726 | 65 text files | plus 2 binary fonts |
-
-## Where the lines live
-
-| Area | Files | Lines | Share |
-| --- | --- | --- | --- |
-| `src/` (library and CLI) | 15 | 4,340 | 37.0% |
-| `tests/` | 17 | 5,410 | 46.1% |
-| `examples/` | 11 | 436 | 3.7% |
-| Markdown at the root | 4 | 390 | 3.3% |
-| `docs/` | 6 | 362 | 3.1% |
-| Build and CI | 9 | 448 | 3.8% |
-| `include/` | 1 | 144 | 1.2% |
-| Meta and licensing | 4 | 196 | 1.7% |
-
-Test material is the largest area of the repository: the `tests/` directory alone holds 46.1% of all tracked lines, more than the production code it checks.
+Classification uses suffixes; `CMakeLists.txt` and `.cmake.in` are CMake. “Other” includes `cmake/ki_xml_pdf.pc.in`, linker map, notices, checksums and expected text. Tiny XML line counts can hide long single-line fixtures such as `tests/fixture.xml`.
 
 ## Average file size by directory
 
-| Directory | Text files | Lines | Average lines per file |
-| --- | --- | --- | --- |
-| `tests/` | 16 | 5,410 | 338 |
-| `src/` | 15 | 4,340 | 289 |
-| `include/` | 1 | 144 | 144 |
-| `docs/` | 6 | 362 | 60 |
-| `examples/` | 11 | 436 | 40 |
-| `cmake/` | 4 | 55 | 14 |
+Directories are recursive first-level groups; `(root)` means files directly at the repository root. Same text-only exclusions as above; means are rounded to one decimal.
 
-Tests have both the largest files and the largest average. The examples stay deliberately small: the biggest, `examples/catalog_map.c`, is 213 lines, about the size `src/page_sink.c` was (206 lines) before OSR-90 removed it.
+| Directory | Files | Lines | Mean lines | Mean bytes |
+| --- | ---: | ---: | ---: | ---: |
+| `src/` | 18 | 6,201 | 344.5 | 10,316.6 |
+| `include/` | 1 | 236 | 236.0 | 10,005.0 |
+| `tests/` | 61 | 16,190 | 265.4 | 11,674.3 |
+| `examples/` | 11 | 438 | 39.8 | 1,157.7 |
+| `docs/`, excluding evidence | 7 | 491 | 70.1 | 7,553.3 |
+| `cmake/` | 4 | 59 | 14.8 | 570.2 |
+| `.github/` | 6 | 368 | 61.3 | 2,160.2 |
+| `fonts/`, notice only | 1 | 78 | 78.0 | 3,859.0 |
+| `(root)` | 12 | 1,243 | 103.6 | 9,866.1 |
 
-## Largest files
+The largest production files are `src/xml_parse.c` (1,482 lines), `src/pdf_write.c` (1,112), `src/convert.c` (994) and `src/font.c` (662).
 
-| File | Lines |
+## Recent history and churn
+
+All 68 reachable commits are in October: **54 non-merges and 14 merges**, on four active UTC dates (October 7: 2; October 13: 8; October 16: 32; October 17: 26). Dates use committer timestamps converted to UTC; activity includes merges.
+
+| Recent Monday–Sunday week | Commits |
+| --- | ---: |
+| 2026-09-07–09-13 | 0 |
+| 2026-09-14–09-20 | 0 |
+| 2026-09-21–09-27 | 0 |
+| 2026-09-28–10-04 | 0 |
+| 2026-10-05–10-11 (ISO 41) | 2 |
+| 2026-10-12–10-18 (ISO 42, partial) | 66 |
+
+| Recent month | Commits |
+| --- | ---: |
+| 2026-07 | 0 |
+| 2026-08 | 0 |
+| 2026-09 | 0 |
+| 2026-10, through snapshot | 68 |
+
+Last-90-day churn is `git log d573069 --no-merges --since=2026-07-20T00:00:00Z --until=2026-10-18T00:00:00Z --numstat --no-renames`. Exclude wiki, evidence and binary entries; retain deleted source paths. It totals **27,083 additions / 1,766 deletions**. The initial public import is included, so high churn is not automatically maintenance trouble. Git numstat counts an unterminated final line, unlike the size tables.
+
+| Hotspot, ordered by additions + deletions | Touching non-merges | Added | Removed |
+| --- | ---: | ---: | ---: |
+| `tests/test_stream.c` | 19 | 3,753 | 98 |
+| `src/xml_parse.c` | 4 | 1,725 | 243 |
+| `src/pdf_write.c` | 12 | 1,380 | 268 |
+| `src/convert.c` | 13 | 1,097 | 103 |
+| `src/font.c` | 6 | 789 | 127 |
+| `tests/research_table.py` | 1 | 762 | 0 |
+| `tests/test_xml_subset.c` | 1 | 751 | 0 |
+| `tests/test_layout_wrap.c` | 1 | 686 | 0 |
+
+### Explicit bot attribution: a lower bound
+
+Search author name/email and `Co-authored-by:` trailers, case-insensitively, for `[bot]`, the whole word `bot`, or `factory-droid`. There are **0 bot-authored commits**, **30 with a bot co-author**, and **30 in their union**: **30/68 = 44.1%** of all reachable commits, or **30/54 = 55.6%** of non-merges. The denominator includes the initial import; merges have no matching trailer. All 30 matching commits explicitly credit `factory-droid[bot]`.
+
+This measures visible attribution only. It cannot establish how much code was AI-generated, and absent trailers do not prove work was unaided.
+
+## Include depth and export surface
+
+Resolve literal quoted includes relative to their source file, then the project roots `include/`, `src/`, `examples/`; traverse existing tracked C/C++ files and headers only. Exclude system headers, generated build dependencies and evidence snapshots. There are no unresolved quoted includes. Maximum simple-chain depth is **four include edges / five files**, with six tied paths:
+
+- Each of `src/convert.c`, `src/layout.c` and `tests/test_stream.c` reaches `src/layout.h` → `src/pdf_write.h` → `src/geometry.h` → `src/font.h`.
+- The same three origins also reach `src/layout.h` → `src/pdf_write.h` → `src/info.h` → `include/ki_xml_pdf.h`.
+
+`libki_xml_pdf.map` declares **13 function exports**, excluding the three ELF version-node names and local implementation/test hooks:
+
+| Version node | Functions |
 | --- | --- |
-| `tests/test_stream.c` | 3,259 |
-| `src/xml_parse.c` | 1,163 |
-| `src/convert.c` | 861 |
-| `src/pdf_write.c` | 774 |
-| `tests/verify.sh` | 556 |
-| `src/font.c` | 340 |
-| `src/report.c` | 263 |
-| `tests/catalog_verify.py` | 244 |
-| `tests/cli_pipeline.py` | 240 |
-| `tests/large_proof.py` | 230 |
+| `KI_0_1` (8) | `ki_convert`, `ki_convert_file`, `ki_doc_text`, `ki_doc_break`, `ki_doc_fail`, `ki_options_init`, `xml2pdf_convert`, `xml2pdf_convert_cap` |
+| `KI_0_2` (1) | `ki_convert_to_file` |
+| `KI_0_3` (4) | `ki_config_init`, `ki_convert_cfg`, `ki_convert_file_cfg`, `ki_convert_to_file_cfg` |
 
-The parser, the driver and the PDF writer are the biggest production pieces, in that order. The largest file in the repository is a test file, 2.8 times the size of the largest production file.
+These are the source-controlled export rules, not `nm` counts from an arbitrary local build. See [C API](api/c-api.md).
 
-## Commit history
+## Measurements are revision-scoped
 
-Nine commits across two active days:
+`docs/evidence/osr-82-heap-profile/README.md` measured **de8ba0e**, before the October 17 memory changes: median RSS 2,728 KiB for full 16 MiB report-v1, 2,688 KiB for records-v1, and 2,728 KiB for report-v1 limited to 1,000 records. These are not measurements of this HEAD. `tests/verify.sh` now gates converter RSS at **4,096 KiB**, below half the large input and within small-run RSS +4 MiB; that fixture gate is not a universal RSS bound.
 
-| Day | Commits | Events |
-| --- | --- | --- |
-| 2026-10-07 | 2 | Public drop `7c62fe4` at 21:10, CI and source-distribution fix `cedcaab` at 21:34 (local +03:00) |
-| 2026-10-13 | 7 | Six OSR commits between 02:32 and 03:08 UTC, then merge of PR #1 (`037e2bf`) at 06:39 local |
+## Key source files and related pages
 
-| Week (Mon to Sun) | Commits |
+| Sources | Purpose |
 | --- | --- |
-| 2026-10-05 to 2026-10-11 (ISO week 41) | 2 |
-| 2026-10-12 to 2026-10-18 (ISO week 42) | 7 |
+| `include/ki_xml_pdf.h`, `libki_xml_pdf.map` | Version, public layouts and export nodes |
+| `src/convert.c`, `src/layout.h`, `src/pdf_write.h`, `src/geometry.h`, `src/info.h`, `src/font.h` | Production inventory and include-chain evidence |
+| `tests/test_stream.c`, `tests/verify.sh`, `tests/resource_baseline.py` | Test size and measured resource gates |
+| `docs/evidence/osr-82-heap-profile/README.md` | Historical heap/RSS provenance, excluded from code counts |
 
-The 2026-10-13 sprint averages one commit every 7.3 minutes across the six OSR commits. The first commit landed 73% of all lines that have ever been inserted (8,824 of 12,067), which is what a repository looks like when it is published as a finished first release rather than grown in public.
-
-## Churn hotspots
-
-From `git log --numstat` across the eight non-merge commits:
-
-| File | Commits touching it | Lines added | Lines removed |
-| --- | --- | --- | --- |
-| `tests/test_stream.c` | 3 | 3,259 | 0 |
-| `src/xml_parse.c` | 1 | 1,163 | 0 |
-| `src/convert.c` | 3 | 906 | 45 |
-| `src/pdf_write.c` | 1 | 774 | 0 |
-| `tests/verify.sh` | 2 | 559 | 3 |
-| `src/font.c` | 1 | 340 | 0 |
-| `tests/fuzz_smoke.py` | 2 | 274 | 89 |
-| `src/report.c` | 1 | 263 | 0 |
-| `README.md` | 3 | 262 | 51 |
-| `src/main.c` | 2 | 252 | 32 |
-
-After the initial drop, only three production files changed at all: `src/convert.c` (+58/-45), `src/main.c` (+88/-32) and `include/ki_xml_pdf.h` (+16/-6), all in the 0.2.0 sprint. The rest of `src/` is byte-identical to the first public commit. Most churn after the drop went into tests and documentation: `tests/test_stream.c` gained 566 lines and `README.md` gained 213 across the sprint.
-
-## Bot co-authorship
-
-None. A search for `Co-authored-by` trailers over all nine commit messages returns zero matches, and no commit carries bot attribution. Measured as a share of commits with bot co-author trailers: 0%. All work in the visible history is human-authored.
-
-## Public API surface
-
-`libki_xml_pdf.map` exports exactly 9 symbols in two version nodes:
-
-| Symbol | Version node | Kind |
-| --- | --- | --- |
-| `ki_convert` | KI_0_1 | current API |
-| `ki_convert_file` | KI_0_1 | current API |
-| `ki_doc_text` | KI_0_1 | current API |
-| `ki_doc_break` | KI_0_1 | current API |
-| `ki_doc_fail` | KI_0_1 | current API |
-| `ki_options_init` | KI_0_1 | current API |
-| `xml2pdf_convert` | KI_0_1 | legacy |
-| `xml2pdf_convert_cap` | KI_0_1 | legacy |
-| `ki_convert_to_file` | KI_0_2 | added in 0.2.0 |
-
-Everything else in the shared library is local. The three `xml2pdf_debug_*` test hooks declared in `src/convert.h` are not in the map, so the linker keeps them private.
-
-## Test-to-code ratio
-
-Test harness code in `tests/` totals 5,378 lines: `tests/test_stream.c` (3,259), `tests/consumer/report.c` (59), four Python files (899) and six shell files (1,161). Production C in `src/` and `include/` totals 4,484 lines. The ratio is about 1.2 test lines per production line. The single C test binary registers 16 test cases, and the shell and Python harnesses add build integration, CLI pipeline, catalog, fuzz, docs and 1 GiB large-proof runs on top.
-
-## Historical performance
-
-Measured 2026-10-07 on revision `7c62fe4` (Linux 64-bit, GCC, Poppler), as recorded in `docs/contract.md` and `README.md`:
-
-| Scenario | Input bytes | Pages | PDF bytes | Peak RSS | Offset spool |
-| --- | --- | --- | --- | --- | --- |
-| `records-v1`, whole input | 16,777,313 | 41,944 | 173,535,332 | 2,360 KiB | 671,168 |
-| `report-v1`, first 1,000 of 19,522,650 records | 1,073,741,815 | 41 | 1,009,241 | 2,372 KiB | 720 |
-
-Derived from those rows:
-
-- The 2,372 KiB peak is 3.6% of the 64 MiB ceiling that applied to that revision, and 0.22% of the 1 GiB input; the input-to-RSS ratio is roughly 442 to 1. The current acceptance gate is 4096 KiB (4 MiB).
-- The 1 GiB conversion took 7.61 seconds, about 141 MB/s of input.
-- The offset spool costs 8 bytes per PDF object: about 16 bytes per page in the full `records-v1` run.
-- The `records-v1` run expands 16 MiB of XML into a 173.5 MB PDF, a factor of about 10.3.
-
-The scripted gate in `tests/verify.sh` requires large-run RSS at most 4096 KiB, under half the input size, and within 4 MiB of a small run's RSS. See [how the checks work](how-to-contribute/testing.md).
-
-## Related pages
-
-- [Overview](overview/index.md) and [Architecture](overview/architecture.md)
-- [The report-v1 profile](features/report-v1.md) and [records-v1](features/records-v1.md)
-- [The legacy page sink](systems/page-sink.md) and [Layout and fonts](systems/layout-and-fonts.md)
-- [Design decisions](background/design-decisions.md) and [Cleanup opportunities](cleanup-opportunities.md)
-- [History](lore.md) and [Fun facts](fun-facts.md)
+[Overview](overview/index.md) · [Architecture](overview/architecture.md) · [PDF writer](systems/pdf-writer.md) · [Resource limits](features/resource-limits.md) · [Testing](how-to-contribute/testing.md) · [Design decisions](background/design-decisions.md) · [History](lore.md)

@@ -1,61 +1,107 @@
 # Dependencies
+Active contributors: Artem
 
-The library has no third-party code: at runtime it needs glibc and the bundled font, nothing else. The tool list grows only for building and checking. Versions below come from `CMakeLists.txt`, `Makefile`, the test scripts and `.github/workflows/ci.yml`.
+The shipping library depends on Linux/glibc and zlib, plus a compatible TrueType font. Build/test/research tools are separate from runtime dependencies.
 
-## Runtime
+## Runtime and platform
 
-| Dependency | Why | Where enforced |
+| Dependency | Why | Source |
 | --- | --- | --- |
-| glibc | `ki_convert` wraps `write_bytes` with `fopencookie` | `CMakeLists.txt` compiles a `__GLIBC__` probe and fails configuration without it |
-| 64-bit Linux | Validated platform; `CMakeLists.txt` rejects others | `CMakeLists.txt` checks `CMAKE_SYSTEM_NAME` and pointer size |
-| POSIX 200809 | `mkstemp`, `fsync`, `rename`, `sigaction`, `readlink` | `_POSIX_C_SOURCE=200809L` in `Makefile`; `_GNU_SOURCE` in `src/convert.c` and `src/pdf_write.c` for `fopencookie` |
-| DejaVu Sans | The one embedded font, installed with the package | `fonts/DejaVuSans.ttf`, notice in `fonts/DejaVuSans.copyright` |
+| 64-bit Linux with glibc | Only supported platform; GNU/POSIX APIs and ELF packaging | `README.md`, `CMakeLists.txt`, `src/platform.h` |
+| glibc cookie streams | Callback adapter and counted output share `FILE *` writing | `src/convert.c`, `src/pdf_write.c` |
+| zlib | Flate-compressed page content and complete embedded font | `src/pdf_write.c`, `Makefile`, `CMakeLists.txt` |
+| TrueType font | Fixed-repertoire metrics and embedded glyph outlines | `src/font.c`, `fonts/DejaVuSans.ttf` |
 
-There is no network access, no XML library, no PDF library and no image library. Project source and examples are MIT (`LICENSE`); the font keeps its separate notice.
+CMake rejects non-Linux, non-64-bit and non-glibc targets.
+Make rejects non-Linux; `src/platform.h` also requires Linux/glibc during compilation.
+musl, macOS and Windows are not supported or advertised as merely untested alternatives.
 
-## Build
+The XML parser and PDF writer are project code, not libxml2 or an external PDF engine.
+There is no network resolver, Java/FOP runtime, image library, shaping engine or linked subsetter.
+A caller can supply another compatible font, subject to the 8 MiB cap and unchanged body repertoire.
 
-| Tool | Used for |
+## Link dependencies reach consumers
+
+| Consumption route | zlib handling |
 | --- | --- |
-| GCC or Clang (C99) | Compiling `src/` and `examples/` |
-| GNU Make | The `Makefile` targets (`all`, `test`, `check`, `test-san`, `example`, `install`, `dist`, `distcheck`, `clean`) |
-| GNU-compatible linker and `ar` | `--version-script=libki_xml_pdf.map`, soname `libki_xml_pdf.so.0`, `libki_xml_pdf.a` |
-| CMake 3.16+ | Out-of-tree builds, CTest, installation, consumer discovery (optional but exercised by the checks) |
-| pkg-config | Consumer discovery against installed packages |
-| binutils (`readelf`) | Linkage and soname verification in the check scripts |
+| Raw static archive | Add `-lz` after the archive/library |
+| pkg-config shared | `pkg-config --libs ki_xml_pdf` gives public library flags |
+| pkg-config static | Use `pkg-config --static --libs ki_xml_pdf` to include `Libs.private: -lz` |
+| CMake static target | `ki_xml_pdf::static` carries the zlib link-only dependency |
+| CMake shared target | Shared library records libz as an ELF NEEDED dependency |
 
-## Test tools
+`cmake/ki_xml_pdfConfig.cmake.in` calls `find_dependency(ZLIB)`.
+zlib development files are required when building and for installed CMake discovery.
+Do not copy obsolete “glibc and font only” or “no dependencies” claims.
 
-| Tool | Used by |
+## Build tools
+
+| Tool | Use |
 | --- | --- |
-| C++ compiler (GCC or Clang) | `examples/consume.cpp` and the installed C++ consumers in `tests/build_integration.sh`, `tests/distcheck.sh`, `tests/docs_smoke.sh` |
-| Python 3 | `tests/verify.sh`, `tests/cli_pipeline.py`, `tests/catalog_verify.py`, `tests/fuzz_smoke.py`, `tests/large_proof.py`, and CMake configure when `BUILD_TESTING` is on. Standard library only: no pip packages |
-| `/usr/bin/time` | RSS measurement in `tests/verify.sh` and `tests/large_proof.py` (the `time` package on Debian/Ubuntu) |
-| Poppler: `pdfinfo`, `pdftotext`, `pdftohtml` | The independent PDF readers used as oracles |
-| bash, `tar`, `mktemp` | `tests/verify.sh`, `tests/distcheck.sh`, `tests/build_integration.sh`, `tests/docs_smoke.sh` |
+| GCC or Clang, C99 | Core library and CLI |
+| GNU Make | Development/install/source targets in `Makefile` |
+| GNU-compatible linker and `ar` | ELF version scripts/soname and static archive |
+| zlib development package | Headers and link library; Debian/Ubuntu `zlib1g-dev` |
+| CMake 3.16+ | Out-of-tree build, CTest, install and consumers |
+| pkg-config | Installed consumer discovery |
+| Git, tar/gzip, SHA-256 tools | Exact-HEAD source archives and provenance |
 
-On Debian or Ubuntu the full set is:
+C++ is not a core runtime requirement.
+A C++ compiler is required to check public-header and installed-client compatibility.
+The Make defaults include C99 warnings, PIC and POSIX feature macros; see [Tooling](../how-to-contribute/tooling.md).
+
+## Check tools
+
+| Tool | Evidence |
+| --- | --- |
+| Python 3 | CLI/feature/PDF/resource oracles and fixture generators; regular suites use the standard library |
+| Bash and standard Unix tools | Integration, docs, installation and archive scripts |
+| Poppler `pdfinfo`, `pdftotext`, `pdftohtml` | Page structure/text extraction and independent reading |
+| Poppler `pdffonts`, `pdftoppm` | Embedded-font identity and actual raster ink for font/geometry/integration checks |
+| binutils `readelf`, loader `ldd` | Soname, symbol/linkage and old-binary checks |
+| `/usr/bin/time` | Separate converter/generator/reader/oracle RSS records |
+| pthreads | Independent-context C regressions |
+| GNU linker `--wrap` | fsync and zlib failure injection |
+| DejaVu system fonts | Non-default bold-font checks in `tests/font_metrics_check.py` |
+
+For a Debian/Ubuntu check environment:
 
 ```sh
-sudo apt-get install -y gcc g++ clang make cmake pkg-config binutils python3 time poppler-utils
+sudo apt-get install -y gcc g++ clang make cmake pkg-config zlib1g-dev \
+  binutils python3 time poppler-utils fonts-dejavu-core
 ```
 
-The Python scripts import only the standard library (`argparse`, `pathlib`, `subprocess`, `tempfile`, `random`, `hashlib`, `re`, `xml.etree.ElementTree`), so no virtual environment is needed.
+The repository also bundles its default font.
+A development system font is not a reason for installed consumers to depend on the source checkout.
+See [Testing](../how-to-contribute/testing.md) for exact suite membership.
 
-## CI
+## CI and release tooling
 
-GitHub Actions on `ubuntu-latest` runners. Two actions, pinned as recorded in `.github/workflows/ci.yml`:
+`.github/workflows/ci.yml` uses GitHub-hosted `ubuntu-latest` and installs job-specific tools.
+Actions are `actions/checkout@v4` and `actions/upload-artifact@v7.0.2`.
+Those are tag/version references, not immutable commit-SHA pins.
+`.github/workflows/release.yml` additionally uses GitHub CLI to create tag-triggered releases.
+The tag job does not rerun functional/resource CI.
 
-| Action | Version | Used for |
-| --- | --- | --- |
-| `actions/checkout` | `v4` | Every job, with the PR head commit as the ref |
-| `actions/upload-artifact` | `v7.0.2` | The `source` job: archive, `SHA256SUMS`, `SOURCE_COMMIT` |
+## Licensing and research boundary
 
-Each job installs only what its steps need: the `gcc` job adds `gcc g++ make cmake pkg-config binutils poppler-utils python3 time`; `clang` swaps `gcc` for `clang`; `asan` installs `gcc make poppler-utils python3`; `resources` installs `gcc g++ make poppler-utils python3 time`. The job graph is on [Tooling](../how-to-contribute/tooling.md).
+Project source, public API and original examples use MIT under `LICENSE`.
+`fonts/DejaVuSans.copyright` carries the separate Bitstream Vera/DejaVu terms.
+Both build systems install the font and its notice alongside the project license.
+Users supplying other fonts are responsible for their embedding/distribution rights.
 
-## Related pages
+Massif/Valgrind in the OSR-82 evidence is historical profiling tooling, not a converter dependency.
+UTF-16, table and subsetting research scripts are not runtime or ordinary Make/CMake test dependencies.
+No product support for those experiments follows from their presence in the source tree.
 
-- [Getting started](../overview/getting-started.md) for the install commands in context.
-- [Testing](../how-to-contribute/testing.md) for how each tool is used.
-- [Packaging](../features/packaging.md) for what lands in an installed prefix.
-- [Release and distribution](../deployment.md) for artifact provenance.
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `Makefile`, `CMakeLists.txt` | Required compiler/link/build dependencies |
+| `cmake/ki_xml_pdf.pc.in`, `cmake/ki_xml_pdfConfig.cmake.in` | Consumer dependency propagation |
+| `src/platform.h` | Compile-time Linux/glibc guard |
+| `.github/workflows/ci.yml` | Job packages and action references |
+| `LICENSE`, `fonts/DejaVuSans.copyright` | Distribution notices |
+
+Related: [Packaging](../features/packaging.md), [Distribution and releases](../deployment.md).

@@ -1,154 +1,90 @@
 # XML parser
+Active contributors: Artem
 
-Active contributors: Artem Klen
+`src/xml_parse.c` is an allocation-free pull parser for the project's UTF-8 XML subset. It emits one bounded event at a time, validates skipped content too, and reports where input has been consumed rather than where a token began.
 
-`src/xml_parse.c` is a pull parser that turns a byte stream into `XmlEvent` records: start tag, end tag, text, EOF or error. It runs in fixed memory, a 4096-byte input window plus a 64-entry stack of open element names, with no allocation anywhere in the file. It accepts a documented subset of XML and rejects everything else with a message and a byte offset.
+## Model and bounds
 
-## Purpose
+`XmlParser` owns a sliding window, a fixed stack of open element names and incremental UTF-8/position state. `xml_next` fills an `XmlEvent` with START, END, TEXT, EOF or ERROR; `src/convert.c` exposes only START, END and TEXT to public mappers.
 
-The parser is the first stage of the pipeline in [Architecture](../overview/architecture.md). Its job is to hand the driver one event at a time while keeping memory independent of document size, so a 1 GiB input costs the same as a 1 KiB one. The design is a single forward pass: no tree, no attribute map, no entity table, and a sticky error state instead of recovery.
+| Bound in `src/xml_parse.h` | Value |
+| --- | --- |
+| Input window | 4096 bytes |
+| Open elements | 64 |
+| Element/attribute name | 63 bytes plus terminator |
+| Attributes per element | 8 |
+| Decoded attribute value | 255 UTF-8 bytes plus terminator |
+| Text/CDATA fragment | At most 1023 bytes plus terminator |
 
-## Key abstractions
+The subsystem has one implementation unit and two focused C test files, `tests/test_xml_subset.c` and `tests/test_xml_coords.c` (2:1), alongside the original streaming groups in `tests/test_stream.c`. These bounds are storage limits, not field/document size limits.
 
-| Abstraction | Defined in | Role |
-| --- | --- | --- |
-| `XmlParser` | `src/xml_parse.h` | All parser state: window, open-element stack, byte offset, error slot |
-| `XmlEvent` | `src/xml_parse.h` | One START, END, TEXT, EOF or ERROR record |
-| `XmlReadFn` | `src/xml_parse.h` | Byte source contract: count, 0 on EOF, negative on error |
-| `xml_parser_init` | `src/xml_parse.c` | Construct from a read callback |
-| `xml_parser_init_file` | `src/xml_parse.c` | Construct from a `FILE *` through `file_read` |
-| `xml_next` | `src/xml_parse.c` | Pull the next event |
-| `fill`, `peek`, `nextch` | `src/xml_parse.c` | Window refill and UTF-8 validation |
-| `parse_markup`, `parse_text`, `parse_cdata` | `src/xml_parse.c` | The dispatch targets of `xml_next` |
-| `try_entity`, `try_named`, `try_numeric` | `src/xml_parse.c` | Entity and character reference decoding |
+## Pull flow
 
-## How it works
+`fill` moves unread bytes to the window front and asks `XmlReadFn` for more. A positive short read is data, zero is EOF, and a negative value is failure. The public adapter in `src/convert.c` also rejects counts larger than the requested maximum.
 
-### Fixed bounds
-
-The bounds are compile-time constants in `src/xml_parse.h`. Nothing grows with the document, so `sizeof(XmlParser)` is about 8 KiB (4 KiB window plus 4 KiB name stack plus small fields).
-
-| Constant | Value | Meaning |
-| --- | --- | --- |
-| `XML_BUF_SIZE` | 4096 | Input window in bytes |
-| `XML_NAME_MAX` | 64 | Element and attribute names up to 63 bytes |
-| `XML_MAX_DEPTH` | 64 | Open elements at once |
-| `XML_ATTR_MAX` | 8 | Attributes per start tag |
-| `XML_ATTR_VAL_MAX` | 256 | Attribute values up to 255 bytes |
-| `XML_TEXT_MAX` | 1024 | Text chunks up to 1023 bytes |
-| `XmlParser.errmsg`, `XmlEvent.error` | 160 bytes each | Message buffers |
-
-### The read contract
-
-`XmlReadFn` in `src/xml_parse.h` reads up to `max` bytes into `dst` and returns the count, 0 on EOF, or a negative value on error. A short read is not EOF; the parser asks again. `fill` moves unread bytes to the front of the window with `memmove` so a token that straddles a refill stays contiguous, then asks the source for the remaining space. Decisions that need several bytes at once go through helpers that keep calling `fill`: `match_at` for fixed marks such as `<!DOCTYPE` and `[CDATA[`, `try_entity` and `try_named` for entity names, and `try_numeric` for reference digits. `]]>` is handled without look-ahead: CDATA holds back up to two `]` bytes in `cdata_mark`, and plain text counts them in `bracket_run`. A source that returns one byte at a time works; `one_byte_entities_and_nesting` in `tests/test_stream.c` feeds one-byte reads.
-
-### Dispatch
-
-`xml_next` resets the event fields, then works through sticky state: a recorded failure returns `XML_EV_ERROR` with the stored message, a completed document returns `XML_EV_EOF`, and a pending end tag left by a self-closing element is emitted before any new scanning. The first call consumes a BOM. The loop continues an open CDATA section while one exists, peeks one byte, and sends `<` to `parse_markup` and anything else to `parse_text`. Skipped markup (comment, PI, DOCTYPE) returns `XML_EV_NONE` internally and the loop runs again.
+`xml_next` handles sticky failure/EOF, a pending synthetic END for `<x/>`, and an optional leading BOM before dispatching to text, markup or continued CDATA parsing. Comments, processing instructions and DOCTYPE are consumed internally and never become mapper events. A failed parser never recovers without reinitialization.
 
 ```mermaid
-graph TD
-    Next[xml_next] --> St{sticky state: failed, done, pending_end, BOM}
-    St -->|pending self-closing end| Pend[emit saved END]
-    St -->|clean pass| InC{inside CDATA?}
-    InC -->|yes| PC[parse_cdata next chunk]
-    InC -->|no| Pk{peek one byte}
-    Pk -->|EOF| End{depth 0 and root seen?}
-    End -->|yes| Eof[emit XML_EV_EOF]
-    End -->|no| Err[fail: unclosed element or no document element]
-    Pk -->|'<'| Mk[parse_markup]
-    Pk -->|other| Tx[parse_text chunk]
-    Mk -->|START or END| Out[XmlEvent]
-    Mk -->|comment, PI, DOCTYPE, declaration| Pk
-    PC -->|TEXT with from_cdata| Out
-    Tx -->|TEXT| Out
-    Pend --> Out
-    Eof --> Out
-    Err --> Out2[XmlEvent with XML_EV_ERROR]
+flowchart LR
+    Read[Read callback] --> Window[Fixed input window]
+    Window --> Dispatch[xml_next]
+    Dispatch --> Tags[START or END]
+    Dispatch --> Text[TEXT or CDATA fragment]
+    Dispatch --> Skip[Comment, PI, DOCTYPE]
+    Skip --> Dispatch
+    Tags --> Driver[Conversion driver]
+    Text --> Driver
 ```
 
-### The accepted subset
+## Accepted subset
 
-| Construct | Behavior | Code |
-| --- | --- | --- |
-| UTF-8 BOM | Consumed once, counted in the byte offset | `consume_bom` |
-| XML declaration | First markup only; `version="1.0"` required; `encoding` only `utf-8`/`UTF-8`; `standalone` yes/no; unknown keys rejected | `xml_decl_ok` |
-| Comments | Skipped; no `--` inside; must end with `-->` | `skip_comment` |
-| Processing instructions | Skipped; body up to 255 bytes; the target that spells `xml` in the exact case is reserved for the declaration | `parse_markup` |
-| DOCTYPE | At most one, at top level before the root; skipped whole, including quoted strings and a bracketed internal subset; external entities never fetched | `skip_bang`, `skip_decl_rest` |
-| CDATA | Only inside element content; emitted as TEXT events with `from_cdata = 1` in chunks up to 1023 bytes | `parse_cdata` |
-| Elements | One document element; matching end tags; self-closing tags emit START then END on the next call | `parse_start`, `parse_end`, `pop_name` |
-| Attributes | Quoted; entities decoded; tab, LF and CR become spaces; up to 8, duplicates rejected, space required between them | `read_quoted`, `parse_start` |
-| Text | Chunks up to 1023 bytes; whitespace-only outside the root | `parse_text` |
-| Entities | `amp`, `lt`, `gt`, `quot`, `apos`, and decimal or hex numeric references | `try_named`, `try_numeric` |
-
-### Encoding and validation
-
-Only UTF-8 is supported. `consume_bom` skips `EF BB BF` and rejects the UTF-16 byte-order marks with "unsupported encoding". `feed_utf8` sees every byte through `nextch` and `note_bytes` and rejects NUL, lead bytes 0x80 to 0xC1 and 0xF5 to 0xFF, overlong forms (0xE0 not followed by 0xA0 to 0xBF, 0xF0 not followed by 0x90 to 0xBF), surrogates (0xED followed by 0xA0 to 0xBF) and anything above U+10FFFF (0xF4 followed above 0x8F). Among ASCII code points, only tab, LF and CR are legal; other controls fail `xml_cp_ok`. Non-ASCII code points are checked structurally: a well-formed sequence passes even when the code point has no glyph in the font, and the failure surfaces later as `KI_CAUSE_FONT` in [Layout and fonts](layout-and-fonts.md).
-
-### Normalization
-
-- CR and CRLF become LF in text and CDATA (`parse_text`, `parse_cdata`).
-- In attribute values, CR, CRLF, LF and tab each become one space (`read_quoted`).
-- The declaration must be the first markup after the BOM. Any text before it, even whitespace, clears `document_start`, so a later `<?xml` fails with "xml declaration not at start".
-- Names may contain `:`; it is treated as a name character, and no namespace processing exists (`is_name_start`, `is_name_char`).
-- In text, an entity is deferred to the next chunk when the current one cannot hold a 4-byte UTF-8 sequence plus its terminator, so a decoded character is never split.
-
-### Rejected constructs
-
-| Construct | Message |
+| Construct | Current behavior in `src/xml_parse.c` |
 | --- | --- |
-| UTF-16 BOM | "unsupported encoding" |
-| Second document element | "multiple document elements" |
-| Nesting past 64 | "element nesting too deep" |
-| End tag with no matching start | "end tag without start" |
-| End tag with the wrong name | "end tag mismatch" |
-| More than 8 attributes | "too many attributes" |
-| Repeated attribute name | "duplicate attribute" |
-| Unquoted or missing value | "attribute without value", "bad attribute value" |
-| Raw `<` in an attribute | "raw '<' in attribute" |
-| Name longer than 63 bytes | "bad start tag", "bad end tag", "bad attribute" |
-| `]]>` in text | "']]>' in text" |
-| Non-whitespace text outside the root | "text outside document" |
-| CDATA outside element content | "cdata outside element" |
-| Comment containing `--` or not ending `-->` | "bad comment" |
-| DOCTYPE after the root or nested | "doctype placement" |
-| Other `<!` declarations | "unsupported declaration" |
-| Misspelled or unknown entity | "unknown entity" |
-| Numeric reference out of range or an illegal code point | "bad character reference" |
-| Invalid UTF-8, control characters, truncated sequence at EOF | "illegal character" |
-| EOF with elements open, or no root seen | "unclosed element", "no document element" |
-| A `<?` target that spells `xml` in any letter case other than the exact declaration | "reserved processing instruction" |
+| Encoding | UTF-8 only; optional BOM; UTF-16 is unsupported |
+| XML declaration | At document start after BOM; required `version="1.0"`, optional encoding `UTF-8`/`utf-8`, optional standalone `yes`/`no`, ordered and unique |
+| Elements | One root, matching names, bounded nesting; empty elements produce START then END |
+| Attributes | Quoted values; duplicate names rejected; literal `<` rejected |
+| References | Five predefined entities and decimal / lowercase-`x` hexadecimal numeric references |
+| CDATA | Only inside an element; bounded TEXT fragments with `from_cdata=1`; reference spelling stays literal |
+| Comments and PI | Skipped incrementally, including long bodies; malformed comments/targets and reserved mixed-case `xml` PI targets fail |
+| DOCTYPE | At most one before the root; external identifier syntax checked but never resolved; internal subset skipped with quote/comment/PI awareness |
 
-### byte_offset
+Declared entities do not become valid references. There is no network fetch, DTD validation, namespace resolution or DOM. Names retain colons and use the parser's byte-oriented name rules; do not advertise this as a complete XML implementation. The report/custom mapper may impose a narrower schema.
 
-`XmlParser.offset` counts every consumed byte, starting from byte 0 and including the BOM. Every event carries it in `XmlEvent.byte_offset` at completion: a START event reports the offset just past its `>`, a TEXT event just past the chunk. `fail_at` appends " at byte N" to a message before storing it, so the byte offset travels into `KiResult.message` through the driver.
+Every consumed byte passes UTF-8/XML-Char checks, including comments, PI, DTD bodies, skipped report records and trailing input. Invalid sequences, surrogates, out-of-range scalars and non-XML characters fail. Legal XML text can still fail later because the [font repertoire](layout-and-fonts.md) is narrower.
 
-### Errors
+Literal CR/CRLF become LF in text/CDATA. Literal tab/LF/CR/CRLF become spaces in attributes. References are decoded separately, so referenced whitespace is not normalized as literal attribute whitespace. Text chunks finish at scalar boundaries, but mapper emission calls should still work incrementally.
 
-`fail` sets `failed`, stores the message in `XmlParser.errmsg`, and fills `XmlEvent.error` and `XmlEvent.byte_offset`. The parser never recovers: every later `xml_next` call returns `XML_EV_ERROR` with the stored message until the struct is reinitialized. The driver maps the message to a status and `KI_CAUSE_*` cause, described in [Conversion pipeline](conversion-pipeline.md).
+## Consumed positions
 
-## Integration points
+`consume`, `stamp` and `xml_format_pos` implement the position contract (`src/xml_parse.c`, `src/xml_parse.h`):
 
-- `convert_streams` in `src/convert.c` builds the parser with `xml_parser_init` over `conv_read`, which wraps `KiOptions.read_bytes` and polls `cancelled`, or reads a plain `FILE *`. See [Conversion pipeline](conversion-pipeline.md) and [Streaming I/O](../features/streaming-io.md).
-- Every mapper consumes `XmlEvent`: `map_event` in `src/convert.c` for [records-v1](../features/records-v1.md), `report_map` in `src/report.c` for [report-v1](../features/report-v1.md), and user callbacks for [custom mappers](../features/custom-mappers.md).
-- The byte offset surfaces in `KiResult.message` on profile failures; see [C API](../api/c-api.md).
-- The legacy page sink consumes the same events directly; see [Page sink](page-sink.md).
-- Parser coverage lives in `tests/test_stream.c`: `split_mid_tag_and_text`, `one_byte_entities_and_nesting`, `skips_and_errors`, `cdata_and_numeric`, `cdata_stream_fixed_memory`, and the RSS-gated `big_stream_fixed_memory`. See [Testing](../how-to-contribute/testing.md).
+- Line/column are 1-based; column counts Unicode scalars, with tab counting once.
+- Byte offset is 0-based raw bytes consumed, including a leading BOM. The BOM adds no column.
+- CR, LF and CRLF each end one line. References and CDATA delimiters count their source spelling.
+- A tag event points just after `>`; an empty element's synthetic END has its START position.
+- Looking ahead does not consume input. Counter overflow stops parsing rather than wrapping.
 
-## Entry points for modification
+Malformed UTF-8 is reported when the containing parser path checks the latched bad-sequence state. Text/CDATA/comment/PI/DTD bodies usually check after each byte; text references check after the whole reference, tags after `>`, and cut-off text sequences before `<` or at EOF. A syntax/reference error found earlier wins. Do not interpret the result as an exact offending-byte pointer. The public header gives the edge-case contract.
 
-- Bounds: the `XML_*` constants in `src/xml_parse.h`. Struct sizes change, and `tests/test_stream.c` asserts fixed memory.
-- A new parsed or skipped construct: add a branch in `parse_markup`, a helper function, and a test in `tests/test_stream.c`.
-- More entity names: `try_named` in `src/xml_parse.c`.
-- Declaration policy: `xml_decl_ok` in `src/xml_parse.c`.
-- Event shape: `XmlEvent` in `src/xml_parse.h`; consumers in `src/convert.c` and `src/report.c` change together.
+The driver appends `at line L, column C, byte B` to XML/profile errors; public `KiEvent` retains only `byte_offset`. See [Data models](../reference/data-models.md) and [Debugging](../how-to-contribute/debugging.md).
+
+## Change entry points
+
+- Grammar: dispatch in `parse_markup`, with helpers such as `parse_pi`, `parse_xml_decl`, `skip_doctype` and `skip_internal_subset`.
+- Text/references: `parse_text`, `parse_cdata`, `try_named`, `try_numeric`; test around the 4096-byte window and with one-byte reads.
+- Position rules: centralize consumption in `consume`; add independent position oracles in `tests/test_xml_coords.c`.
+- Limits: `src/xml_parse.h`; remember that event/public attribute bounds and mapper depth assumptions are coupled.
 
 ## Key source files
 
 | File | Role |
 | --- | --- |
-| `src/xml_parse.c` | Parser implementation, no allocation |
-| `src/xml_parse.h` | Bounds, event and parser structs, read callback contract |
-| `tests/test_stream.c` | Stream-splitting, entity, skip and fixed-memory tests |
-| `examples/hello.xml` | Sample input used by the test suite |
+| `src/xml_parse.c`, `src/xml_parse.h` | Parser, bounds, event shape and position rules |
+| `src/convert.c` | Checked public reader adapter and event/cause translation |
+| `tests/test_xml_subset.c` | Character contexts, declaration/DTD rules, chunk boundaries and selected tails |
+| `tests/test_xml_coords.c` | Independent position oracle, counter overflow and profile/custom errors |
+| `tests/test_stream.c` | Original parser, CDATA and bounded-state tests |
+| `tests/corpus/xml/SHA256SUMS` | Audited negative-fixture manifest |
+
+Related: [Conversion pipeline](conversion-pipeline.md), [Security](../security.md), [Testing](../how-to-contribute/testing.md).

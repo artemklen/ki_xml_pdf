@@ -1,92 +1,97 @@
 # Tooling
+Active contributors: Artem
 
-Two build systems cover the repository: GNU Make for development and CI, CMake for out-of-tree and consumer builds. This page lists every target, the compiler flags, the exported symbol map, version derivation, and how the CI jobs depend on each other.
+GNU Make drives the development/CI checks; CMake provides out-of-tree builds and installed package targets. Both build the same eight core C units and require zlib.
 
 ## Make targets
 
-From `Makefile`; run from the repository root.
-
-| Target | What it does |
+| Target | Scope in `Makefile` |
 | --- | --- |
-| `all` (default) | Builds `xml2pdf` from `src/main.c` and `libki_xml_pdf.a` |
-| `test` | Builds `test_stream` (`-pthread -Wl,--wrap=fsync`) and runs it |
-| `check` | `make clean`, `make test`, `tests/verify.sh`, `make example`, `python3 tests/cli_pipeline.py`, `python3 tests/catalog_verify.py` |
-| `test-san` | Builds `test_stream_san` with ASan+UBSan and runs it with fatal diagnostics |
-| `example` | Builds `examples/consume`, `examples/report`, `examples/catalog`, `examples/consume_cpp` |
-| `install` | Installs the CLI, both libraries, the header, font, notices, CMake package and pkg-config file |
-| `dist` | Creates `ki_xml_pdf-<version>.tar.gz` from Git HEAD and prints its SHA-256 |
-| `distcheck` | `dist`, then `tests/distcheck.sh` on the archive |
-| `print-version` | Prints the version parsed from `include/ki_xml_pdf.h` |
-| `print-dist-name` | Prints the archive name derived from Git HEAD |
-| `clean` | Removes binaries, objects, dependency files and the `src/.font_prefix` stamp |
+| `all` | Default: CLI linked with the static library and `-lz` |
+| `libki_xml_pdf.a`, `libki_xml_pdf.so` | Explicit library builds; shared soname `libki_xml_pdf.so.0` |
+| `test` | C groups, Python xref offsets and stream checks |
+| `check` | Clean build, tests, synthetic RSS verification, examples and CLI/font/wrap/geometry/Info/integration/catalog checks |
+| `test-san` | ASan/UBSan C groups with leak detection and fatal diagnostics |
+| `example` | C/C++ consumers, report example and public catalog mapper |
+| `install` | CLI, static/shared libraries, header, font/notices, CMake and pkg-config metadata |
+| `dist`, `distcheck` | Exact-HEAD archive; clean extracted-source acceptance |
+| `print-version`, `print-dist-name` | Working-tree header version; HEAD-derived archive name |
+| `clean` | Generated binaries, objects, dependencies and font-prefix stamp |
 
-Make variables: `CC`, `CXX`, `CFLAGS`, `CXXFLAGS`, `PREFIX` (default `/usr/local`), `DESTDIR` (staging only), `PDFTOTEXT`, `DISTCHECK_ORACLE`, `DISTCHECK_BREAK`.
+Default flags are C99, `-Wall -Wextra -Wpedantic -O2 -g -fPIC` and `_POSIX_C_SOURCE=200809L`.
+`-MMD -MP` generates header dependencies.
+`src/.font_prefix` tracks `PREFIX` so a prefix switch rebuilds `src/font.o`.
+Tests add pthreads and GNU wrappers for fsync and zlib fault injection.
 
-One detail worth knowing: `src/font.o` depends on the `src/.font_prefix` stamp file, which records `PREFIX`. Installing into a different prefix without rebuilding is caught here, because the compiled font path must follow the install prefix.
+## CMake and CTest
 
-## CMake targets
+`CMakeLists.txt` requires CMake 3.16+, 64-bit Linux/glibc and `find_package(ZLIB REQUIRED)`.
+It builds both library variants regardless of the default selection:
 
-`CMakeLists.txt` requires CMake 3.16, Linux, 64-bit and glibc, and fails configuration otherwise. It defines:
+- Build targets: `ki_xml_pdf_static`, `ki_xml_pdf_shared`, `xml2pdf`, `catalog_example`.
+- Consumer names: `ki_xml_pdf::static`, `ki_xml_pdf::shared`, `ki_xml_pdf::ki_xml_pdf`.
+- `BUILD_SHARED_LIBS` defaults ON and selects the last target's variant.
+- `BUILD_TESTING` defaults ON; it adds the internal C test executable, Threads and Python.
+- CTest registers nine tests; see [Testing](testing.md) for exact names.
 
-- `ki_xml_pdf_static` and `ki_xml_pdf_shared`, both named `ki_xml_pdf` on disk, with aliases `ki_xml_pdf::static`, `ki_xml_pdf::shared` and `ki_xml_pdf::ki_xml_pdf` (the last follows `BUILD_SHARED_LIBS`). The shared library sets soname `libki_xml_pdf.so.0`, `VERSION`/`SOVERSION` and the version-script link flag.
-- `xml2pdf`, linked against the default library variant, with an `$ORIGIN` rpath so the build-tree binary finds the shared library, and `fonts/DejaVuSans.ttf` copied next to it so it finds the font from any working directory.
-- `catalog_example` (output name `catalog`) from `examples/catalog_driver.c` and `examples/catalog_map.c`.
-- `test_stream` built from the core sources plus `tests/test_stream.c` (internal symbols stay visible for parser tests), linked with `Threads` and `--wrap=fsync`.
+The test executable compiles the core sources directly because internal symbols are hidden from the shared ABI.
+The build copies the font to the binary tree.
+The installed CLI has an `$ORIGIN`-relative library rpath; do not confuse library lookup with the separately compiled font path.
 
-Options: `BUILD_SHARED_LIBS` (default `ON`), `BUILD_TESTING` (default on; needs Python 3 at configure time). CTest registers three tests: `stream` (runs `test_stream` in the source directory), `catalog` (`tests/catalog_verify.py` against the built example) and `cli_pipeline` (`tests/cli_pipeline.py` against the built CLI).
+## Installed discovery and ABI
 
-## Compiler flags
+`cmake/ki_xml_pdfConfig.cmake.in` finds zlib and imports package targets.
+`ki_xml_pdf_USE_STATIC_LIBS` selects the default consumer target when explicitly set.
+The static target carries zlib's link-only dependency.
+`cmake/ki_xml_pdf.pc.in` records `Libs.private: -lz`; raw archive users must add `-lz`, while pkg-config users need `--static` for static dependency flags.
 
-Both builds use C99 with `-Wall -Wextra -Wpedantic` and `_POSIX_C_SOURCE=200809L`, `-O2 -g -fPIC` in the Makefile default `CFLAGS`. `src/convert.c` and `src/pdf_write.c` also use `_GNU_SOURCE` for `fopencookie`. The sanitizer target adds `-fsanitize=address,undefined -fno-omit-frame-pointer`. Dependency files (`.d`) are generated with `-MMD -MP` so header edits rebuild what needs rebuilding; the `gcc` CI job verifies this by touching `src/layout.h` and checking the binary is newer.
+`libki_xml_pdf.map` has three inherited export nodes:
 
-## Symbol map
-
-`libki_xml_pdf.map` fixes the shared-library ABI with version nodes:
-
-```
-KI_0_1 { global: ki_convert; ki_convert_file; ki_doc_text; ki_doc_break;
-              ki_doc_fail; ki_options_init; xml2pdf_convert; xml2pdf_convert_cap;
-         local: *; };
-KI_0_2 { global: ki_convert_to_file; } KI_0_1;
-```
-
-Everything not listed is `local`. Public functions carry the `KI_API` visibility attribute in `include/ki_xml_pdf.h`. A new public symbol needs a new version node, and `tests/build_integration.sh` plus `readelf` checks keep the soname and linkage honest.
-
-## Version derivation
-
-`include/ki_xml_pdf.h` is the single version source:
-
-- The Makefile parses `KI_XML_PDF_VERSION` with `sed` for `VERSION`, `VERSION_MAJOR` and `VERSION_MINOR`, used by `install` (CMake package and pkg-config files) and `print-version`.
-- `DIST_VERSION` is parsed from `git show HEAD:include/ki_xml_pdf.h`, so `make dist` archives HEAD even when the working tree is dirty, and an uncommitted version bump stays out of the archive.
-- CMake re-reads the header on every configure (`CMAKE_CONFIGURE_DEPENDS` on the header) and derives the project version, the pkg-config version and the CMake package version from it.
-- The CLI prints the same define in `--version`; `tests/verify.sh`, `tests/docs_smoke.sh` and `tests/distcheck.sh` all cross-check the printed version against the header.
-
-## CI jobs
-
-`.github/workflows/ci.yml` runs on pushes to `main`, on pull requests and on manual dispatch, with a concurrency group per ref that cancels stale runs. Every job checks out the PR head commit, not the merge ref. A push to a branch with no open PR triggers nothing.
-
-| Job | Steps |
+| Node | Additions |
 | --- | --- |
-| `gcc` | `make test xml2pdf example`, `tests/cli_pipeline.py`, `tests/catalog_verify.py`, `tests/build_integration.sh`, `tests/docs_smoke.sh`, `tests/fuzz_smoke.py`, the header-dependency check, `make distcheck`, five negative distcheck controls (bad compiler, bad reader, bad oracle, `DISTCHECK_BREAK=license`), `tests/prefix_switch.sh` |
-| `clang` | Functional build and tests with `CC=clang`, `tests/build_integration.sh` with Clang, `make test-san` |
-| `asan` | `make test-san` with GCC |
-| `resources` | `make check` on the uninstrumented build, then `python3 tests/large_proof.py --self-test` and the 1 GiB run |
-| `source` | Needs all four jobs above; `make dist`, writes `SHA256SUMS` and `SOURCE_COMMIT`, verifies the tar commit id, uploads the archive with provenance |
+| `KI_0_1` | Options initializer, file/callback conversion, document helpers and two legacy wrappers |
+| `KI_0_2` | `ki_convert_to_file` |
+| `KI_0_3` | `ki_config_init`, `ki_convert_cfg`, `ki_convert_file_cfg`, `ki_convert_to_file_cfg` |
 
-```mermaid
-graph TD
-    GCC["gcc: functional, integration, docs, fuzz, distcheck"] --> SRC
-    CLANG["clang: functional, integration, sanitizers"] --> SRC
-    ASAN["asan: ASan/UBSan"] --> SRC
-    RES["resources: make check, 1 GiB proof"] --> SRC
-    SRC["source: archive, SHA256SUMS, SOURCE_COMMIT artifact"]
-```
+Other symbols are local.
+Concrete 0.2 binary compatibility is tested separately with old-header canaries.
+The CMake version file deliberately matches only the same minor before 1.0; it does not advertise all 0.y releases as interchangeable.
 
-The `source` job produces the release artifact only after every gate passes; see [Release and distribution](../deployment.md) for what the artifact contains and how to verify it.
+## CI execution
 
-## Related pages
+`.github/workflows/ci.yml` runs on PRs, `main` pushes and manual dispatch.
+It uses read-only repository permissions and cancels stale runs per ref.
+PR checkout is pinned to the head SHA; other runs use the event SHA.
 
-- [Testing](testing.md) for what each suite proves.
-- [Release and distribution](../deployment.md) for the artifact and provenance flow.
-- [Packaging](../features/packaging.md) for installed files and consumer discovery.
-- [Patterns and conventions](patterns-and-conventions.md) for the code rules the flags enforce.
+| Job | Checks |
+| --- | --- |
+| `gcc` | Functional/API/PDF suites, all external feature checks, installed consumers, documented examples, fuzz, header rebuild, distcheck and negative controls, prefix switch |
+| `clang` | Functional tests/examples, installed consumers, ASan/UBSan |
+| `asan` | GCC ASan/UBSan |
+| `resources` | Ordinary `make check`; resource-judge self-test and 1 GiB selected-output proof |
+| `source` | Needs all four jobs; archives HEAD, verifies provenance and uploads source/checksum/commit |
+
+Actions are `actions/checkout@v4` and `actions/upload-artifact@v7.0.2`.
+Version tags trigger a separate workflow, not these jobs.
+The release workflow does not rerun CI or enforce the main-green precondition itself.
+See [Distribution and releases](../deployment.md).
+
+## Research is separate
+
+`tests/research_font_subset.py`, `tests/research_utf16.py`, `tests/research_utf16_adapter.c` and `tests/research_table.py` are research harnesses, not linked runtime features.
+They are not ordinary Make/CMake/CTest acceptance targets.
+Additional research tools do not become product dependencies by appearing in evidence.
+The extended resource-series runners are also explicit evidence tools, not hidden steps of `make check`.
+
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `Makefile`, `CMakeLists.txt` | Targets, flags and test registration |
+| `cmake/ki_xml_pdfConfig.cmake.in` | Installed targets and zlib discovery |
+| `cmake/ki_xml_pdfConfigVersion.cmake.in` | Same-minor package matching |
+| `cmake/ki_xml_pdf.pc.in` | pkg-config link flags |
+| `libki_xml_pdf.map` | ELF exports |
+| `.github/workflows/ci.yml`, `.github/workflows/release.yml` | CI versus tag publication |
+
+Related: [Configuration](../reference/configuration.md), [Dependencies](../reference/dependencies.md).

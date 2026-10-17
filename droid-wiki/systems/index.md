@@ -1,24 +1,40 @@
 # Systems
 
-The library in `src/` is a chain of small modules. Each one has a fixed-size state struct and a narrow C interface, and `src/convert.c` wires them together.
+The 0.3.0 library has eight C implementation units and one public header. `src/convert.c` connects the parser, a mapper, font-aware layout and the append-only writer; the CLI is a ninth C unit.
 
-| System | Files | Summary |
-| --- | --- | --- |
-| [Conversion pipeline](conversion-pipeline.md) | `src/convert.c`, `src/convert.h` | Public entry points, the event loop, error mapping and atomic publication |
-| [XML parser](xml-parser.md) | `src/xml_parse.c`, `src/xml_parse.h` | Bounded pull parser for a documented XML subset |
-| [Layout and fonts](layout-and-fonts.md) | `src/layout.c`, `src/font.c` | UTF-8 decoding, glyph-width wrapping, TrueType metrics |
-| [PDF writer](pdf-writer.md) | `src/pdf_write.c`, `src/pdf_write.h` | Append-only PDF with an embedded font and a disk-spooled xref |
-| [Page sink](page-sink.md) | removed | Older byte-grid page buffer. Sources and its unit test are gone; `XML2PDF_PAGE_CAP` remains for other tests |
+| System | Responsibility | Implementation units | Focused C test files |
+| --- | --- | --- | --- |
+| [Conversion pipeline](conversion-pipeline.md) | Validation, dispatch, ownership, errors and publication | 1 | 2 |
+| [XML parser](xml-parser.md) | Bounded UTF-8 pull parsing and consumed positions | 1 | 2 |
+| [Layout and fonts](layout-and-fonts.md) | Incremental word wrapping and TrueType metrics | 2 | 2 |
+| [Geometry](geometry.md) | Shared rounded page geometry and glyph-ink fitting | 1 | 1 |
+| [PDF writer](pdf-writer.md) | Flate streams, fixed page IDs and disk-spooled xref | 1 | 2 |
+
+Counts describe files, not coverage percentages. Pipeline tests are `tests/test_callback_io.c` and `tests/test_integration.c`; parser tests are `tests/test_xml_subset.c` and `tests/test_xml_coords.c`; layout/font tests are `tests/test_layout_wrap.c` and `tests/test_font_metrics.c`; geometry uses `tests/test_geometry.c`; writer tests are `tests/test_pdf_bounds.c` and `tests/test_flate.c`. All share the harness and extra regression groups in `tests/test_stream.c`, and have Python/Poppler checks.
+
+The other two library units are thin feature modules: `src/report.c` implements [report-v1](../features/report-v1.md), and `src/info.c` implements [document information](../features/document-information.md). `src/platform.h` enforces the Linux/glibc boundary. History on `origin/main` has one human contributor, Artem Klen (byline Artem), across these modules; this is historical ownership, not a formal CODEOWNERS assignment.
 
 ```mermaid
-graph LR
-    P[XML parser] --> C[Conversion pipeline]
-    C --> M[Mappers]
-    M --> L[Layout]
-    F[Font] --> L
-    L --> W[PDF writer]
-    F --> W
-    C --> W
+flowchart LR
+    Input[File or read callback] --> Parser[XML parser]
+    Parser --> Mapper[Built-in or custom mapper]
+    Mapper --> Layout[Line and page layout]
+    Font[Open font and fixed metrics] --> Layout
+    Font --> Geometry[Shared page frame]
+    Geometry --> Layout
+    Geometry --> Writer[PDF writer]
+    Layout --> Writer
+    Writer --> Output[File or write callback]
+    Writer --> Spool[Offset spool]
 ```
 
-Mappers are described on the feature pages: [records-v1](../features/records-v1.md), [report-v1](../features/report-v1.md) and [Custom mappers](../features/custom-mappers.md). The CLI front end is on [CLI](../features/cli.md).
+The removed byte-grid experiment is historical context in [Design decisions](../background/design-decisions.md), not a live subsystem. Start with [Architecture](../overview/architecture.md) for the whole flow or [Features](../features/index.md) for user-visible behavior.
+
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h` | Public C/C++ contract |
+| `src/convert.c` | Pipeline composition |
+| `Makefile`, `CMakeLists.txt` | Authoritative lists of library units and tests |
+| `tests/test_stream.c` | Shared C regression harness |

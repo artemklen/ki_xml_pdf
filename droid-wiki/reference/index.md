@@ -1,28 +1,58 @@
 # Reference
+Active contributors: Artem
 
-This section is the lookup shelf: every option, flag, environment variable and compile-time constant in one place, the structs with their fields, and the dependency inventory. Values here come from the headers and build files, not from memory.
+This section is the lookup shelf for the 0.3.0 public contract, configuration values, bounded state and external dependencies. `include/ki_xml_pdf.h` is authoritative for callers.
+
+## Pages
 
 | Page | Contents |
 | --- | --- |
-| [Configuration](configuration.md) | `KiOptions` fields, CLI flags, environment and build variables, compile-time constants |
-| [Data models](data-models.md) | Field tables for `KiOptions`, `KiResult`, `KiEvent`, `XmlEvent`, `XmlParser`, `Layout`, `FontFace`, `PdfConfig`, `PdfWriter`, `Report`, `CatalogMap` |
-| [Dependencies](dependencies.md) | Runtime, build and test dependencies; CI actions and their versions |
+| [Configuration](configuration.md) | Options/config defaults, geometry, metadata, CLI equivalents and hard bounds |
+| [Data models](data-models.md) | Public structs, ownership and important private state |
+| [Dependencies](dependencies.md) | Linux/glibc, zlib, build/test tools and licensing |
 
-## Quick facts
+## Current facts
 
 | Fact | Value | Source |
 | --- | --- | --- |
-| Version | 0.2.0, single source `KI_XML_PDF_VERSION` | `include/ki_xml_pdf.h` |
-| Platform | 64-bit Linux with glibc | `CMakeLists.txt` |
-| Language | C99, `-Wall -Wextra -Wpedantic`, `_POSIX_C_SOURCE=200809L` | `Makefile` |
-| Exit codes | 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota/cancel | `src/convert.h`, `src/main.c` |
-| Causes | `KI_CAUSE_NONE/XML/USAGE/IO/RESOURCE/FONT/CANCEL/PROFILE` = 0 to 7 | `include/ki_xml_pdf.h` |
-| Profiles | `records-v1` (default), `report-v1` | `include/ki_xml_pdf.h`, `src/main.c` |
-| Memory ceiling | 4096 KiB (4 MiB) converter RSS on the documented synthetic workload | `tests/large_proof.py` |
+| Library version | 0.3.0 | `include/ki_xml_pdf.h` |
+| Supported platform | 64-bit Linux with glibc only | `README.md`, `CMakeLists.txt`, `src/platform.h` |
+| Language | C99 core; C/C++ public consumers | `Makefile`, `include/ki_xml_pdf.h` |
+| Compression dependency | zlib, including static link flags | `Makefile`, `cmake/ki_xml_pdf.pc.in` |
+| Profiles | records-v1 default; report-v1 | `include/ki_xml_pdf.h` |
+| New configuration | `KiConfig` geometry and optional `/Info` | `include/ki_xml_pdf.h` |
+| Shared ABI | Soname 0; retained older exports plus `KI_0_3` | `libki_xml_pdf.map`, `CMakeLists.txt` |
+| CMake version policy | Same minor before 1.0, not cross-minor matching | `cmake/ki_xml_pdfConfigVersion.cmake.in` |
+| Synthetic converter RSS gate | ≤4096 KiB on specified ordinary-process workloads | `tests/verify.sh`, `tests/large_proof.py` |
 
-## Where to look next
+## Contract boundaries
 
-- Public function contracts: [C API](../api/c-api.md) and the comments in `include/ki_xml_pdf.h`.
-- Behavior pages: [CLI](../features/cli.md), [report-v1](../features/report-v1.md), [Custom mappers](../features/custom-mappers.md), [Atomic output](../features/atomic-output.md), [Streaming I/O](../features/streaming-io.md), [Resource limits](../features/resource-limits.md), [Packaging](../features/packaging.md).
-- Internals: [Conversion pipeline](../systems/conversion-pipeline.md), [XML parser](../systems/xml-parser.md), [Layout and fonts](../systems/layout-and-fonts.md), [PDF writer](../systems/pdf-writer.md).
-- Terms: [Glossary](../overview/glossary.md). Release flow: [Release and distribution](../deployment.md).
+The unchanged 0.2 `KiOptions`, `KiResult` and `KiEvent` layouts coexist with additive 0.3 functions.
+Supported `KiConfig` sizes are full current size and the geometry-only prefix.
+Defaults omit document metadata and implicit timestamps.
+
+The library is not a full XML implementation or general document-layout engine.
+UTF-16 XML, tables, font addons and internal subsetting remain unimplemented/deferred.
+UTF-16BE `/Info` serialization is separate from XML input encoding.
+
+File publication is atomic on handled failure; callback/stdout output is partial on failure.
+Selection changes rendering, not complete-input validation.
+Body glyph support is narrower than accepted metadata Unicode.
+Use [C API](../api/c-api.md) for ownership, callbacks and status/cause semantics.
+
+## Navigation
+
+Behavior: [Features](../features/index.md).
+Implementation: [Systems](../systems/index.md).
+Failure triage: [Debugging](../how-to-contribute/debugging.md).
+Measurement provenance: [Background](../background/index.md).
+Installed consumers: [Packaging](../features/packaging.md).
+
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h` | Public declarations, version and comments |
+| `src/convert.c` | Options/config validation and defaults |
+| `src/geometry.h`, `src/info.h` | Private normalized geometry/metadata |
+| `Makefile`, `CMakeLists.txt`, `cmake/ki_xml_pdf.pc.in` | Build, install and link requirements |

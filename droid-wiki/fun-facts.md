@@ -1,30 +1,64 @@
 # Fun facts
+By Artem.
 
-Five small things about this repository that are easy to miss and easy to verify. Each one below was checked against the files cited.
+Small, verifiable details at **2026-10-17**, HEAD `d573069`. Facts about experiments are labeled as experiments; they are not new supported features.
 
-## A gibibyte goes in, 2.3 MiB stays resident
+## The PDF speaks Russian even when onboarding is English
 
-The historical large-proof run in `docs/contract.md` feeds the converter a synthetic report of 1,073,741,815 bytes, one GiB minus exactly 9 bytes. Peak converter RSS was 2,372 KiB. The input is roughly 442 times the memory used to process it, and the peak sits at 3.6% of the 64 MiB ceiling that applied to that revision. The current acceptance gate is 4096 KiB (4 MiB). The run read all 19,522,650 records to select the first 1,000, produced 41 pages and 1,009,241 PDF bytes in 7.61 seconds, and left an offset spool of just 720 bytes: about 18 bytes of on-disk bookkeeping per page. The whole point of the architecture is that none of these numbers grow with the input; the parser works through a fixed 4096-byte window (`src/xml_parse.c`).
+`src/report.c` emits `Запись <id>`, `Всего записей: N`, `Выбрано записей: N` and `Пропущено записей: N`. Those labels survive from the initial public implementation. `examples/report-v1.xml` uses the title `Сводка`, while `examples/catalog_map.c` demonstrates an English custom mapper. Output language belongs to the mapping, not to a global locale switch.
 
-## The PDF answers in Russian
+The repository is similarly bilingual: `README.md` and `README.ru.md` are parallel onboarding documents, while the original contract and license/profile decisions remain Russian. See [report-v1](features/report-v1.md) and [custom mappers](features/custom-mappers.md).
 
-Ask for `--profile report-v1` and the generated PDF speaks Russian regardless of the input. The labels are hard-coded in `src/report.c`: every record is headed "Запись <id>", and the footer reads "Всего записей: N", "Выбрано записей: N" and "Пропущено записей: N". The 0.2.0 entry in `CHANGELOG.md` states that existing report-v1 labels are unchanged, so this is policy, not accident. The bundled fixture `examples/report-v1.xml` plays along, with title "Сводка" and field names like "Название" and "Статус". The repository itself is bilingual the same way: `README.md` and `docs/report-v1.md` are English, `README.ru.md`, `docs/contract.md` and both decision records are Russian, and `CHANGELOG.md` switches from a Russian 0.1.0 section to an English 0.2.0 section in the middle of the file.
+## It can write the answer before it knows the length
 
-## The biggest file in the repository is a test file
+PDF font and page content streams are compressed straight to the destination. Instead of seeking back to patch `/Length`, `src/pdf_write.c` writes a reference to the next object, then writes that length object after the compressed bytes. Every page therefore needs three objects: content, compressed-content length, and page.
 
-`tests/test_stream.c` stands at 3,259 lines, 2.8 times the largest production file (`src/xml_parse.c`, 1,163 lines), and nearly 28% of every tracked text line in the tree. All test harnesses together (C, Python and shell under `tests/`) total 5,378 lines against 4,484 production C lines, about 1.2 to 1. The test file contains 38 `XXXXXX` scratch-path templates for temporary files, more than the rest of the repository combined, because each test creates and cleans up its own scratch files rather than sharing state.
+ToUnicode takes the opposite route: its fixed-repertoire body is counted once, emitted once and left uncompressed, with a direct length. Neither technique requires a whole compressed PDF in memory. See the [PDF writer](systems/pdf-writer.md) and [streaming I/O](features/streaming-io.md).
 
-## Zero TODOs, and one deliberately fake font
+## The font is both opened and distrusted
 
-A whole-word search for `TODO` and `FIXME` across the tracked tree returns nothing. Not one marker, in any file, in any language. The nearest thing to debt is a 206-byte file named `tests/corpus/truncated-hmtx.ttf`, which is not a font at all: it is hand-built binary that mimics a TrueType file with its `hmtx` metrics table cut short, so `src/font.c` can prove it rejects broken metrics instead of rendering with them. The real font, `fonts/DejaVuSans.ttf`, is 759,720 bytes, about 3,700 times larger than the impostor.
+`FontFace` in `src/font.h` retains an open file, fixed metrics, its size and a 32-bit hash—not all 759,720 bytes of `fonts/DejaVuSans.ttf`. Before embedding, `font_stream_matches` in `src/font.c` rereads that same open file to check size and FNV-1a; `src/pdf_write.c` then deflates it in 16 KiB input chunks.
 
-## The font ceiling stops at U+04FF, exactly where Cyrillic ends
+This is a change-detection check, not a cryptographic authenticity guarantee. The library still embeds the complete font, not a subset. See [layout and fonts](systems/layout-and-fonts.md).
 
-`src/font.h` fixes the glyph table at `FONT_BMP_MAX 0x500`, so the accepted repertoire is U+0009, U+000A and U+000D, U+0020 through U+04FF, plus exactly 24 punctuation code points at U+2010 through U+2027, and nothing else. U+04FF happens to be the last code point of the Cyrillic block, which makes the repertoire a clean fit for English plus Russian and nothing beyond. The bundled DejaVu Sans actually contains thousands more glyphs (Greek, Armenian, Georgian and others), but the fixed lookup tables decline to use them: an Armenian character fails with `KI_CAUSE_FONT` and a `U+` code point rather than rendering. The design trades repertoire for a font face that cannot grow, whatever the document contains.
+## A word gets no extra suitcase
 
-## Related pages
+Word wrapping did not add an unbounded pending-word allocation. `Layout.line` in `src/layout.h` holds both committed line bytes and the pending word: `[0, len)` plus `[len, len + wlen)`. A long word falls back at complete UTF-8 code points; zero-advance marks stay with their base when the bounded line permits it.
 
-- [By the numbers](by-the-numbers.md) for the measurements behind these facts
-- [Layout and fonts](systems/layout-and-fonts.md) for how the repertoire is enforced
-- [The report-v1 profile](features/report-v1.md) for the labels and grammar
-- [Testing](how-to-contribute/testing.md) for the large-proof and fuzz harnesses
+That is why arbitrary token length does not imply arbitrary layout memory. It is also why a single oversized inseparable base-plus-marks cluster can still fail with a resource error. See [layout and fonts](systems/layout-and-fonts.md) and `tests/test_layout_wrap.c`.
+
+## Metadata can say more than the body font
+
+Title and producer strings use validated UTF-8 input and UTF-16BE hexadecimal PDF strings (`src/info.c`). They need no body-font glyphs. The same character can therefore be legal in `/Title` yet fail as `KI_CAUSE_FONT` if a mapper tries to draw it with the bounded body repertoire.
+
+No date is invented: `CreationDate` is written only when explicitly supplied. UTF-16BE output strings do **not** imply UTF-16 XML input support. See [document information](features/document-information.md).
+
+## The font boundary is not “English and Russian only”
+
+The fixed body lookup slots cover U+0000–U+04FF plus 24 punctuation slots U+2010–U+2027 (`src/font.h`); drawable input must also be legal XML, and the selected font must provide a nonzero in-range GID. The range includes Greek as well as Latin and Cyrillic. U+04FF ends the base Cyrillic block, not every Cyrillic extension in Unicode.
+
+An available glyph may have zero advance: “width zero” no longer means “missing.” No shaping or normalization is implied, and script addons remain an unimplemented ADR. See [font behavior](systems/layout-and-fonts.md) and [design decisions](background/design-decisions.md).
+
+## Tests outweigh production—but research counts too
+
+The measured `tests/` code is 16,147 lines against 6,437 production C/header lines, **2.51:1**. That numerator includes Python/shell harnesses, ABI canaries and research prototypes; it is not a coverage score. `tests/test_stream.c` alone has 3,655 lines, versus 1,482 in the largest production file, `src/xml_parse.c`.
+
+There are also two deliberately broken tiny fonts: `tests/corpus/truncated-hmtx.ttf` (206 bytes) and `tests/corpus/truncated-cmap-184.ttf` (184 bytes). They test rejection, not typography. See [measurement scope](by-the-numbers.md) and [testing](how-to-contribute/testing.md).
+
+## One scientific “no” saved a feature
+
+The synthetic font-subsetting study measured the compressed font at 382,174 bytes in a 12,501,989-byte target report PDF: **3.06%**. Its best subset could save **2.92%** of that PDF, despite much larger percentage savings on tiny reports. OSR-10 therefore recorded no-go for an internal subsetter under the large-report goal.
+
+Those numbers belong to the revision pinned in `docs/evidence/osr-10-font-spike/README.md`, not a fresh HEAD benchmark. The research also checked raster output: text extraction alone can survive an intentionally broken `.notdef` font. See [design decisions](background/design-decisions.md).
+
+## Key source files
+
+| Sources | Interesting detail |
+| --- | --- |
+| `src/report.c`, `examples/catalog_map.c` | Mapper-owned output language |
+| `src/pdf_write.c`, `src/font.c`, `src/font.h` | Forward lengths, streamed font and change check |
+| `src/layout.h`, `tests/test_layout_wrap.c` | Shared line/word storage |
+| `src/info.c`, `tests/test_info.c` | Font-independent, explicitly dated metadata |
+| `docs/evidence/osr-10-font-spike/README.md` | Revision-scoped subsetting experiment |
+
+[Overview](overview/index.md) · [Architecture](overview/architecture.md) · [By the numbers](by-the-numbers.md) · [History](lore.md)

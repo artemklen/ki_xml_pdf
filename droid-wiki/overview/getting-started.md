@@ -1,77 +1,68 @@
 # Getting started
 
-This page covers the prerequisites, the two build systems, a first conversion and the main checks. The authoritative copy of these commands is `README.md`; `tests/docs_smoke.sh` runs the README blocks in CI so they stay correct.
+Build on 64-bit Linux with glibc using GCC or Clang. `README.md` is the full onboarding reference; these commands cover a source build, a report and the main validation paths.
 
 ## Prerequisites
 
-- 64-bit Linux with glibc. `CMakeLists.txt` fails configuration on anything else.
-- GCC or Clang, GNU Make, a GNU-compatible linker.
-- For checks: a C++ compiler, `python3`, `/usr/bin/time`, `readelf` (binutils), and Poppler's `pdfinfo`, `pdftotext`, `pdftohtml`.
-- For integration checks: CMake 3.16+ and pkg-config.
+The build requires a C99 compiler, GNU Make, a GNU-compatible linker and zlib development files. Checks also use C++, Python 3, GNU time, binutils and Poppler. CMake integration requires CMake 3.16 or newer and pkg-config (`Makefile`, `CMakeLists.txt`, `.github/workflows/ci.yml`).
 
-On Debian or Ubuntu:
+On Debian/Ubuntu, the documented package set is:
 
 ```sh
-sudo apt-get install -y gcc g++ clang make cmake pkg-config binutils python3 time poppler-utils
+sudo apt-get install gcc g++ clang make cmake pkg-config zlib1g-dev \
+  binutils python3 time poppler-utils
 ```
 
-## Build with Make
+## Build and convert
+
+Run from the repository root:
 
 ```sh
 make
+./xml2pdf --version
 ./xml2pdf --profile report-v1 examples/report-v1.xml report.pdf
+pdfinfo report.pdf
+pdftotext report.pdf -
 ```
 
-`make` builds `libki_xml_pdf.a` and the `xml2pdf` binary. The default font path is compiled in from `PREFIX` (`-DXML2PDF_FONT_PATH` in `Makefile`), so use the same `PREFIX` for build and install:
+The output is a sequential report, not a table layout. The default profile is the diagnostic `records-v1`; select `report-v1` explicitly (`src/main.c`, `docs/report-v1.md`).
+
+```sh
+./xml2pdf --profile report-v1 --page-size a4 --orientation landscape \
+  --margin 36 --font-size 12 --title "Quarterly report" \
+  examples/report-v1.xml a4.pdf
+./xml2pdf --profile report-v1 examples/report-v1.xml - > streamed.pdf
+```
+
+Check the exit status before consuming stdout output: late failure can leave a partial PDF. A named output is replaced atomically on success (`src/convert.c`).
+
+## CMake
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Tests are enabled by default and require Python at configure time. `-DBUILD_TESTING=OFF` disables test targets. Both static and shared libraries are built; `BUILD_SHARED_LIBS` selects the default target (`CMakeLists.txt`).
+
+## Install and use
 
 ```sh
 make PREFIX="$HOME/.local"
 make install PREFIX="$HOME/.local"
 ```
 
-When the font is not installed yet, `font_open_default` in `src/font.c` also looks for `fonts/DejaVuSans.ttf` relative to the executable, which is why `./xml2pdf` works straight from the source tree.
+Use the same prefix for build and installation because it sets the runtime font path. `DESTDIR` stages files without changing that path. Installed clients use `find_package(ki_xml_pdf CONFIG REQUIRED)` and `ki_xml_pdf::ki_xml_pdf`, or `pkg-config --cflags --libs ki_xml_pdf`. Static manual linking needs zlib too (`cmake/ki_xml_pdfConfig.cmake.in`, `cmake/ki_xml_pdf.pc.in`).
 
-## Build with CMake
+See [Packaging](../features/packaging.md) for external C/C++ consumers and relocation.
 
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
-cmake --build build
-./build/xml2pdf --profile report-v1 examples/report-v1.xml cmake-report.pdf
-ctest --test-dir build --output-on-failure
-```
-
-CMake enables tests by default and needs Python 3 at configure time. Pass `-DBUILD_TESTING=OFF` to skip test targets.
-
-## Try the CLI
+## Validate a change
 
 ```sh
-# records-v1 (default): element names, attributes, text
-./xml2pdf examples/hello.xml hello.pdf
-
-# report-v1 with selection and quotas
-./xml2pdf --profile report-v1 --record-offset 0 --record-limit 1000 \
-  --max-pages 10000 --max-output-bytes 268435456 input.xml report.pdf
-
-# pipelines: '-' is stdin for input, stdout for output
-cat examples/report-v1.xml | ./xml2pdf --profile report-v1 - - > pipeline.pdf
+make test
+make check
+make test-san
 ```
 
-Exit codes: 0 success, 1 XML/profile/font, 2 usage, 3 I/O, 4 quota or cancellation. See [CLI](../features/cli.md).
-
-## Run the checks
-
-| Command | What it covers |
-| --- | --- |
-| `make test` | Builds and runs `tests/test_stream.c` (unit and API tests) |
-| `make check` | Clean rebuild, `make test`, `tests/verify.sh` (16 MiB RSS gate, Poppler), examples, CLI pipeline and catalog oracles |
-| `make test-san` | Same unit tests under ASan and UBSan |
-| `make distcheck` | Builds and installs the `git archive` of HEAD, runs external consumers |
-| `python3 tests/large_proof.py 1073741824` | 1 GiB synthetic report, RSS and page budgets |
-
-More detail is in [Testing](../how-to-contribute/testing.md).
-
-## Next steps
-
-- Read the [Architecture](architecture.md) page.
-- Embed the library through the [C API](../api/c-api.md).
-- Write a mapper for your own schema with [Custom mappers](../features/custom-mappers.md).
+`make check` cleans and rebuilds before functional, resource and reader checks; do not run it concurrently with other Make builds in the same tree. Sanitizers and ordinary converter RSS are separate checks (`Makefile`, `tests/verify.sh`). For documentation changes, `tests/docs_smoke.sh` exercises documented clients and commands. Source archive checks use committed HEAD rather than uncommitted edits. See [Testing](../how-to-contribute/testing.md).

@@ -1,20 +1,56 @@
 # Background
+Active contributors: Artem
 
-ki_xml_pdf's shape comes from a handful of recorded decisions, not from convention. This section holds the reasoning behind the own streaming pipeline, the bounded-memory rule and the release scope, and the danger zones that follow from them.
+This section separates implemented design, historical measurements and proposed work. A decision record can explain intent without being a description of the current writer.
 
 ## Pages
 
-| Page | Contents |
+| Page | Purpose |
 | --- | --- |
-| [Design decisions](design-decisions.md) | Own pipeline instead of Apache FOP, offsets spooled to disk, fixed object numbering, report-v1, MIT, Linux/glibc only, atomic publication, selection that still validates, no font fallback |
-| [Pitfalls](pitfalls.md) | Eleven ways to get bitten: partial stdout, PREFIX mismatch, `KiOptions.size`, borrowed event pointers, short reads, process-global test hooks, fragment whitespace, `xml:space` differences, quota zero values, the header version, `make dist` and HEAD |
+| [Design decisions](design-decisions.md) | Streaming/state trade-offs, ABI evolution, memory reductions, deferred research and design-only addons |
+| [Pitfalls](pitfalls.md) | Integration assumptions that break streams, ownership, selection, fonts, geometry or packaging |
 
-## Where the decisions live
+## Read evidence by revision
 
-Three decisions are recorded in Russian in the repository: `docs/contract.md` (KW-1004, the pipeline contract and measurements), `docs/profile-decision.md` (KW-1021, the report-v1 profile) and `docs/license-decision.md` (KW-1024, MIT). [Design decisions](design-decisions.md) summarizes them in English and points at the code that implements each one. Task identifiers such as KW-1004 and OSR-7 come from the owner's tracker and also appear in commit messages.
+| Record | Scope |
+| --- | --- |
+| `docs/contract.md` | Original streaming rationale and explicitly dated early measurements |
+| `docs/profile-decision.md` | Project-owned report-v1 choice |
+| `docs/license-decision.md` | MIT source licensing versus separate font terms |
+| `docs/evidence/osr-23-baseline-075455c/README.md` | Reproducible full-output and fixed-selection baseline |
+| `docs/evidence/osr-25-callback-1193cdc/README.md` | Final OSR-25 acceptance on its named revision |
+| `docs/evidence/osr-82-heap-profile/README.md` | Heap/RSS snapshot of `de8ba0e`, before subsequent reductions |
+| `docs/adr/0001-font-script-addons.md` | Accepted design only; no addon implementation |
 
-## Where to go next
+A baseline result is not a current benchmark.
+A selected-output run does not prove full-output performance at the same input size.
+Massif heap and ordinary-process RSS measure different things.
+Use [Testing](../how-to-contribute/testing.md) to produce new revision-specific evidence.
 
-- For what is unsafe input and how it is handled, see [Security](../security.md).
-- For project history and measurement provenance, see [Lore](../lore.md).
-- For what could be removed or simplified next, see [Cleanup opportunities](../cleanup-opportunities.md).
+## Current versus deferred
+
+The shipping 0.3 API includes word wrapping, page geometry and optional `/Info`.
+Subsequent memory work streams the open font file, writes ToUnicode in two passes and reuses one page-content buffer.
+
+The UTF-16, fixed-column table and internal font-subsetting studies did not add supported product features.
+Their synthetic success is feasibility evidence, not a consumer requirement.
+The addon ADR similarly does not introduce addon fields or mixed-font rendering.
+
+The old page-sink experiment was removed from the implementation.
+Its historical role belongs in this background section, not in the current systems map or data-model inventory.
+
+## Navigation
+
+- [Lore](../lore.md): dated development history.
+- [Architecture](../overview/architecture.md): current conversion flow and ownership.
+- [Security](../security.md): validation boundaries and private reporting.
+- [Cleanup opportunities](../cleanup-opportunities.md): current maintenance work rather than already-fixed historical allocations.
+
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h` | Actual shipping API/features |
+| `src/font.c`, `src/pdf_write.c`, `src/layout.c` | Current memory lifecycle |
+| `docs/adr/0001-font-script-addons.md` | Future design with an explicitly older source snapshot |
+| `docs/evidence/osr-82-heap-profile/README.md` | Revision-pinned historical heap measurements |

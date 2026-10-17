@@ -1,55 +1,69 @@
 # Cleanup opportunities
+By Artem.
 
-Verified candidates for removal or simplification in the current tree. None of these is a defect; each item is dead weight, duplication or a stale record the project could shed, most of them at the next 0.y bump. Counts and line spans below were measured, not estimated.
+Verified maintenance candidates at **2026-10-17**, HEAD `d573069`. These are bounded follow-ups, not a request to redesign the pipeline. Removed `page_sink` sources, the old whole-TTF allocation, heap-built CMap and joined-page copy are **already resolved**, not current debt.
 
-## Dead ends
+## 1. Remove the no-op writer hook
 
-- **`src/page_sink.c` and `src/page_sink.h`** were removed. They were a fixed byte-grid page buffer from the 0.1 design, compiled into the library but called only from `test_page_sink_flushes`. The conversion path uses `src/layout.c`. What the module did is still described on [Page sink](systems/page-sink.md).
-- **`XML2PDF_PAGE_COLS`, `XML2PDF_PAGE_LINES`, `XML2PDF_PAGE_CAP`** in `src/convert.h`: the old 90x48 grid, referenced only by `tests/test_stream.c`. The comment above them still says "Helvetica 10pt", although the pipeline has used DejaVu metrics since `src/font.c` was added.
-- **`xml2pdf_convert` and `xml2pdf_convert_cap`** (`src/convert.c`): 0.1-era wrappers around `ki_convert_file` with a hardwired stderr logger. `xml2pdf_convert_cap` maps its `page_cap` argument into `max_output_bytes`, so the parameter is a byte cap, not a page cap, which is a trap for anyone reading the signature. Both are exported in the `KI_0_1` node of `libki_xml_pdf.map`, and the wrapper is also the only code that resets the debug hooks.
-- **`pdf_debug_fail_at_page`** (`src/pdf_write.c:583`): a no-op stub declared in `src/pdf_write.h` with an empty body. The working mechanism is `PdfConfig.debug_fail_page`, fed by the convert-level hook. A search for callers returns nothing; declaration and definition can go together.
+`pdf_debug_fail_at_page` is declared in `src/pdf_write.h:97-98` and defined in `src/pdf_write.c:844-846` as `(void)n;`. A tracked-source search finds no call: the only occurrences are that declaration and definition.
 
-## Markers
+The active mechanism is different: `xml2pdf_debug_fail_at_page` in `src/convert.c` feeds `PdfConfig.debug_fail_page`; `pdf_page_begin` enforces it. `tests/test_stream.c` calls the convert-level hook. Removing the no-op pair would reduce ambiguity without removing active failure injection. It is not in `libki_xml_pdf.map`'s public exports.
 
-There are no open code comments begging for attention: `rg '\b(TODO|FIXME)\b'` across the repository returns zero matches. Work items live in the owner's tracker and arrive as `OSR-n`/`KW-n` identifiers in commit messages and docs, so there is no marker debt to clean.
+**Check:** rebuild Make/CMake consumers and run the normal and sanitizer suites. Do not delete the similarly named working convert-level hook. See the [writer](systems/pdf-writer.md).
 
-## Complexity hotspots
+## 2. Replace historical grid names with test intent
 
-Measured spans, from each function's first line to the next function:
+`src/convert.h:6-11` still describes “a letter page in Helvetica 10pt” and defines `XML2PDF_PAGE_COLS` = 90, `XML2PDF_PAGE_LINES` = 48 and `XML2PDF_PAGE_CAP` = 4,368. These no longer describe production glyph-metric layout, configurable geometry or the writer's content-buffer capacity.
 
-| Function | Location | Lines |
-| --- | --- | --- |
-| `convert_streams` | `src/convert.c:452-768` | 317 |
-| `pdf_add_page` | `src/pdf_write.c:587-697` | 111 |
-| `write_tounicode` | `src/pdf_write.c:91-189` | 99 |
-| `parse_start` | `src/xml_parse.c:792-880` | 89 |
-| `pdf_begin_cfg` | `src/pdf_write.c:493-578` | 86 |
+Their only non-definition uses are two test padding calculations in `tests/test_stream.c:1075` and `tests/test_stream.c:1564`. The first creates a larger conversion sample; the second puts a malformed closing tag after a long body.
 
-The largest source files are `src/xml_parse.c` (1,163 lines), `src/convert.c` (861) and `src/pdf_write.c` (774); the largest file in the repository is `tests/test_stream.c` (3,259 lines).
+Move an explicitly named fixture-padding constant into the test, or size those inputs for their stated assertions; then remove the misleading internal grid definitions/comment. Preserve the tests' multi-page and late-error behavior rather than substituting a new production “page cap.” See [geometry](systems/geometry.md) and [layout and fonts](systems/layout-and-fonts.md).
 
-`convert_streams` is the obvious first candidate for decomposition. One function holds the event loop, three mapper dispatch arms, error mapping for four failure families, the publish sequence, and result bookkeeping, joined by a single `done` cleanup label. Splitting mapper dispatch, publication and result reporting into helpers would cut its span substantially without changing behavior.
+## 3. Make the legacy wrapper's byte limit unmistakable
 
-## Duplicated cancellation checks
+`xml2pdf_convert_cap` in `src/convert.c:979-990` accepts `size_t page_cap`, then sets `KiOptions.max_output_bytes` to it. The name suggests a page count or layout capacity, but the behavior is an **output-byte quota**. `src/convert.h` exposes the same ambiguous parameter name.
 
-The four-line pattern checking `opt != NULL && opt->cancelled != NULL` followed by setting status, cause, message and the failed flag appears nine times: six in `convert_streams` and three in `conv_read` (`src/convert.c`). The PDF writer already shows the shape a convert-side helper would take: `stop_pdf` in `src/pdf_write.c` wraps the same test in one function and is used at every xref checkpoint. A shared `check_cancel(opt, &failed, ...)` helper would remove roughly 50 lines and one recurring copy-paste hazard.
+Clarify the internal parameter/documentation without changing behavior. Both `xml2pdf_convert` and `xml2pdf_convert_cap` remain exported in `KI_0_1` in `libki_xml_pdf.map`; deleting them is an ABI decision, not dead-code cleanup. Keep their stderr logging and failure-hook reset behavior unless deliberately replacing those contracts. See the [C API](api/c-api.md).
 
-## Russian-only historical records
+## 4. Decompose the conversion coordinator along ownership boundaries
 
-`docs/contract.md`, `docs/profile-decision.md` and `docs/license-decision.md` are decision records written in Russian, and the `0.1.0` section of `CHANGELOG.md` is Russian as well (the `0.2.0` section is English). `README.ru.md` is a deliberate parallel onboarding document, not a stale record. The decision documents have no English counterpart in the tree; this wiki summarizes them on [Design decisions](background/design-decisions.md). Translating the three records, or marking them as historical with an English abstract at the top, would close the gap without losing the originals.
+`convert_streams` spans **`src/convert.c:541-875`**, 335 lines inclusive from signature through closing brace. It initializes parser/layout/writer, dispatches three mapping routes, classifies failures, finalizes output, publishes a file and fills results. The common cleanup label is useful; the size is a reviewability issue, not evidence that bounded memory is broken.
 
-## `baseline-manifest.json` staleness
+Concrete duplication is the cancellation polling at `src/convert.c:614,730,753,777,788,814`, plus three reader-side polls at `src/convert.c:127,142,156`. Several publication checkpoints repeat the same resource/cancel status, message and logging assignments.
 
-The manifest is a snapshot of a 07.10.2026 review against revision `c73176ec...`: 13 files hashed, of which 7 are already recorded as `matches_review: false` (`Makefile`, `src/convert.c`, `src/convert.h`, `src/pdf_write.c`, `src/pdf_write.h`, `tests/test_stream.c`, `tests/verify.sh`). Nothing in the Makefile, CMake or CI regenerates or verifies it, yet it ships in the source archive (`tests/distcheck.sh` includes it in the file list). Its note says the working tree is compared against the review, so every post-review edit deepens the mismatch. Two clean exits: regenerate it as a release-step and check it in CI, or retire it in favor of the commit-bound provenance CI already records (`SOURCE_COMMIT`, `SHA256SUMS`).
+Consider a small cancellation-report helper and a file-publication helper with explicit ownership/result contracts. **Do not collapse checkpoints:** polling before/after I/O, around `fsync`, after close and before `rename` is observable. Preserve the first-error latch, callback-accepted byte accounting, cleanup order and “no publication after cancellation” guarantee.
 
-## Constraints on any cleanup
+**Check:** `tests/test_callback_io.c`, `tests/test_stream.c`, `tests/cli_pipeline.py` and `tests/test_integration.c`, including sanitizer/concurrent runs. See the [conversion pipeline](systems/conversion-pipeline.md), [atomic output](features/atomic-output.md) and [testing](how-to-contribute/testing.md).
 
-- The ABI is unstable until 1.0, but exports are versioned (`KI_0_1`, `KI_0_2` nodes in `libki_xml_pdf.map`), so removing `xml2pdf_convert`/`xml2pdf_convert_cap` is a deliberate ABI decision for the next 0.y release, not a casual deletion.
-- The debug hooks are how tests inject page, write and read failures (`tests/test_stream.c` sets them around lines 1617 to 1628). They need a replacement, for example per-conversion injection through `KiOptions`, or those tests lose their failure coverage.
-- `page_sink` was removed in OSR-90 from both build lists and from `tests/test_stream.c`. [Page sink](systems/page-sink.md) describes the module that was deleted.
-- `tests/test_stream.c` is the largest file in the repository and the place that exercises the debug hooks. Any cleanup that touches it should be verified with `make test-san`, since CI runs the sanitizer suite over this file in both its gcc and clang jobs, not just `make test`.
+## 5. Label the review manifest as historical provenance
 
-## Related pages
+`baseline-manifest.json` says its hashes compare the “working tree” with the 2026-10-07 review. Comparing its 13 recorded `sha256` values with HEAD blobs gives:
 
-- [Page sink](systems/page-sink.md) for what the removed module did.
-- [Design decisions](background/design-decisions.md) for why the current structure exists.
-- [Patterns and conventions](how-to-contribute/patterns-and-conventions.md) for the rules a cleanup must preserve.
+| Current comparison | Count |
+| --- | ---: |
+| Same bytes (`tests/fixture.xml`) | 1 |
+| Different bytes | 10 |
+| Paths no longer present | 2 |
+
+The absent paths are historical review entries, not removal tasks. `review_source_revision` is a 64-character identifier; the repository does not establish it as a reachable Git commit. Neither `Makefile`, `CMakeLists.txt` nor `.github/workflows/` regenerates/verifies the manifest, while `tests/distcheck.sh:65` explicitly requires it in the source archive.
+
+Prefer an unambiguous historical-snapshot note and a pointer to the commit-bound release provenance. Do not “repair” old review hashes as if they were current checksums. `SOURCE_COMMIT`, `SHA256SUMS` and the archive commit check in `.github/workflows/release.yml` serve the current-release purpose. See [packaging](features/packaging.md) and [design decisions](background/design-decisions.md).
+
+## What is not an evidenced cleanup finding
+
+- The scoped tracked code (`.c`, `.h`, `.cpp`, `.py`, `.sh`, excluding wiki/evidence) has **zero whole-word `TODO`/`FIXME` markers**. That is a search result, not proof of no remaining work.
+- The addon ADR explicitly says “accepted as design” and “not implemented,” and pins older writer assumptions. Its historical CMap description is not a current allocation regression. Updating it before implementation would be documentation maintenance, not evidence of shipped addon support.
+- `tests/research_*` and revision-scoped `docs/evidence/` records are intentional research/audit material. Deferred UTF-16, tables and subsetting are not accidentally enabled dependencies or stale production packages.
+- Russian historical design records are not obsolete merely because they lack English translations; the wiki already supplies English context. No dependency-staleness claim is made here.
+
+## Key source files and guardrails
+
+| Sources | Evidence / behavior to preserve |
+| --- | --- |
+| `src/convert.h`, `tests/test_stream.c` | Test-only grid constants and live failure injection |
+| `src/convert.c`, `src/pdf_write.c`, `src/pdf_write.h` | Coordinator, legacy byte quota and no-op hook |
+| `include/ki_xml_pdf.h`, `libki_xml_pdf.map` | Size-checked structures and versioned public ABI |
+| `baseline-manifest.json`, `tests/distcheck.sh`, `.github/workflows/release.yml` | Historical review artifact versus current release provenance |
+| `tests/test_callback_io.c`, `tests/test_integration.c`, `tests/cli_pipeline.py` | Failure, lifecycle and publication regression coverage |
+
+[Overview](overview/index.md) · [Architecture](overview/architecture.md) · [Patterns and conventions](how-to-contribute/patterns-and-conventions.md) · [Testing](how-to-contribute/testing.md) · [Background](background/index.md) · [Measurements](by-the-numbers.md)

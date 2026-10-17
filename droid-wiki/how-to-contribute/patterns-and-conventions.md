@@ -1,66 +1,41 @@
 # Patterns and conventions
 
-The code is small, C99 and deliberately plain. These patterns show up across `src/` and are expected in new code.
+The implementation uses small C99 modules, bounded document state and explicit error/ownership contracts. `CONTRIBUTING.md` defines review expectations; the patterns below explain how the current code implements them.
 
-## Bounded state everywhere
+## Bounded state
 
-Every structure has a fixed size set by a `#define`: `XML_BUF_SIZE`, `XML_MAX_DEPTH`, `XML_TEXT_MAX` in `src/xml_parse.h`, `LAYOUT_LINE` and `LAYOUT_LINES` in `src/layout.h`, `FONT_BMP_MAX` in `src/font.h`, `MAX_OBJECTS` in `src/pdf_write.c`. Exceeding a bound is an error, never a reallocation. `CONTRIBUTING.md` treats this as part of the public contract: parser and mapper state must not grow with input size.
+Parser limits are constants in `src/xml_parse.h`; line/page bounds are in `src/layout.h`; font metrics cover fixed repertoire arrays in `src/font.h`. Input length must not grow parser, mapper or page state.
 
-The only heap allocations in the conversion path are the font file bytes, path strings and the `fopencookie` sink in `ki_convert`.
+Bounded does not mean allocation-free. The font loader reads temporary table spans, the writer keeps one reusable page-content allocation and zlib state, and callback streams/path handling allocate their own state (`src/font.c`, `src/pdf_write.c`, `src/convert.c`). Whole TTF bytes and a heap-backed ToUnicode CMap are no longer retained. Metadata that scales with PDF object count goes to a quota-controlled disk spool.
 
-## Return codes, not exceptions
+## Error mapping and cleanup
 
-Internal functions return 0 on success and -1 (or a negative value) on failure. The detailed reason is stored on the owning struct:
+Internal functions generally return 0/-1 and record detail on their owning state: `XmlParser.errmsg`, `PdfWriter.fail_kind`, `Layout.bad_cp`/`line_full`/`too_wide`, and the private `KiDoc` error fields. `fail_from_pdf` and the driver translate those into public status/cause pairs (`src/xml_parse.h`, `src/pdf_write.h`, `src/layout.h`, `src/convert.c`).
 
-- `XmlParser.errmsg` and `XmlEvent.error` for parse errors.
-- `PdfWriter.fail_kind`, `fail_errno` and `hit_limit` for writer failures.
-- `Layout.bad_cp` for an unsupported code point.
-- `KiDoc.error` and `KiDoc.cause` for mapper failures.
+Use the existing `done:`/`open_fail:` cleanup style when a function owns several resources. Preserve the first failure. In particular, callback write failure is latched and must not be hidden by a later successful flush (`src/convert.c`). File publication happens only after successful completion and final cancellation checks.
 
-`convert_streams` in `src/convert.c` inspects those fields after a failure and maps them to a status and a `KI_CAUSE_*` value (`fail_from_pdf` does this for the writer). Keep that split: low-level code records what happened, the driver decides how to report it.
+## Validation before side effects
 
-## goto-based cleanup
+Every public conversion entry resets a non-null `KiResult` before validation. Initialize `KiOptions` with `ki_options_init`; its `size` must match exactly. Initialize `KiConfig` with `ki_config_init`; only the current size and `KI_CONFIG_SIZE_GEOMETRY` are accepted (`include/ki_xml_pdf.h`, `src/convert.c`).
 
-Functions with several resources use a single exit label (`done:` / `open_fail:` in `src/convert.c`). Temporary files are unlinked there unless `published` is set.
+Geometry and metadata syntax are checked before opening files or invoking callbacks. Font-dependent fitting happens after loading the font but before reading or mapping input (`src/geometry.c`, `src/info.c`, `src/pdf_write.c`). Do not move validation behind output side effects.
 
-## Results are always reset
+## Ownership and concurrency
 
-Every public entry point zeroes a non-NULL `KiResult` before validating anything (`ki_convert_file`, `ki_convert_to_file`, `ki_convert`). This was fixed in OSR-2 so reused results never carry stale counters. Tests check it.
+Mapper event pointers are borrowed for one callback. Callback resources stay with the caller. Separate conversions need separate mutable options, results, I/O and mapper state (`include/ki_xml_pdf.h`). The normal library path does not install signal handlers or write diagnostics without a log callback; signal handling belongs to `src/main.c`.
 
-## Options validation
+Internal debug/failure-injection hooks are test infrastructure, not a concurrent public API. Do not generalize their global state into normal conversion behavior (`src/convert.c`, `src/pdf_write.c`, `tests/test_stream.c`).
 
-`ki_options_init` zeroes `KiOptions` and sets `size`. `reject_options` rejects a size mismatch, negative quotas or selection values, and unknown profiles with `KI_CAUSE_USAGE`. New option fields must keep `KiOptions` layout stable within a 0.y series.
+## ABI and dependencies
 
-## Cancellation checkpoints
+The shared-library export map has `KI_0_1`, `KI_0_2` and additive `KI_0_3` nodes. Geometry and metadata use `KiConfig` rather than changing the older `KiOptions`, `KiResult` or `KiEvent` layouts (`libki_xml_pdf.map`, `include/ki_xml_pdf.h`). The soname remains `libki_xml_pdf.so.0`; before 1.0 the CMake package accepts only its own minor version (`cmake/ki_xml_pdfConfigVersion.cmake.in`).
 
-The `cancelled` callback is polled in the read path (`conv_read`), at the top of the event loop, inside the PDF writer while finishing, and again around `fflush`, `fsync`, `close` and `rename`. A new long-running step should add a checkpoint.
+zlib is a required dependency. Keep CLI, shared/static targets, examples, pkg-config private libraries and CMake dependency discovery consistent (`Makefile`, `CMakeLists.txt`, `cmake/ki_xml_pdf.pc.in`, `cmake/ki_xml_pdfConfig.cmake.in`).
 
-## No global side effects in the library
+## Style and evidence
 
-The library never installs signal handlers, never prints unless `KiOptions.log` is set, and reads only one environment variable (`KI_XML_PDF_FONT`, when no `font_path` is given). Signal handling lives in `src/main.c` and restores the previous handlers before exit.
+Follow four-space indentation, same-line braces, `snake_case` functions and `Ki`/`ki_` public names. Headers document lifetime and limits; comments explain constraints rather than restating operations. The supported platform is explicitly Linux/glibc, not portable ISO C (`src/platform.h`, `README.md`).
 
-The exception is a set of static test hooks (`xml2pdf_debug_fail_*` in `src/convert.c`, `pdf_debug_fail_at_page` in `src/pdf_write.c`). They are reset when a conversion returns and are not in the public header.
+A behavior change needs a regression that fails before the fix and checks an observable result. PDF bytes alone do not establish correct text or rendering; use the independent reader/oracle checks described in [Testing](testing.md). Historical performance evidence must name its revision and must not be presented as a fresh measurement.
 
-## Symbol visibility
-
-Public functions are marked `KI_API` (default visibility). The shared library's exports are fixed by `libki_xml_pdf.map` with versioned nodes `KI_0_1` and `KI_0_2`; everything else is `local`. Adding a public function means adding it to a new version node.
-
-## Comments
-
-Comments explain constraints, not mechanics. Header comments state ownership and lifetime rules (for example "Pointers are valid only for the duration of the map callback" in `include/ki_xml_pdf.h`). Match that style.
-
-## Style
-
-- C99 with `-Wall -Wextra -Wpedantic` and `_POSIX_C_SOURCE=200809L`; `src/convert.c` and `src/pdf_write.c` use `_GNU_SOURCE` for `fopencookie`.
-- Four-space indentation, braces on the same line, `snake_case` functions, `PascalCase` structs.
-- Public names use the `ki_` / `Ki` / `KI_` prefix. Internal modules use their own prefix (`xml_`, `pdf_`, `layout_`, `font_`, `report_`).
-- No third-party C dependencies.
-
-## Tests as evidence
-
-A behavior change needs a regression that fails before the fix and checks an observable result, preferably through an independent reader (`pdftotext`) rather than by matching writer bytes. See [Testing](testing.md).
-
-## Related pages
-
-- [Conversion pipeline](../systems/conversion-pipeline.md) for the error mapping in context.
-- [C API](../api/c-api.md) for the public contract these patterns protect.
+See [Conversion pipeline](../systems/conversion-pipeline.md) and [C API](../api/c-api.md).

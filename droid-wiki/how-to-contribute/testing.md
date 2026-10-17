@@ -1,140 +1,111 @@
 # Testing
+Active contributors: Artem
 
-All checks live in `tests/`: one C unit binary, five Python suites, and shell scripts for integration and distribution. This page lists every suite, how to run it, what it proves, and the measurement rules for memory.
+The repository combines C regressions, independent PDF readers, fault injection, installed consumers and ordinary-process resource measurements. A passing writer self-check alone is not sufficient.
 
-## Quick commands
+## Main commands
 
-| Command | Covers |
+Run these from the repository root on 64-bit Linux/glibc with the [test dependencies](../reference/dependencies.md).
+
+| Command | Actual scope |
 | --- | --- |
-| `make test` | Builds and runs `tests/test_stream.c` (unit and API groups) |
-| `make check` | Clean rebuild, `make test`, `tests/verify.sh`, `make example`, `tests/cli_pipeline.py`, `tests/catalog_verify.py` |
-| `make test-san` | The same unit binary under ASan and UBSan |
-| `make distcheck` | `make dist`, then `tests/distcheck.sh` on the archive |
-| `python3 tests/cli_pipeline.py` | CLI pipelines, quotas, signals, publication |
-| `python3 tests/catalog_verify.py` | The public catalog mapper example |
-| `python3 tests/fuzz_smoke.py` | Bounded seeded fuzz with a PDF reader |
+| `make test` | C regression binary, `tests/pdf_offsets.py`, `tests/pdf_streams.py` |
+| `make check` | Clean build, `make test`, `tests/verify.sh`, examples, CLI/font/wrap/geometry/Info/integration/catalog Python checks |
+| `make test-san` | C regression binary with ASan/UBSan and fatal diagnostics |
+| `bash tests/build_integration.sh` | Installed Make/CMake × C/C++ × static/shared × CMake/pkg-config matrix |
+| `bash tests/docs_smoke.sh` | Documented shell syntax, links/anchors, executed English onboarding and mapper examples, installed clients and PDF oracles |
+| `make distcheck` | Exact-HEAD archive, clean extraction/install, clients, CLI/report/catalog and integration |
+| `python3 tests/fuzz_smoke.py` | Bounded seeded XML/font mutations and independent reading |
 | `python3 tests/large_proof.py --self-test` | Negative controls for the resource judge |
-| `python3 tests/large_proof.py 1073741824` | 1 GiB report with RSS/page/spool budgets |
-| `tests/build_integration.sh` | Installed package matrix (Make/CMake, C/C++, static/shared) |
-| `tests/docs_smoke.sh` | Executes the documented command blocks and checks oracles |
-| `tests/install_smoke.sh`, `tests/prefix_switch.sh` | Install into private prefixes |
-| `ctest --test-dir build --output-on-failure` | The CTest registration: `stream`, `catalog`, `cli_pipeline` |
+| `python3 tests/large_proof.py 1073741824` | Full 1 GiB validation with fixed-1000 report selection |
 
-## Unit tests: `tests/test_stream.c`
+CTest registers `stream`, `catalog`, `cli_pipeline`, `pdf_offsets`, `pdf_streams`, `wrap_check`, `geometry_check`, `info_check` and `integration_check`.
+It does not replace `make check`, sanitizer, archive or installed-consumer acceptance.
 
-One 3,259-line C file holds 16 test groups. Each group is a `static int test_*(void)` returning 0 on success; `main()` runs them in order, prints `ok <group>` per passing group and `FAILED <group>` on failure, and exits non-zero if anything failed. `tests/verify.sh` re-runs the binary and requires exactly 16 `ok` lines, so adding a group means updating that count.
+## C regression map
 
-| Group (`rg '^static int test_' tests/test_stream.c`) | Covers |
+`tests/test_stream.c` includes ten focused C extension files and registers 60 groups at this revision.
+`tests/verify.sh` derives its expected count from that table, requires at least 16, and checks the final success marker.
+
+| Source | Coverage |
 | --- | --- |
-| `test_big_stream_fixed_memory` | A large input pulled through small reads with the RSS gate on ordinary builds |
-| `test_split_mid_tag_and_text` | Tags and text split across read boundaries |
-| `test_one_byte_entities_and_nesting` | One-byte reads, predefined entities, nesting |
-| `test_skips_and_errors` | Comments, declarations, error paths, repeatable error offsets |
-| `test_pdf_appends_and_releases` | Writer append/release behavior, spooled offsets, object limits |
-| `test_convert_pipeline` | End-to-end conversions through the public entry points |
-| `test_cdata_and_numeric` | CDATA and numeric character references |
-| `test_cdata_stream_fixed_memory` | CDATA streaming across reads with fixed memory |
-| `test_output_keeps_previous` | Atomic publication preserving a previous destination |
-| `test_wellformed_profile` | records-v1 rendering of well-formed documents |
-| `test_review_regressions` | Regressions from reviews, including the corpus files below |
-| `test_library_contract` | Options validation, result reuse, quotas, cancellation, concurrency |
-| `test_callback_usage_result` | `ki_convert` usage errors and result initialization |
-| `test_callback_to_file` | `ki_convert_to_file`, callback input into an atomic file |
-| `test_report_v1` | report-v1 mapping, selection, counters, byte offsets |
+| `tests/test_stream.c` | Fragmented reads, entities, CDATA, atomic output, quotas, result reuse, report selection, cancellation and concurrent contexts |
+| `tests/test_xml_subset.c` | XML Char/UTF-8 validation in rendered and skipped contexts, declaration/DTD/PI rules and corpus |
+| `tests/test_xml_coords.c` | Consumed line/column/byte positions, overflow controls, profile and custom failures |
+| `tests/test_font_metrics.c` | Font table bounds, names, zero advances, mark runs, replacement before embedding |
+| `tests/test_pdf_bounds.c` | Classic-xref ceiling and exact output quotas |
+| `tests/test_flate.c` | Stream inflation, expansion, compressor failures and damaged-reader controls |
+| `tests/test_layout_wrap.c` | Space/tab opportunities, long tokens, mark clusters, fragment/page invariance and bounded token memory |
+| `tests/test_geometry.c` | Config sizes, invalid values, geometry matrix, old-call behavior and outline/ink bounds |
+| `tests/test_info.c` | Metadata validation, copying, size compatibility, safe strings and byte quotas |
+| `tests/test_integration.c` | Combined `_cfg` calls, independent contexts, error cleanup and caller ownership |
+| `tests/test_callback_io.c` | One-shot negative/short/zero/over-count writes, no retry after failure, exact accepted-byte accounting |
 
-The binary links with `-pthread -Wl,--wrap=fsync` (the `test_stream` target in `Makefile`). `__wrap_fsync` calls `__real_fsync`, then flags that it returned. A test arms `arm_fsync_cancel`, and its `cancelled` callback fires only after that flag is set, which proves deterministically that a cancellation during `fsync` never publishes the PDF and preserves the previous file. `pthread` covers two concurrent conversion contexts, which the header contract allows.
+`Makefile` links internal tests with `-pthread` and GNU `--wrap` for `fsync`, `deflate` and `deflateInit2_`.
+The fsync wrapper makes cancellation after sync deterministic.
+zlib wrappers exercise memory/compressor failure branches rather than hoping to exhaust the host.
 
-`KI_RSS_GATE` in `tests/test_stream.c` disables the in-process memory checks under ASan (detected via `__SANITIZE_ADDRESS__` or `__has_feature`), because sanitizer shadow memory would break them.
+## Independent PDF checks
 
-## CLI and memory gate: `tests/verify.sh`
-
-Run by `make check` after `make test`. It requires `python3`, `pdfinfo`, `pdftotext`, `pdftohtml` and `/usr/bin/time`. It uses a scratch directory: set `SCRATCH` to keep it, otherwise it makes one under `TMPDIR`/`/tmp`.
-
-The script, in order:
-
-1. Checks CLI exit codes: `--help` and `--version` return 0, no arguments return 2, and the version line must equal the header version from `include/ki_xml_pdf.h`.
-2. Re-runs `./test_stream` and requires exactly 16 `ok` groups.
-3. Runs `./xml2pdf tests/fixture.xml` twice. An embedded Python reader decodes the PDF page streams through the embedded ToUnicode map (not Poppler) and compares the two runs for identical recovered text, page count, first/last-page markers, and unescaped entities (`alpha&beta` present, `alpha&amp;beta` absent).
-4. Builds a 16 MiB synthetic XML and measures both it and the small fixture with `/usr/bin/time -v`. The gate: large-run RSS must be at most 4096 KiB, under half the input size, and within small-run RSS plus 4 MiB; the PDF must be larger than the RSS, and first/last markers must appear on the first and later pages. Results land in `mem.txt` in the scratch directory.
-5. Reads the run through Poppler: `pdfinfo` reports at least 2 pages, `pdftotext -layout` page 1 and the last page match expected markers, a 90-character line stays inside the 572 pt margin (`pdftotext -bbox`), Cyrillic appears in both `pdftotext` and `pdftohtml`, and an unsupported character (U+1F600) is rejected without publishing a PDF.
-6. Removes the large inputs, fails if any file over 8 MiB remains in scratch, and records tool versions plus the Git commit in `versions.txt`.
-
-## Oracles
-
-An oracle is produced independently of the writer. The suites use three kinds:
-
-- **Independent reader oracles**: `examples/report-v1.expected.txt`, `examples/catalog.expected.txt` and the `doc`/`Hello` pair for `examples/hello.xml`, compared against `pdftotext -layout` output in `tests/cli_pipeline.py`, `tests/catalog_verify.py`, `tests/build_integration.sh`, `tests/docs_smoke.sh` and `tests/distcheck.sh`.
-- **A second decode path**: the ToUnicode recovery in `tests/verify.sh` decodes page streams with its own code, so a Poppler bug cannot hide a writer bug in the two-CLI-run comparison.
-- **Generator oracles**: `tests/large_proof.py` computes the expected selected text and counters from the generator itself, so the writer cannot be both producer and judge.
-
-A wrong oracle must fail the suite: `make distcheck DISTCHECK_ORACLE=/tmp/bad-oracle.txt` is expected to fail, and CI asserts that it does.
-
-## Fixtures and corpus
-
-| File | Used for |
+| Runner | Oracle |
 | --- | --- |
-| `tests/fixture.xml` | The 80 KB mixed document for the two CLI runs and the small-file RSS baseline in `tests/verify.sh` |
-| `examples/hello.xml` | Minimal document for consumers and install smoke |
-| `examples/report-v1.xml` + `examples/report-v1.expected.txt` | report-v1 golden input and text oracle |
-| `examples/catalog.xml` + `examples/catalog.expected.txt` | Catalog example golden input and oracle |
-| `tests/corpus/split_whitespace.xml` | CDATA whitespace split across a fragment boundary |
-| `tests/corpus/utf8_512.xml` | Multi-byte UTF-8 text |
-| `tests/corpus/truncated-hmtx.ttf` | A deliberately truncated font, rejected by `font_load` in direct, environment-variable and explicit-path tests |
-| `tests/consumer/` | A CMake consumer project (`report.c`) built against installed packages by `tests/build_integration.sh` |
+| `tests/cli_pipeline.py` | Fixed report text; all four file/stdin → file/stdout routes, usage, signals and broken outputs |
+| `tests/catalog_verify.py` | Fixed catalog text, one-byte reads, long values, schema positions and previous-file safety |
+| `tests/font_metrics_check.py` | Non-default font names/metrics, mark extraction and raster checks |
+| `tests/wrap_check.py` | Expected wrapped words and marks through Poppler |
+| `tests/geometry_check.py` | Expected MediaBoxes and actual raster ink inside margins |
+| `tests/info_check.py` | Expected `/Info`, Unicode/date round trips, syntax-injection and quota controls |
+| `tests/integration_check.py` | Geometry + wrapping + non-default font + marks + Flate + `/Info`, both profiles and four routes |
+| `tests/pdf_offsets.py`, `tests/pdf_streams.py` | xref targets, stream lengths, Flate round trips and deliberate corruption |
 
-## CLI pipelines: `tests/cli_pipeline.py`
+Use text extraction for content, structure readers for xref/streams and raster output for ink.
+Subsetting research demonstrated that missing outlines can leave extracted text unchanged.
+`tests/pdf_inflate.c` provides the C-side stream decoder for regressions.
 
-`python3 tests/cli_pipeline.py [--binary ...] [--fixture ...] [--oracle ...] [--pdftotext ...]`; the reader also comes from the `PDFTOTEXT` environment variable. Scenarios:
+## Installed clients and ABI
 
-- All four file/stdin to file/stdout combinations: exit 0, stdout carries only PDF bytes (ending `%%EOF` when streamed), diagnostics on stderr, and `pdftotext` text equal to the report oracle.
-- `-h`, `--help`, `--version`, and `--` handling for paths that begin with `--`.
-- Ten invalid argument shapes, all exiting 2 with empty stdout.
-- Late XML error and page, output and spool quota failures (exit 4) preserving an `OLD` destination byte-for-byte, with no temporary PDF or spool file left behind.
-- A real `SIGTERM` sent while the CLI blocks reading stdin: exit 4, destination and cleanup preserved.
-- `stdout` to `/dev/full` and to a closed pipe: exit 3 with diagnostics, not a silent `SIGPIPE` death.
-- A late XML error on stdout producing a partial PDF that starts with `%PDF-` and lacks `%%EOF`.
-- The default records-v1 profile rendering `["doc", "Hello"]` from both file and pipeline input.
+`tests/build_integration.sh` exercises 16 consumer rows plus four installed catalog variants.
+It checks actual ELF linkage, version/soname, installed font/notices, foreign working directories and explicit-font failures.
+`tests/prefix_switch.sh` covers changing the compiled install prefix without a clean.
+`tests/install_smoke.sh` is a smaller installation smoke check.
 
-## Catalog mapper: `tests/catalog_verify.py`
+Prepare old binaries once with `tests/abi_canary/build_canary.sh PREFIX DEST` against an installed 0.2 prefix; do not rebuild them against the new header.
+`tests/abi_canary/run_canary.sh BINDIR LIBDIR FONT OUTDIR` runs those separately prepared C/C++ binaries.
+It verifies their recorded checksums and loaded library path, then reads their PDFs through Poppler.
+Supply an empty output directory; the runner does not compile the old binaries.
+This is concrete old-binary evidence, not a promise that every future 0.y ABI is compatible.
 
-`python3 tests/catalog_verify.py` with the same flag set as `cli_pipeline.py`. It drives the built example (default `examples/catalog`). Success cases run three times with callback chunk sizes `None`, `1` and `4096`, proving short reads and one-byte delivery change nothing. The long-field case pushes a value over 4096 UTF-8 bytes spanning TEXT, CDATA and character references and compares every character. Rejection cases cover the grammar rule, cause, status, byte offset, an unchanged previous file (same bytes and inode) and no leftover temporaries; usage cases cover chunk parsing and a zero page quota. The profile failures check cause 7, the unsupported glyph cause 5 with its `U+` code, and quota cause 4.
+## Resource evidence
 
-## Fuzz smoke: `tests/fuzz_smoke.py`
+`tests/verify.sh` measures the ordinary converter on a 16 MiB synthetic document:
+RSS ≤4096 KiB, below half the input, and within the small reference plus 4096 KiB.
+It also checks rendered markers, page bounds and readable text.
+`tests/large_proof.py` separately caps the selected-output proof at 10,000 pages, 256 MiB PDF and 64 MiB spool.
+These are workload gates, not a universal RSS ceiling for every accepted font or caller callback.
 
-A bounded, seeded run (seed 20261007, 24 iterations, one to seven single-byte mutations each, payloads capped at 4096 bytes) mutating `examples/report-v1.xml`. Every conversion runs under `ulimit -v` of 256 MiB with a 5 second timeout; a crash, timeout or undocumented exit code writes the input to `fuzz-crash/` and fails the suite. Successful mutants are read back with `pdftotext`; short payload values are cross-checked with Python's ElementTree as a sanity projection, never as an acceptance oracle. Truncation cuts at 0, 1, 4095, 4096, 4097 and one-from-the-end bytes must exit 1. Font controls feed truncated and mutated DejaVu samples plus `tests/corpus/truncated-hmtx.ttf`, expecting exit 1, a preserved old output and no leaked temporaries. The golden input is checked against the fixed full-text oracle first.
+`tests/resource_baseline.py matrix` runs six full-output cases (both profiles, 1/16/64 MiB) and three fixed-1000 selections (16/256/1024 MiB).
+`compare` evaluates revision-specific evidence against the `075455c` baseline.
+`tests/resource_recipe.py`, `tests/resource_oracle.py` and `tests/resource_measure.py` separate fixture generation, conversion, Poppler reading and streaming-oracle processes.
+`tests/resource_controls.py` supplies real-PDF negative/quota/tail controls; `tests/resource_baseline_test.py` checks the recipe/oracle without the converter.
 
-## Large proof: `tests/large_proof.py`
+The extended resource matrix and ABI canaries are acceptance tools, not implicit steps of every CI job.
+CI explicitly runs `make check` and the large proof in its resource job.
+Historical OSR-82 Massif/RSS evidence measures `de8ba0e`, before later font/CMap/page-buffer reductions; it is not a current heap measurement.
 
-`python3 tests/large_proof.py 1073741824` builds a synthetic report of the requested size (default 134217728), converts it selecting 1000 records, and judges four budgets: converter RSS at most 4096 KiB (4 MiB), at most 10,000 pages, a PDF of at most 256 MiB, and a spool of at most 64 MiB. The selected text must equal the generator's expected lines, including the Russian counters. The reader runs separately under `ulimit -v` of 1 GiB, and first, middle and last pages are spot-checked. `--self-test` runs negative controls against the judge (over-budget RSS, pages, PDF, spool, a missing metric, and a changed value) and fails if any is accepted. Extra cases prove offset/limit selection keeps only the chosen record and that a late invalid record preserves the previous PDF. Inputs are removed on success and failure.
+## Safety and provenance
 
-## Installed packages: `tests/build_integration.sh`
+Sanitizer RSS is not ordinary RSS; in-process RSS gates disable themselves under ASan.
+`tests/fuzz_smoke.py` is a seeded smoke test, not exhaustive fuzzing.
+`make distcheck` uses committed HEAD; it cannot validate uncommitted edits by archiving them.
+CI asserts failures for bad C/C++ compilers, a failing reader, a wrong oracle and a missing license.
 
-Copies the sources into a disposable directory (no Git checkout), installs through both Make and CMake with `DESTDIR` staging, then verifies the staged file list, the `libki_xml_pdf.so.0` soname via `readelf`, the pkg-config version and prefix, and that neither `DESTDIR` nor the source tree leaked into installed metadata or the compiled font path. It then runs 16 consumer rows (Make/CMake install × C/C++ × static/shared × CMake/pkg-config discovery), each from a foreign working directory against the report oracle, plus the installed CLI, four catalog variants through `tests/catalog_verify.py`, and negative controls for a missing installed font and an explicit missing `KI_XML_PDF_FONT`.
+## Key source files
 
-## Documented commands: `tests/docs_smoke.sh`
+| File | Role |
+| --- | --- |
+| `Makefile`, `CMakeLists.txt` | Exact target and CTest membership |
+| `.github/workflows/ci.yml` | Executed CI gates |
+| `tests/verify.sh` | Synthetic 16 MiB acceptance and group counting |
+| `docs/release-checklist.md` | Release acceptance evidence |
 
-Extracts the fenced `sh` blocks from `README.md`, `README.ru.md`, `CONTRIBUTING.md`, `docs/report-v1.md` and `docs/mapper-guide.md`, syntax-checks them with `bash -n`, verifies every local link and anchor, and executes the documented blocks in private prefixes. Every produced PDF is checked against its oracle through `pdftotext`, and static/shared linkage is verified with `readelf`. Editing a documented command without running this script is how documentation rot starts.
-
-## Distribution: `tests/distcheck.sh`
-
-Run via `make distcheck`. It unpacks the `git archive` produced by `make dist`, requires a single archive root named after the header version, verifies a required-file list, rejects any `.git` metadata or private workspace paths, installs with Make into a disposable prefix, builds the C and C++ consumers against the installed static and shared libraries and runs them from `/`, checks the report oracle, runs the installed CLI pipelines, and finally runs `tests/build_integration.sh` expecting 16 consumer rows and 4 catalog variants. `DISTCHECK_ORACLE` replaces the oracle (a mismatch must fail) and `DISTCHECK_BREAK=license` deletes `LICENSE` (the run must fail). CI asserts all these negative controls fail.
-
-## Sanitizers
-
-`make test-san` compiles all library sources plus `tests/test_stream.c` with `-fsanitize=address,undefined -fno-omit-frame-pointer` and runs with `ASAN_OPTIONS=halt_on_error=1:detect_leaks=1` and `UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1`. The first error fails the suite. In-process RSS gates are disabled under ASan, so sanitizer runs never replace a memory measurement. CI runs this in the `clang` and `asan` jobs.
-
-## RSS measurement rules
-
-The rules `CONTRIBUTING.md` sets, enforced by the scripts:
-
-- Measure an ordinary, uninstrumented `xml2pdf` with `/usr/bin/time -v` (or `-f rss_kib=%M`). The XML generator, the PDF reader and the sanitizer builds are excluded.
-- The verify.sh gate is absolute and relative: large-run RSS at most 4096 KiB, below half the 16 MiB input, and within the small run plus 4 MiB. The same 4096 KiB converter RSS budget is in `tests/large_proof.py`.
-- Historical numbers stay tied to the revision that produced them (2372 KiB on `7c62fe4`); new claims need new measurements.
-- Poppler runs under its own address-space limit, separate from the converter measurement.
-
-## Related pages
-
-- [Tooling](tooling.md) for the build targets and CI jobs that run these suites.
-- [Debugging](debugging.md) for reading failures the suites surface.
-- [Patterns and conventions](patterns-and-conventions.md) for the code rules the unit tests enforce.
-- [Resource limits](../features/resource-limits.md) and [Atomic output](../features/atomic-output.md) for the behaviors under test.
+Related: [Debugging](debugging.md), [Tooling](tooling.md), [Resource limits](../features/resource-limits.md).

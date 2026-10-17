@@ -1,118 +1,95 @@
 # Custom mappers
+Active contributors: Artem
 
-Active contributors: Artem Klen
+A caller-supplied `KiOptions.map` callback replaces both built-in profiles. It validates an application schema and emits incremental text through `KiDoc`, while the library retains XML parsing, fonts, wrapping, PDF generation and publication.
 
-A mapper is a caller-supplied callback that replaces both built-in profiles: when `KiOptions.map` is set, `records-v1` and `report-v1` are not used at all. The catalog example (`examples/catalog_map.c`, `examples/catalog_driver.c`) shows the full pattern for a small project-owned schema, and `docs/mapper-guide.md` is the step-by-step guide.
+## Minimal integration
 
-## Purpose
+```c
+CatalogMap mapper;
+catalog_map_init(&mapper);
+KiOptions opt;
+KiResult result;
+ki_options_init(&opt);
+opt.map = catalog_map_event;
+opt.map_user = &mapper;
+int status = ki_convert_file("catalog.xml", "catalog.pdf", &opt, &result);
+```
 
-Let applications render their own XML schemas with the same parser, layout, font and PDF writer, without changing library code. The library contract keeps memory bounded, so a mapper must work from fixed-size state and streaming fragments rather than by collecting a document in memory.
+This uses `examples/catalog_map.h` and `examples/catalog_map.c`. The callback signature is `int map(void *user, KiDoc *doc, const KiEvent *ev)`. Return zero for success, nonzero to stop. `src/convert.c` always dispatches custom map before a built-in profile; the ordinary options/profile fields must still pass validation.
 
-## Key abstractions
+## Mapper rules
 
-| Abstraction | Path | Role |
-| --- | --- | --- |
-| `KiOptions.map` / `map_user` | `include/ki_xml_pdf.h` | The callback and its state pointer |
-| `KiEvent` | `include/ki_xml_pdf.h` | One START, END or TEXT event; pointers valid only during the callback |
-| `KiDoc` | `include/ki_xml_pdf.h` | Opaque handle the mapper writes to |
-| `ki_doc_text`, `ki_doc_break`, `ki_doc_fail` | `src/convert.c` | Emission and failure entry points |
-| `CatalogMap` | `examples/catalog_map.h` | Example mapper state: one state, one flag, one counter |
-| `catalog_map_event` | `examples/catalog_map.c` | Example mapper for the catalog grammar |
+1. Keep current state bounded. The example holds one state, one value-started flag and one counter, not field/item/document buffers.
+2. Handle START, TEXT and END; there is no mapper EOF event. Validate required children at parent closure and emit summaries at root closure.
+3. Use `text_len` in bytes, not `strlen` assumptions for arbitrary fragments. Send TEXT and CDATA through the same emission path and preserve significant spaces.
+4. Check every `ki_doc_text` / `ki_doc_break` return and propagate failures immediately. Replacing them with `ki_doc_fail` hides font/resource/I/O causes.
+5. Use `ki_doc_fail(doc, "schema: rule")` for schema errors. The library appends the current consumed `at line L, column C, byte B`; do not append a second offset yourself.
 
-## How to write a mapper
+`KiEvent` and its name/text/attribute pointers are borrowed only during that callback (`include/ki_xml_pdf.h`). Consume attributes immediately or copy only bounded metadata; never save an event pointer.
 
-The callback signature is `int map(void *user, KiDoc *doc, const KiEvent *ev)`. `convert_streams` in `src/convert.c` calls it for every event and treats a nonzero return as failure. The pattern, following the catalog example:
+Text is incremental, not a whole field. The current parser emits scalar-complete chunks, and `ki_doc_text` also accepts caller emission split within UTF-8 sequences. The pending word survives separate calls and TEXT/CDATA boundaries; no application word buffer is needed. See [Layout and fonts](../systems/layout-and-fonts.md).
 
-1. Keep fixed-size state. `CatalogMap` is one enum state, one `value_started` flag and one item counter. It allocates no field, item or document buffer, stores no event pointers, and has a maximum schema depth of three. Sorting, joins and document-wide lookups need a different resource contract and do not fit this pattern.
-2. Initialize with `ki_options_init`, then set `map` and `map_user`, and keep both the options and the state alive until the conversion returns.
-3. Handle `KI_EV_START`, `KI_EV_TEXT` and `KI_EV_END`. There is no EOF event: validate required children when the parent closes (the catalog checks `item requires name then price` at item end) and emit summaries when the root closes.
-4. Check every emission result and return failures immediately. Return `ki_doc_text` and `ki_doc_break` failures directly; replacing them with a profile failure would hide the real font, quota or I/O cause.
-5. For a schema failure, build a bounded message that names the rule and the offset, then return `ki_doc_fail(doc, message)`. The catalog uses `"catalog: %s at byte %zu"`. `ki_doc_fail` records `KI_CAUSE_PROFILE`.
-
-## Borrowed pointers
-
-`KiEvent` and its `name`, `text` and attribute pointers are valid only for the duration of the current callback. Read attributes immediately: the catalog consumes the `id` attribute inside the `item` START callback and never keeps the pointer. If another schema needs metadata later, copy only bounded metadata into your own state; retaining an event pointer does not extend its lifetime.
-
-## Fragments
-
-A text event is a fragment, not a complete field, and not necessarily a complete UTF-8 character. Use `event->text_len`, in bytes. The catalog sends each fragment straight to `ki_doc_text(doc, event->text, event->text_len)`; `KiDoc` handles character boundaries and physical line and page wrapping. TEXT and CDATA use the same path, references are already decoded in ordinary text, and reference-looking text inside CDATA stays literal. A mapper that preserves fragment whitespace keeps a space between separate TEXT/CDATA events intact; field length is bounded by library quotas, not by a mapper buffer.
-
-For each field, the first nonempty fragment emits the fixed label and `": "`; the END event calls `ki_doc_break`, and a field with no fragments emits the label and a bare colon first, so an empty value prints `Name:` or `Price:`.
-
-## Byte offsets in diagnostics
-
-`KiEvent.byte_offset` is the parser position after the event's bytes were consumed. An empty element's synthetic END uses the same position as its START. It is not a character index and not the beginning of the tag. `ki_doc_fail` does not append an offset for you: compose the message yourself, as the catalog does with `snprintf(message, sizeof message, "catalog: %s at byte %zu", rule, event->byte_offset)`.
-
-## The catalog example
-
-Grammar and output:
+## Catalog example
 
 | Element | Attributes | Content |
 | --- | --- | --- |
-| `catalog` | none | Zero or more `item` elements |
-| `item` | Optional nonblank `id` | Exactly one `name`, then exactly one `price` |
-| `name`, `price` | none | Text, CDATA and references; no nested elements |
+| `catalog` | None | Zero or more items |
+| `item` | Optional nonblank `id` | Exactly one `name`, then one `price` |
+| `name`, `price` | None | Text/CDATA/references, no nested elements |
 
-The mapper walks eight states: `BEFORE_CATALOG`, `IN_CATALOG`, `NEED_NAME`, `IN_NAME`, `NEED_PRICE`, `IN_PRICE`, `ITEM_DONE`, `AFTER_CATALOG` (`examples/catalog_map.c`). It prints `Catalog`, `Item <id or number>`, `Name: value`, `Price: value` and `Items: N`; missing IDs use the source item number starting at 1, duplicate IDs are allowed, empty catalogs and empty fields are valid, and prices are lexical text with no numeric parsing.
+`examples/catalog_map.c` has eight states: before catalog, in catalog, need/in name, need/in price, item done, after catalog. It rejects namespaces, unknown attributes/elements, invalid child order and structural text.
 
-The rule strings the example produces, all prefixed `catalog: ` and suffixed ` at byte N`:
+Output is `Catalog`, `Item <id or original number>`, `Name: value`, `Price: value`, then `Items: N`. Empty fields use a bare colon, duplicate IDs are allowed, empty catalogs are valid, and prices are lexical strings rather than parsed amounts. Attribute values retain the parser's 255-byte bound; field values stream without a mapper buffer limit.
 
-| Rule | Raised when |
-| --- | --- |
-| `namespaces are not supported` | A colon in an element or attribute name, or an `xmlns` attribute |
-| `unknown attribute <attr> on <element>` | An attribute outside the allowed set |
-| `item nesting` | `item` starts outside `catalog` |
-| `catalog nesting` | `catalog` starts twice, or ends at the wrong state |
-| `name order or nesting` / `price order or nesting` | `name` or `price` appears in the wrong position or order |
-| `name nesting` / `price nesting` | A field end event in the wrong state |
-| `item requires name then price` | `item` closes without one `name` then one `price` |
-| `unknown element <name>` / `unknown end element` | Any other element name |
-| `structural text` | Non-whitespace text outside `name` or `price` |
-| `empty item id` | An `id` with no non-whitespace character |
-| `item counter overflow` | The item counter reaches `ULLONG_MAX` |
+The example is two C implementation files (mapper and driver), one private header and one dedicated Python verifier, `tests/catalog_verify.py`. This is an example-level 1:2 test-to-implementation-file ratio, not a coverage metric. Both files include only the public library interface.
 
-The driver `examples/catalog_driver.c` runs `catalog [--max-pages N] INPUT OUTPUT [CHUNK_BYTES]`. Without a chunk argument it calls `ki_convert_file`. A positive chunk argument chooses a caller-owned `FILE` reader with `ki_convert_to_file`, capped at that many bytes per callback: `1` reads at most one byte per callback, `4096` is an ordinary size. A zero, negative, invalid or overlong chunk is a usage error with exit 2, as is `--max-pages 0`. The driver owns the input `FILE` and closes it; the library never closes or frees callback resources. On failure it prints `cause=<number>` plus the message to stderr and returns the library status. Leave `KiOptions.record_offset` and `record_limit` at zero: they belong to the built-in report profile, and a custom count belongs in the mapper state.
-
-## Building against an installed library
+## Run and install
 
 ```sh
-prefix="$HOME/.local"
-make install PREFIX="$prefix"
-cc -std=c99 -Wall -Wextra -I"$prefix/include" \
-  examples/catalog_driver.c examples/catalog_map.c \
-  "$prefix/lib/libki_xml_pdf.a" -o catalog
-```
-
-Keep the mapper sources in your application and include only the installed `include/ki_xml_pdf.h`. For a shared library, replace the archive argument with `-L"$prefix/lib" -lki_xml_pdf` and make the directory findable at runtime. See [Packaging](packaging.md).
-
-## Verification
-
-`tests/catalog_verify.py` builds no binary; run it after `make example`:
-
-```sh
+make example
+./examples/catalog examples/catalog.xml catalog.pdf
+./examples/catalog examples/catalog.xml one-byte.pdf 1
 python3 tests/catalog_verify.py
 ```
 
-It checks the full oracle `examples/catalog.expected.txt`, empty fields and catalogs, duplicate IDs, significant spaces, literal CDATA and decimal and hex references. For a field larger than 4096 bytes it compares every character for file input, one-byte and ordinary callback reads. Negative cases assert the profile byte offsets, distinct XML, font and resource causes, an unchanged previous destination (same bytes and inode) and temporary-file cleanup. Each failing event has its own consumed-byte oracle computed from the fixture text.
+The driver accepts `catalog [--max-pages N] INPUT OUTPUT [CHUNK_BYTES]`. No chunk uses file input; a positive chunk uses a caller-owned FILE reader through `ki_convert_to_file`. Zero/negative/invalid explicit chunks are usage errors.
 
-## Integration points
+Against an installation, compile mapper sources in the application:
 
-- Precedence: `convert_streams` calls `opt->map` first, before both built-in profiles.
-- Concurrency: use one mapper state per conversion; see [C API](../api/c-api.md) for the context rules.
-- The library validates truncated or malformed XML before successful file publication, so a late schema error in a mapper still preserves the destination ([Atomic output](atomic-output.md)).
+```sh
+prefix="$HOME/.local"
+cc -std=c99 -Wall -Wextra -I"$prefix/include" \
+  examples/catalog_driver.c examples/catalog_map.c \
+  "$prefix/lib/libki_xml_pdf.a" -lz -o catalog
+```
 
-## Entry points for modification
+Use the same prefix at build/install, or set an explicit font. Installed CMake/pkg-config targets manage zlib; see [Packaging](packaging.md).
 
-- To adapt another schema, copy `examples/catalog_map.c` and `examples/catalog_map.h`, replace the state transitions and labels, define allowed attributes and child order, and add independent positive and negative fixtures.
-- To extend what mappers can do, change `KiEvent` or `KiDoc` in `include/ki_xml_pdf.h` and the mapper call in `convert_streams`; a struct layout change requires a minor version bump before 1.0.
+## Selection, errors and ownership
+
+Report offset/limit and `KiResult.report_*` belong to the built-in report mapper. The custom catalog renders all items and keeps its count in `CatalogMap.items`; it does not inherit report selection.
+
+`ki_doc_fail` produces `KI_CAUSE_PROFILE`. Its position is **after** the event, not the beginning of the tag; empty-element END matches START. Long rule text is shortened at a UTF-8 boundary while retaining the whole position suffix.
+
+Use separate mapper state for concurrent conversions. Callback resources remain caller-owned. The file APIs preserve old destinations on late schema/XML/quota errors; callback output cannot be rolled back.
+
+## Change entry points and checks
+
+Adapt state transitions/labels in `examples/catalog_map.c`, define bounded state in `examples/catalog_map.h`, and wire I/O in `examples/catalog_driver.c`. Add independent positive/negative fixtures for your schema. Sorting, joins and document-wide lookup sets need a different resource contract.
+
+`tests/catalog_verify.py` checks full expected output, duplicate/empty/significant-whitespace cases, long fields with file/one-byte/ordinary reads, consumed positions, distinct causes and preserved destination bytes/inode with temporary-file cleanup.
 
 ## Key source files
 
-| File | Contents |
+| File | Role |
 | --- | --- |
-| `docs/mapper-guide.md` | Full guide: grammar, ownership, fragments, errors, verification |
-| `examples/catalog_map.h` | Mapper state struct and callback declaration |
-| `examples/catalog_map.c` | The mapper implementation and rule messages |
-| `examples/catalog_driver.c` | Driver wiring options, callbacks and the two file APIs |
-| `examples/catalog.xml`, `examples/catalog.expected.txt` | Fixture and oracle |
-| `tests/catalog_verify.py` | Positive, negative and usage verification suite |
+| `include/ki_xml_pdf.h` | Map/event/document and ownership contract |
+| `src/convert.c` | Mapper precedence, emission calls and positioned failures |
+| `examples/catalog_map.c`, `examples/catalog_map.h` | Fixed-state schema adapter |
+| `examples/catalog_driver.c` | File/callback driver |
+| `examples/catalog.xml`, `examples/catalog.expected.txt` | Original fixture and independent oracle |
+| `tests/catalog_verify.py` | Public-interface positive/negative suite |
+| `docs/mapper-guide.md` | Full integration and adaptation guide |
+
+Related: [C API](../api/c-api.md), [Streaming I/O](streaming-io.md), [Atomic output](atomic-output.md).

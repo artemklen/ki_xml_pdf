@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-13T04:03:23Z",
-  "commitHash": "037e2bf54180217816a0b59c12eb908eb15ce484",
+  "generatedAt": "2026-10-17T18:22:05Z",
+  "commitHash": "d57306903d7a122f3abe84c4d5d9659799d6176f",
   "branch": "main",
-  "pageCount": 40,
+  "pageCount": 42,
   "topLevelSections": [
     "overview",
     "by-the-numbers",
@@ -36,8 +36,8 @@
     "systems/conversion-pipeline.md",
     "systems/xml-parser.md",
     "systems/layout-and-fonts.md",
+    "systems/geometry.md",
     "systems/pdf-writer.md",
-    "systems/page-sink.md",
     "features/index.md",
     "features/cli.md",
     "features/report-v1.md",
@@ -45,6 +45,8 @@
     "features/custom-mappers.md",
     "features/streaming-io.md",
     "features/atomic-output.md",
+    "features/page-geometry.md",
+    "features/document-information.md",
     "features/resource-limits.md",
     "features/packaging.md",
     "api/index.md",
@@ -59,5 +61,14 @@
     "reference/configuration.md",
     "reference/data-models.md",
     "reference/dependencies.md"
+  ],
+  "videoOverview": {
+    "status": "skipped",
+    "warnings": [
+      "User declined video overview generation"
+    ]
+  },
+  "warnings": [
+    "Visual capture skipped: .factory/skills/qa/config.yaml is absent. Run /install-qa to configure screenshot capture."
   ]
 }

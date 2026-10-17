@@ -1,115 +1,110 @@
 # Packaging
+Active contributors: Artem
 
-Active contributors: Artem Klen
+ki_xml_pdf 0.3.0 installs the CLI, static/shared libraries, one public header, font/licenses and CMake/pkg-config discovery metadata. Both build systems target 64-bit Linux with glibc, GCC/Clang and a GNU-compatible linker; zlib is a required dependency.
 
-ki_xml_pdf ships through two build systems that produce the same installed layout: GNU Make and CMake. The installed package is a CLI, static and shared libraries, one public header, the DejaVu Sans font, CMake and pkg-config discovery metadata; the default font path is compiled into the library from the install prefix.
+## Build and install
 
-## Purpose
+```sh
+make PREFIX="$HOME/.local"
+make install PREFIX="$HOME/.local"
 
-Make the library consumable outside the source tree: `find_package(ki_xml_pdf)` or `pkg-config` for compilation and linking, an installed `xml2pdf` that finds its own shared library through an rpath, and a font that is found without environment setup, while `DESTDIR` staging stays a packaging-only concept.
+cmake -S . -B build-install -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DBUILD_SHARED_LIBS=ON
+cmake --build build-install
+cmake --install build-install
+```
 
-## Build systems
+Use the same prefix at build/install because it sets the compiled runtime font path. Both libraries install regardless of `BUILD_SHARED_LIBS`; that CMake option selects the default library target, not which variant exists.
 
-| System | Entry | Notes |
-| --- | --- | --- |
-| Make | `Makefile` | `PREFIX` (default `/usr/local`), `DESTDIR`, `make install`, `make dist` |
-| CMake | `CMakeLists.txt` | Requires CMake 3.16, `CMAKE_INSTALL_PREFIX`, `BUILD_SHARED_LIBS` (default ON), `BUILD_TESTING` |
+`CMakeLists.txt` requires CMake 3.16 and rejects non-Linux, non-64-bit and non-glibc builds. `src/platform.h` rejects unsupported platforms during compilation. macOS, musl/Alpine, BSD and Windows are not supported. CMake tests default on and require Python 3; `-DBUILD_TESTING=OFF` omits test targets.
 
-`CMakeLists.txt` refuses to configure anywhere except 64-bit Linux with glibc: the shared build needs glibc's `fopencookie` for `ki_convert`. Both systems build the same seven library sources, the CLI and the catalog example.
+Packaging consists of two top-level build files and four discovery templates in `cmake/`. Three dedicated install/prefix/integration scripts test that surface (3:6 test-to-build/template-file ratio), with source-distribution and ABI suites alongside them.
 
 ## Installed layout
+
+Make uses `lib`/`include`/`share` below `PREFIX`; CMake uses `GNUInstallDirs`, so the configured libdir can differ.
 
 | Path under prefix | Contents |
 | --- | --- |
 | `bin/xml2pdf` | CLI |
 | `lib/libki_xml_pdf.a` | Static library |
-| `lib/libki_xml_pdf.so` and `lib/libki_xml_pdf.so.0` | Shared library, soname `libki_xml_pdf.so.0` (CMake also writes `libki_xml_pdf.so.0.2.0`) |
-| `include/ki_xml_pdf.h` | The only public header |
-| `share/ki_xml_pdf/DejaVuSans.ttf`, `share/ki_xml_pdf/DejaVuSans.copyright`, `share/ki_xml_pdf/LICENSE` | Font and license notices |
-| `lib/pkgconfig/ki_xml_pdf.pc` | pkg-config metadata |
-| `lib/cmake/ki_xml_pdf/ki_xml_pdfConfig.cmake`, `ki_xml_pdfConfigVersion.cmake`, `ki_xml_pdfTargets.cmake` | CMake package |
+| `lib/libki_xml_pdf.so`, `lib/libki_xml_pdf.so.0` | Shared-library name and SONAME alias |
+| `include/ki_xml_pdf.h` | Only public header |
+| `share/ki_xml_pdf/DejaVuSans.ttf` | Bundled font |
+| `share/ki_xml_pdf/DejaVuSans.copyright`, `share/ki_xml_pdf/LICENSE` | Separate font notice and project MIT license |
+| `lib/pkgconfig/ki_xml_pdf.pc` | pkg-config discovery |
+| `lib/cmake/ki_xml_pdf/` | Config, version and imported targets |
 
-The Makefile creates the `.so.0` name with `ln -sfn`; CMake sets `VERSION 0.2.0` and `SOVERSION 0`. `tests/build_integration.sh` checks the soname with `readelf`.
+CMake also installs the versioned `libki_xml_pdf.so.0.3.0`; SONAME remains `libki_xml_pdf.so.0`. The Make-built CLI links the archive, while the CMake CLI links the selected variant and has an installed `$ORIGIN`-relative rpath.
 
-## CMake package
-
-Consumers use:
+## Installed C/C++ consumers
 
 ```cmake
 find_package(ki_xml_pdf CONFIG REQUIRED)
 target_link_libraries(client PRIVATE ki_xml_pdf::ki_xml_pdf)
 ```
 
-`ki_xml_pdf::ki_xml_pdf` is an interface target defined in `cmake/ki_xml_pdfConfig.cmake.in` that links to `ki_xml_pdf::shared` or `ki_xml_pdf::static`. The choice is explicit through `ki_xml_pdf_USE_STATIC_LIBS` (`ON` or `OFF`); without it the default recorded at install time applies (`@KI_DEFAULT_SHARED@`, which is `ON` for the Makefile install and equals `BUILD_SHARED_LIBS` for CMake). Both variant targets always exist, so `ki_xml_pdf::static` and `ki_xml_pdf::shared` can be linked directly.
+Installed targets are `ki_xml_pdf::static`, `ki_xml_pdf::shared` and the interface selector `ki_xml_pdf::ki_xml_pdf`. Set `ki_xml_pdf_USE_STATIC_LIBS=ON|OFF` before discovery to override the install-time default.
 
-`cmake/ki_xml_pdfConfigVersion.cmake.in` marks a requested version compatible only when it equals the installed version, or when it is older with the same major and minor number (before 1.0 a minor bump may change the ABI). A non-64-bit consumer is unsuitable. The Makefile install writes the same three files by `sed` substitution from `cmake/ki_xml_pdfMakeTargets.cmake.in` and the `.in` templates, so both installations expose identical target names; the Makefile's targets file derives the prefix from its own location rather than hard-coded paths.
+`cmake/ki_xml_pdfConfig.cmake.in` uses `find_dependency(ZLIB)`. Static targets propagate their zlib link requirement; the shared library records `libz.so.1` itself.
 
-## pkg-config
+```sh
+export PKG_CONFIG_PATH="$HOME/.local/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+cc client.c $(pkg-config --cflags --libs ki_xml_pdf) -o client
+cc client.c $(pkg-config --cflags ki_xml_pdf) \
+  -Wl,-Bstatic $(pkg-config --static --libs ki_xml_pdf) -Wl,-Bdynamic -o client-static
+```
 
-`cmake/ki_xml_pdf.pc.in` yields `prefix`, `libdir`, `includedir`, `Libs: -L${libdir} -lki_xml_pdf` and `Cflags: -I${includedir}`. The Makefile substitutes `$(PREFIX)/lib` and `$(PREFIX)/include`; CMake uses the full `GNUInstallDirs` paths. For static linking against an installation that also contains the shared library, the README's pattern is `pkg-config --static --libs` wrapped in `-Wl,-Bstatic ... -Wl,-Bdynamic`.
+`pkg-config --static` adds `Libs.private: -lz` but does not itself force archive selection. Linking `libki_xml_pdf.a` by path also requires `-lz`. Shared consumers must arrange runtime library discovery, for example an rpath or `LD_LIBRARY_PATH`.
 
-## Symbol versioning
+## ABI and version matching
 
-Exports of the shared library are fixed by `libki_xml_pdf.map` with versioned nodes:
-
-| Node | Symbols |
+| ELF node in `libki_xml_pdf.map` | Export group |
 | --- | --- |
-| `KI_0_1` | `ki_convert`, `ki_convert_file`, `ki_doc_text`, `ki_doc_break`, `ki_doc_fail`, `ki_options_init`, `xml2pdf_convert`, `xml2pdf_convert_cap` |
+| `KI_0_1` | Original conversion/document/options calls and two legacy path exports |
 | `KI_0_2` | `ki_convert_to_file` |
+| `KI_0_3` | `ki_config_init`, `ki_convert_cfg`, `ki_convert_file_cfg`, `ki_convert_to_file_cfg` |
 
-Everything else is `local: *`, so internal symbols never enter the ABI. A new public function needs a new version node. The legacy `xml2pdf_convert` and `xml2pdf_convert_cap` are declared in `src/convert.h`, exported for compatibility, and not part of `include/ki_xml_pdf.h`.
+All other symbols are local. The new config preserves the 0.2 options/result/event layouts; precompiled C/C++ ABI canaries demonstrate old binaries running against 0.3.0. See [C API](../api/c-api.md).
 
-## Font path compiled from the prefix
+This does not widen CMake package matching: `cmake/ki_xml_pdfConfigVersion.cmake.in` accepts exact versions or older patch versions with the same major/minor, and rejects non-64-bit consumers. A request for 0.2 is not advertised as compatible by a 0.3 package even though the tested old binary ABI survives.
 
-The default font path is a compile-time constant. The Makefile passes `-DXML2PDF_FONT_PATH="$(PREFIX)/share/ki_xml_pdf/DejaVuSans.ttf"`; CMake sets `KI_FONT_PATH` to `${CMAKE_INSTALL_FULL_DATADIR}/ki_xml_pdf/DejaVuSans.ttf` and defines the same macro. At runtime the PDF writer in `src/pdf_write.c` first loads `KiOptions.font_path` directly when it is set (no fallback if it fails). When it is not set, `font_open_default` in `src/font.c` tries, in order:
+## Font location and staging
 
-1. the `KI_XML_PDF_FONT` environment variable,
-2. the compiled `XML2PDF_FONT_PATH`,
-3. paths beside the executable (`fonts/DejaVuSans.ttf`, `../fonts/DejaVuSans.ttf`, `../share/ki_xml_pdf/DejaVuSans.ttf`), which lets the build-tree binary work from any directory,
-4. `fonts/DejaVuSans.ttf` relative to the working directory.
+The default path is `<prefix>/share/ki_xml_pdf/DejaVuSans.ttf`. Make tracks prefix changes through `src/.font_prefix`, recompiling `src/font.o` and relinking without requiring a manual clean.
 
-Use the same prefix when building and installing. A relocated installation must set `KiOptions.font_path` or `KI_XML_PDF_FONT`; an explicitly supplied font that fails is an error and is never silently replaced.
+`DESTDIR` stages installation only; it does not enter the compiled font path or discovery prefix:
 
-## The src/.font_prefix rebuild trick
+```sh
+make install PREFIX=/usr/local DESTDIR="$PWD/stage"
+DESTDIR="$PWD/stage-cmake" cmake --install build-install
+```
 
-Because the prefix reaches the library through a preprocessor macro, rebuilding with a different prefix has to recompile `src/font.o`. The `Makefile` implements this with a stamp: the target `src/.font_prefix` writes `$(PREFIX)` to the stamp file only when it differs, and `src/font.o` depends on the stamp. So `make install PREFIX=elsewhere` without `make clean` rewrites the stamp, recompiles `src/font.o` with the new path, and relinks. `tests/prefix_switch.sh` exercises exactly this: it builds with the default prefix, installs to a second prefix without cleaning, verifies the consumer finds the font, installs to a third prefix, then back to the second.
+For relocation, explicitly set `KiOptions.font_path` or nonempty `KI_XML_PDF_FONT`. Invalid explicit fonts are errors, not silently replaced. Build-tree executable-relative fallback uses `/proc/self/exe`; see [Layout and fonts](../systems/layout-and-fonts.md).
 
-## DESTDIR and rpath
+## Source artifacts and checks
 
-`DESTDIR` stages files under a different root without changing the compiled font path or the prefix recorded in discovery metadata. `tests/build_integration.sh` proves both claims: it installs with `DESTDIR`, moves the staged tree to the real prefix, and asserts that `pkg-config --variable=prefix` reports the real prefix, that neither `lib/pkgconfig` nor `lib/cmake` contains the staging path, and that the binary libraries contain `<prefix>/share/ki_xml_pdf/DejaVuSans.ttf` but no staging path.
+`make dist` archives Git HEAD as `ki_xml_pdf-0.3.0.tar.gz` when HEAD has this version, even in a dirty working tree, and prints SHA-256. It does not package uncommitted edits. `make distcheck` builds/installs the archive and runs external C/C++ clients and report-oracle checks. CI/source artifacts and releases are covered in [Deployment](../deployment.md).
 
-The installed CLI carries `INSTALL_RPATH "$ORIGIN/<path from bin to lib>"` (CMake computes the relative path), so `bin/xml2pdf` resolves `libki_xml_pdf.so.0` without `LD_LIBRARY_PATH`. The Makefile-installed CLI links the static library directly. Shared-library consumers that do not use CMake need the library directory in the runtime linker path (an rpath like `-Wl,-rpath,$libdir`, as used by the test scripts).
-
-## Source distribution
-
-`make dist` builds `ki_xml_pdf-<version>.tar.gz` from `git archive HEAD`, so the archive always describes HEAD even in a dirty tree (`DIST_VERSION` is read from `git show HEAD:include/ki_xml_pdf.h`), and prints its SHA-256. `make distcheck` unpacks the archive, builds and installs it, runs external C and C++ consumers and checks the report oracle (`tests/distcheck.sh`). CI preserves the archive, `SHA256SUMS` and `SOURCE_COMMIT` as artifacts.
-
-## Packaging checks
-
-| Script | What it proves |
+| Check | Purpose |
 | --- | --- |
-| `tests/install_smoke.sh` | Installs into a private prefix, builds four consumers (C and C++, static and shared), runs them from `/` with `KI_XML_PDF_FONT` unset, verifies the PDFs |
-| `tests/prefix_switch.sh` | Reinstall to different prefixes without `make clean`, relying on `src/.font_prefix`; rejects an explicit missing font |
-| `tests/build_integration.sh` | The full matrix: Make and CMake installs, `DESTDIR` staging, `ctest`, 16 installed consumer rows (two build systems by two languages by static/shared by CMake/pkg-config discovery), readelf soname checks, the catalog suite against installed libraries, and font-failure negatives |
+| `tests/install_smoke.sh` | C/C++ static/shared consumers from outside the source tree |
+| `tests/prefix_switch.sh` | Repeated prefix changes without clean and explicit-font failure |
+| `tests/build_integration.sh` | Make/CMake, DESTDIR, discovery, ELF/zlib metadata, installed consumers and catalog/Poppler oracles |
+| `tests/abi_canary/run_canary.sh` | Hash-checked precompiled old binaries against the selected installed library |
+| `tests/distcheck.sh` | Source artifact, consumers, required licenses and failure propagation |
 
-The build-integration matrix also verifies that the installed CMake package rejects the wrong variant (`ki_xml_pdf_USE_STATIC_LIBS` selecting a `STATIC_LIBRARY` versus `SHARED_LIBRARY` target) and that installed clients fail when the installed font is missing rather than falling back to a source tree.
+Change install/discovery behavior in both build systems and the relevant template; then test from an unrelated working directory without source-tree fallback. Do not put internal headers or fault hooks into the public install.
 
 ## Key source files
 
-| File | Contents |
+| File | Role |
 | --- | --- |
-| `CMakeLists.txt` | CMake build, install rules, exported targets, rpath, tests |
-| `Makefile` | Default build, install, dist, distcheck, `src/.font_prefix` stamp |
-| `cmake/ki_xml_pdfConfig.cmake.in` | `ki_xml_pdf::ki_xml_pdf` interface and variant selection |
-| `cmake/ki_xml_pdfMakeTargets.cmake.in` | Imported targets for the Makefile-installed package |
-| `cmake/ki_xml_pdfConfigVersion.cmake.in` | Version compatibility policy |
-| `cmake/ki_xml_pdf.pc.in` | pkg-config template |
-| `libki_xml_pdf.map` | Symbol versioning script |
-| `src/font.c` | Default font lookup order |
-| `tests/install_smoke.sh`, `tests/prefix_switch.sh`, `tests/build_integration.sh` | Install verification suites |
+| `Makefile`, `CMakeLists.txt` | Build, install, font path, artifacts and tests |
+| `cmake/ki_xml_pdfConfig.cmake.in`, `cmake/ki_xml_pdfMakeTargets.cmake.in` | Installed target selection/imports |
+| `cmake/ki_xml_pdfConfigVersion.cmake.in`, `cmake/ki_xml_pdf.pc.in` | Version policy and pkg-config/zlib flags |
+| `libki_xml_pdf.map`, `include/ki_xml_pdf.h` | Versioned exports and public version/API |
+| `tests/build_integration.sh`, `tests/install_smoke.sh`, `tests/prefix_switch.sh` | Installed integration coverage |
 
-## Related pages
-
-- [CLI](cli.md) for the installed `xml2pdf` behavior.
-- [C API](../api/c-api.md) for what the installed header exposes.
-- [Getting started](../overview/getting-started.md) for the first build and convert.
+Related: [Getting started](../overview/getting-started.md), [Dependencies](../reference/dependencies.md), [CLI](cli.md).

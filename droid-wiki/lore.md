@@ -1,74 +1,110 @@
 # Lore
+By Artem.
 
-The repository is nine commits old, and nearly all of its story fits into two evenings. The first public drop arrived finished, with a full test suite, CI and a bundled font; a week later a single 36-minute sprint took it from 0.1.0 to 0.2.0. Between those two points, most production code never changed at all. This page tells that history from the commit record, with speculation marked as such.
+The dated story visible at **2026-10-17**, HEAD `d573069`: a finished public import, a 0.2 integration sprint, a much larger 0.3 capability/evidence cycle, then a memory and maintenance pass. The reachable record contains 68 commits, not a claim about work done before publication. See [the measured history](by-the-numbers.md).
 
-## Eras
+## 7 October: the public starting point
 
-### Before the public record
+`7c62fe4` (“first commit”) introduced the parser, glyph-width layout, TrueType reader, append-only writer, CLI, both built-in profiles, tests, CI and bundled DejaVu Sans together. The later `cedcaab` fixed CI dependencies and prepared source distribution on the same day.
 
-The history starts at `7c62fe4` ("first commit", 49 files, 8,824 lines), but the tree carries an older trace. `baseline-manifest.json` hashes the working tree against a "review source revision" `c73176e...` dated 2026-10-07, and that revision is not an object anywhere in the public history (`git cat-file` rejects it). The manifest records what the pre-public version looked like:
+The 0.1.0 section of `CHANGELOG.md` records streaming records-v1, report-v1 selection, callback mapping, quotas/cancellation and atomic file output. These are not inventions of the later 0.3 cycle. `docs/contract.md`, `docs/profile-decision.md` and `docs/license-decision.md` preserve the original Russian-language design/license decisions, dated 2026-10-07.
 
-- Six core files match the review byte-for-byte: `src/main.c`, `src/page_sink.c`, `src/page_sink.h`, `src/xml_parse.c`, `src/xml_parse.h` and `tests/fixture.xml`.
-- Seven files changed after the review: `Makefile`, `src/convert.c`, `src/convert.h`, `src/pdf_write.c`, `src/pdf_write.h`, `tests/test_stream.c` and `tests/verify.sh`.
-- Ten entries were added after the review: the README, the contract doc, the license files, `src/font.c`/`src/font.h` and `src/layout.c`/`src/layout.h`.
+`baseline-manifest.json` is a separate review artifact dated that day. Its `review_source_revision` is a 64-character identifier, **not a reachable Git revision established by this history**. It records 13 file hashes and ten added entries; it should not be treated as a checksum manifest for today's tree. Do not infer an undocumented pre-public architecture from that identifier.
 
-The decision records in `docs/` predate the drop as well: KW-1004 (build its own streaming pipeline, in `docs/contract.md`), KW-1021 (adopt MIT plus the report-v1 profile, in `docs/profile-decision.md`) and KW-1024 (MIT license, in `docs/license-decision.md`) are all dated 07.10.2026. A reasonable reading, though the repository does not state it outright, is that an internal review revision was hardened with real glyph-width layout and a real font loader before anything was published. See [design decisions](background/design-decisions.md).
+## 8–12 October: no visible commits
 
-### The public drop (7 October 2026)
+The reachable history has no commits on these dates. It does not tell us whether development or review continued elsewhere.
 
-`7c62fe4` landed at 21:10 local time with everything at once: parser (`src/xml_parse.c`), driver (`src/convert.c`), PDF writer (`src/pdf_write.c`), font reader (`src/font.c`), layout (`src/layout.c`), both profiles, the CLI, the 2,693-line test binary, a 551-line verification script, CI, the MIT license and the DejaVu Sans font. The commit message is literally "first commit"; every later commit follows the "OSR-N imperative summary" pattern.
+## 13 October: the 0.2 integration sprint
 
-Twenty-four minutes later, `cedcaab` ("Fix CI dependencies and prepare the source distribution") touched 9 files (+123/-32). The 0.1.0 changelog explains what that was about: CI had to install Poppler and Python explicitly for the sanitizer jobs, and the verified source archive with its SHA-256 had to be saved as an artifact. A release that needed a fix within half an hour of existing, and got one, is apparently what a delivery gate looks like here.
+Six OSR commits merged in PR #1 (`037e2bf`):
 
-### The quiet week (8 to 12 October 2026)
+| Commit | Milestone |
+| --- | --- |
+| `f1d1a53` (OSR-2) | Reset callback results before option validation |
+| `28fcb34` (OSR-3) | Installed CMake targets and pkg-config integration |
+| `94e0e5e` (OSR-4) | CLI stdin/stdout and atomic callback-to-file conversion |
+| `833b4d5` (OSR-5) | Bounded public catalog mapper example |
+| `803cc11` (OSR-6) | English onboarding while retaining `README.ru.md` |
+| `37255b9` (OSR-7) | Version 0.2.0 and delivery gates |
 
-No commits. The repository says nothing about what happened in those five days, and anything else would be invention.
+`075455c` added the generated wiki and ignored `.factory`. That revision later became the explicit **unmodified baseline** for OSR-23 resource and ABI comparisons; it is not the final 0.3 measurement revision.
 
-### The OSR sprint (13 October 2026)
+## 16 October: the 0.3 capability and evidence era
 
-Six commits, `f1d1a53` (OSR-2) through `37255b9` (OSR-7), landed between 02:32 and 03:08 UTC, one every 7.3 minutes on average, on the `osr-1` branch. PR #1 merged them at 06:39 local time as `037e2bf` (34 files, +3,118/-306). The series does not expand what "OSR" stands for; the Linear links in `docs/` suggest a numbered task list in the owner's tracker.
+The 32 commits dated October 16 include merges as well as implementation and evidence-only changes. The implementation did not stop at a version-string bump:
 
-The sprint delivered, in order: result-reset before option validation (OSR-2, a 3-line fix plus 71 test lines), CMake and pkg-config install integration (OSR-3, +389), CLI streams and `ki_convert_to_file` (OSR-4, +928), the public catalog mapper example (OSR-5, +819), English onboarding with the Russian one preserved (OSR-6, +544), and version 0.2.0 with the delivery gates (OSR-7, +366). Each commit carries its own tests: the sprint added two Python harnesses, two shell harnesses and 566 lines to `tests/test_stream.c`.
+| Area | Implementation milestone | Current evidence/entry point |
+| --- | --- | --- |
+| Repeatable resources and old-binary checks | `67ce264` (OSR-23) | `tests/resource_baseline.py`, `tests/abi_canary/`, baseline `075455c` |
+| Font span and XML validation | `3fdfb68` (OSR-24), `cd41ac1` (OSR-11) | `src/font.c`, `src/xml_parse.c`, focused negative fixtures |
+| Font names and zero-advance marks | `ecfe429` (OSR-13) | `src/font.c`, `tests/test_font_metrics.c` |
+| Counted PDF bytes and callback accounting | `9ea09c2`, `d24723f` (OSR-19) | `src/pdf_write.c`, `src/convert.c`, `tests/test_pdf_bounds.c` |
+| Flate page/font streams | `3acf0cb` (OSR-9) | `src/pdf_write.c`, `tests/test_flate.c`; zlib becomes a dependency |
+| Consumed line/column/byte diagnostics | `4e38307` (OSR-12) | `src/xml_parse.c`, `tests/test_xml_coords.c` |
+| Word-aware bounded wrapping | `2510d65` (OSR-14) | `src/layout.c`, `tests/test_layout_wrap.c` |
+| Letter/A4/custom geometry | `7637800` (OSR-15) | `src/geometry.c`, separate size-checked `KiConfig` |
+| Optional safe PDF `/Info` | `016f32c` (OSR-17) | `src/info.c`, explicit title/producer/date, no implicit clock |
+| Integrated version 0.3.0 | `48bdef2` (OSR-25) | `include/ki_xml_pdf.h`, `tests/integration_check.py` |
 
-## Longest-standing features
+The additive `KI_0_3` node in `libki_xml_pdf.map` adds four functions without extending `KiOptions`, `KiResult` or `KiEvent`. Old C/C++ ABI canaries exercise that distinction; pre-1.0 CMake package selection still matches its own minor version.
 
-These have not changed since the first public commit and, for the ones in `baseline-manifest.json`, not since the pre-public review either:
+### Corrections after integration
 
-- `src/xml_parse.c` (1,163 lines): the whole streaming parser, including the 4096-byte read window and the 64-element name stack. It appears in exactly one commit, the drop.
-- `src/pdf_write.c` (774 lines), `src/font.c` (340), `src/report.c` (263), `src/layout.c` (225) and `src/page_sink.c` (206): one commit each.
-- Atomic file publication (temporary file beside the destination, `fsync`, `rename`), in `src/convert.c` since the drop and carried through the OSR-4 rewrite with its contract intact.
-- The historical 64 MiB RSS ceiling and the measurement protocol in `docs/contract.md`. The current gate is 4096 KiB (4 MiB).
-- The parser limits, unchanged in `src/xml_parse.h`: 64 open elements, 63-byte names, 8 attributes, 255-byte attribute values, 1023-byte text fragments.
+The evidence trail deliberately retains earlier attempts rather than silently replacing them:
 
-Across all of history only three production files ever changed: `src/convert.c`, `src/main.c` and `include/ki_xml_pdf.h`.
+- `d95a5c1` serialized the deflate test counter and cleaned integration fixtures; `docs/evidence/osr-25-corrective-d95a5c1/README.md` records corrective gates and controls.
+- `1193cdc` fixed a one-shot callback write failure that buffering could otherwise turn into false success. `src/convert.c` now latches the first failed write and counts only accepted callback bytes.
+- `64338ab` recorded final gates, installed lifecycle checks, ABI canaries and resource evidence for **1193cdc**, in `docs/evidence/osr-25-callback-1193cdc/README.md`.
+- PR #4 merged that series as `de8ba0e`. Neither the earlier integration evidence nor these final 0.3 measurements describe subsequent October 17 memory changes.
 
-## Superseded and vestigial
+### Research is not shipped support
 
-- **The byte-grid page sink.** `src/page_sink.c` and `src/page_sink.h` implemented pages as a fixed grid of 90 columns by 48 lines (`XML2PDF_PAGE_COLS`/`XML2PDF_PAGE_LINES` in `src/convert.h`), capped at 4,368 bytes per page (48 rows of 90 columns plus newlines). The production pipeline did not use it: `src/convert.c` includes `src/layout.h`, and nothing in `src/` included `page_sink.h`. Its only caller was `test_page_sink_flushes` in `tests/test_stream.c`. OSR-90 removed the sources and that test; the library no longer compiles them. The grid constants remain because other tests still use `XML2PDF_PAGE_CAP`. Given that the review revision contained `page_sink.c` but not `font.c` or `layout.c`, the glyph-width layout almost certainly replaced the grid before the first public drop. See [the page sink page](systems/page-sink.md).
-- **The Helvetica comment.** The comment above the grid constants in `src/convert.h` still describes "a letter page in Helvetica 10pt". The shipped font has been DejaVu Sans 10 pt all along (`/BaseFont /DejaVuSans` in `src/pdf_write.c`), and wrapping has counted glyph advance units rather than columns since `src/layout.c` arrived. The comment is a fossil of the byte-grid era. See [layout and fonts](systems/layout-and-fonts.md).
-- **The legacy exports.** `xml2pdf_convert` and `xml2pdf_convert_cap` sit in the KI_0_1 node of `libki_xml_pdf.map` next to the `ki_*` API, plus three `xml2pdf_debug_*` hooks in `src/convert.h` that the map keeps private. The 0.2.0 changelog explicitly promises to preserve existing exports, so these stay until a 0.y ABI break is declared.
-- **`baseline-manifest.json`.** A snapshot comparing the tree to the unreachable review revision, listing six matching files, seven changed and ten added. It reads like a museum plaque for the pre-public hardening, and nothing in the tree regenerates or retires it. It is collected with other candidates on [cleanup opportunities](cleanup-opportunities.md).
-- **The Russian-first documents.** `README.md` was rewritten in English in OSR-6 (+145/-45) and the previous Russian onboarding was preserved as `README.ru.md` (122 lines). `docs/contract.md`, `docs/profile-decision.md` and `docs/license-decision.md` remain in Russian, and `CHANGELOG.md` keeps its 0.1.0 entry in Russian while 0.2.0 is in English.
+Three October 16 research outcomes are explicitly deferred/no-go:
 
-## Major rewrites
+- **Internal TTF subsetting:** `36ad651` (OSR-10), `docs/evidence/osr-10-font-spike/README.md`. The best measured subset would remove 2.92% of the target 16 MiB report PDF after Flate; no internal subsetter shipped.
+- **UTF-16 input:** `b018964` (OSR-16), `docs/evidence/osr-16-utf16-spike/README.md`. The external adapter is a synthetic research prototype, not a library/CLI encoding feature. UTF-8 remains the input contract.
+- **Tables:** `3fc9a3f` (OSR-18), `docs/evidence/osr-18-table-spike/README.md`. Synthetic bounded-table/pre-layout experiments do not implement a table API or new profile.
 
-- **OSR-4 rebuilt the I/O layer.** `src/main.c` grew by 88 lines with 32 removed to accept `-` for stdin and stdout; `src/convert.c` moved 55/45 lines for stream plumbing and the new `ki_convert_to_file`. The CLI went from file-only to pipeline-capable, and the public header gained the function that made callback input safe for atomic file output. Tests followed: 495 new lines in `tests/test_stream.c` and the new 240-line `tests/cli_pipeline.py`.
-- **`tests/fuzz_smoke.py` was rewritten in OSR-7** (+145/-89, more than half the file). The fuzz harness that shipped with 0.1.0 was a 129-line smoke test; 0.2.0 carries a 185-line bounded fuzzer with an independent reader.
-- **`README.md` doubled twice.** 49 lines at the drop, +68 in the CI fix commit, then +145/-45 in OSR-6 to reach 211 lines.
-- **The largest rewrite happened before the public history began**: adding `src/font.c` and `src/layout.c` after the review, which turned a byte-grid renderer into a glyph-width typesetter.
+`tests/research_font_subset.py`, `tests/research_utf16.py`, `tests/research_utf16_adapter.c` and `tests/research_table.py` are research tools. Their presence is not a capability advertisement.
 
-## Growth
+## 17 October: measure, remove duplication, tighten the contract
 
-| Point | Tracked files | Lines | Test harnesses |
-| --- | --- | --- | --- |
-| Drop, 2026-10-07 | 49 | 8,824 | 1 C file (2,693) + `tests/verify.sh` (551) |
-| After PR #1, 2026-10-13 | 67 | 11,726 | 2 C programs (3,318) + 4 Python (899) + 6 shell (1,161) |
+The 26 commits on this date include the following distinct workstreams:
 
-CI grew from a 95-line workflow to 137 lines across five jobs (`gcc`, `clang`, `asan`, `resources`, `source`). The `gcc` job even asserts that broken tooling is rejected: a run with `CC=false`, a bogus PDF reader or a missing license file must fail for the gate to pass. The project stayed small on purpose; what grew was the ring of checks around it.
+| Work | Commits | Result at this HEAD |
+| --- | --- | --- |
+| Heap/RSS baseline | `28076d6`, `1a59729` (OSR-82) | Profile of **de8ba0e**, corrected peak-tree comparison; historical, not current allocation facts |
+| Remove obsolete byte-grid sink | `66fcf13` (OSR-90) | Obsolete byte-grid implementation, header and dedicated test removed ([removal diff](https://github.com/artemklen/ki_xml_pdf/commit/66fcf13)) |
+| Community maintenance | `980cbf8` (OSR-88) | `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR templates |
+| Release automation | `28eb107`, `379664c` (OSR-87) | Tag-triggered `.github/workflows/release.yml`, archive commit proof and gzip/SIGPIPE handling |
+| RSS acceptance | `688c29d`, `5f30171` (OSR-86) | 4,096 KiB gate consistently described |
+| Stream the font | `9595c0e` (OSR-83) | Open file plus fixed metrics; size/hash recheck before 16 KiB-chunk embedding, no retained whole TTF |
+| Stream ToUnicode | `b1f3e99` (OSR-84) | Count then write the uncompressed CMap with fixed arrays, no heap assembly buffer |
+| Reuse page content storage | `42930f3` (OSR-85) | One lazily allocated reusable writer buffer; layout emits fixed page lines without a joined-page copy |
+| Narrow platform promise | `f824f3f` (OSR-89) | Only 64-bit Linux with glibc is supported |
+| Addon design | `68422ec`, `1b69a39` (OSR-91) | Accepted ADR, **not implemented** |
 
-## Related pages
+The removed `page_sink` was the old fixed byte-grid implementation, not the production glyph-width pipeline. It is historical context, not an open cleanup task. Some test-only grid constants and their old Helvetica comment remain in `src/convert.h`; see [verified cleanup candidates](cleanup-opportunities.md).
 
-- [By the numbers](by-the-numbers.md) for the measurements behind this history
-- [Design decisions](background/design-decisions.md) for KW-1004, KW-1021 and KW-1024
-- [Testing](how-to-contribute/testing.md) for what the harnesses do
-- [Overview](overview/index.md) and [Architecture](overview/architecture.md)
+The addon ADR, `docs/adr/0001-font-script-addons.md`, explicitly describes a tree after OSR-83 and before the CMap/page-buffer changes. Its retained 256 KiB CMap discussion is a labeled historical assumption. Its proposed dynamic page IDs and extra font resources are future design: today's writer still derives page IDs from a fixed three-object-per-page formula.
+
+**A workflow is not a release.** Version 0.3.0 in the header/changelog and a `v*` release trigger do not establish that a `v0.3.0` tag or GitHub Release exists. The `v0.0.0-test` path is an explicit draft proof exception, not evidence of a production release.
+
+## Threads that survived the changes
+
+- The parser still consumes a fixed 4,096-byte window with bounded element/name/attribute/text storage (`src/xml_parse.h`), despite substantially stronger validation and diagnostics.
+- File publication still happens only after successful conversion, flushing, synchronization and close (`src/convert.c`); callback/stdout destinations can already contain partial output on failure.
+- `src/report.c` retains its Russian report labels; English onboarding did not silently translate the profile's output contract.
+- Full-font embedding remains the supported path. Streaming its bytes is not subsetting it, and safe UTF-16BE `/Info` strings are not UTF-16 XML input support.
+
+## Key source files and related pages
+
+| Sources | Why they matter to the history |
+| --- | --- |
+| `CHANGELOG.md`, `include/ki_xml_pdf.h`, `libki_xml_pdf.map` | Version/capability and additive ABI record |
+| `baseline-manifest.json`, `docs/contract.md`, `docs/profile-decision.md`, `docs/license-decision.md` | Original review/design artifacts |
+| `docs/evidence/osr-23-baseline-075455c/README.md`, `docs/evidence/osr-25-callback-1193cdc/README.md`, `docs/evidence/osr-82-heap-profile/README.md` | Three different measured revisions |
+| `docs/adr/0001-font-script-addons.md`, `.github/workflows/release.yml`, `src/platform.h` | Deferred addon design, release mechanism and platform boundary |
+
+[Overview](overview/index.md) · [Architecture](overview/architecture.md) · [PDF writer](systems/pdf-writer.md) · [Page geometry](features/page-geometry.md) · [Testing](how-to-contribute/testing.md) · [Design decisions](background/design-decisions.md) · [Fun facts](fun-facts.md)

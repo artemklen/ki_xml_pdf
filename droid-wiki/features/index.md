@@ -1,16 +1,29 @@
 # Features
 
-User-visible capabilities of ki_xml_pdf: the CLI, the two built-in profiles, custom schemas, and the streaming, publication, quota and packaging behavior behind them.
+ki_xml_pdf 0.3.0 renders sequential XML text reports with bounded converter state on 64-bit Linux/glibc. These pages describe user-facing behavior; the [systems pages](../systems/index.md) explain its implementation.
 
-| Page | Summary |
+| Page | Use it for |
 | --- | --- |
-| [CLI](cli.md) | `xml2pdf` options, stdin/stdout streams, signals, exit codes and which API each mode uses |
-| [records-v1](records-v1.md) | The default diagnostic profile: element names, attributes and text with the whitespace and `xml:space` rules |
-| [report-v1](report-v1.md) | The report profile: grammar, validation messages, record selection, Russian labels and counters |
-| [Custom mappers](custom-mappers.md) | Writing a `KiOptions.map` callback with fixed state, borrowed event pointers and byte-offset diagnostics |
-| [Streaming I/O](streaming-io.md) | `read_bytes` and `write_bytes` callbacks, short reads, and the stdin/stdout pipelines |
-| [Atomic output](atomic-output.md) | Temporary file, fsync and rename publication, and what survives a failure |
-| [Resource limits](resource-limits.md) | Page, output-byte and spool quotas, parser bounds and the RSS gate |
-| [Packaging](packaging.md) | Make and CMake installs, CMake and pkg-config discovery, the compiled font path and `DESTDIR` |
+| [CLI](cli.md) | Options, pipelines, signals and exit codes |
+| [records-v1](records-v1.md) | Default diagnostic rendering of element names, attributes and text |
+| [report-v1](report-v1.md) | Report grammar, field labels, explicit selection and totals |
+| [Custom mappers](custom-mappers.md) | Adapting an application-owned schema through the public API |
+| [Page geometry](page-geometry.md) | Letter/A4/custom pages, margins, type size and ink fitting |
+| [Document information](document-information.md) | Optional safe PDF Title, Producer and explicit CreationDate |
+| [Streaming I/O](streaming-io.md) | Short reads, callback ownership, accepted bytes and latched failures |
+| [Atomic output](atomic-output.md) | Temporary files, fsync, rename and preserved destinations |
+| [Resource limits](resource-limits.md) | Fixed state, quotas, xref ceiling and synthetic RSS gates |
+| [Packaging](packaging.md) | Installed C/C++ use, CMake/pkg-config, zlib and additive ABI |
 
-For how these features are implemented, see the [systems pages](../systems/index.md); for the public contract they are built on, see the [API](../api/index.md).
+Word wrapping belongs to [Layout and fonts](../systems/layout-and-fonts.md): words break at spaces/tabs, long words use a bounded code-point fallback, and the pending word shares the existing line buffer. There is no table layout, XSL-FO, shaping engine, UTF-16 XML input or automatic mapping for unknown business schemas.
+
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h` | Public feature/configuration contract |
+| `src/main.c` | CLI exposure |
+| `src/convert.c`, `src/report.c` | Built-in profiles, dispatch and I/O/publication |
+| `src/geometry.c`, `src/info.c` | Geometry and document-information validation |
+
+Start with [Getting started](../overview/getting-started.md), [C API](../api/c-api.md) or [Configuration](../reference/configuration.md).

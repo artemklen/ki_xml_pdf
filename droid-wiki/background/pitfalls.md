@@ -1,54 +1,117 @@
 # Pitfalls
+Active contributors: Artem
 
-These behaviors are deliberate and documented, but each one is easy to get wrong the first time. Every entry names what bites, why the code is that way, and what to do instead.
+These are integration traps in the current API, not proposed features. Check the public header before carrying assumptions from older evidence or experimental tools into an application.
 
-## 1. Partial output to stdout and write callbacks
+## Streams are not transactions
 
-Choosing `-` as the CLI output, or calling `ki_convert`, means output cannot be rolled back: bytes already accepted by `write_bytes` stay in place when the conversion later fails, leaving an incomplete PDF. The CLI makes stdout unbuffered and checks the final `fflush` (a failure returns exit 3), but only the exit status distinguishes a complete file from a truncated one. Check the status before using streamed output, or use `ki_convert_to_file` to get atomic publication with callback input. The usage text in `src/main.c` states this directly: "stdout may contain a partial PDF on failure". See [Streaming I/O](../features/streaming-io.md).
+`ki_convert` and `ki_convert_cfg` leave accepted callback bytes in place on failure.
+The font is emitted before input is read, so even an immediate XML error can leave output.
+Do not accept a PDF merely because it starts with `%PDF-`; require status 0.
+Use the callback-to-file route when publication must preserve an existing destination.
 
-## 2. PREFIX is baked in at build time
+A short positive read is data, not EOF.
+A write callback must accept the entire request; short/zero/negative/over-count returns fail.
+The first failed write is terminal and is never retried.
+`output_bytes` is delivered-byte accounting, not a recovery cursor or proof of a complete PDF.
 
-The default font path `<PREFIX>/share/ki_xml_pdf/DejaVuSans.ttf` is compiled into the library as `XML2PDF_FONT_PATH` (Makefile `CPPFLAGS`). The `src/.font_prefix` stamp makes a PREFIX change rebuild `font.o`, and `tests/prefix_switch.sh` proves installing to a new prefix without a clean rebuild works. What the stamp cannot fix: artifacts copied by hand, or a build cache that skips the stamp, carry a stale font path, and `DESTDIR` stages files without changing the compiled runtime path (the header comment in `include/ki_xml_pdf.h` says so). The symptom is "font: cannot load" for consumers running outside the source tree. Build and install with the same prefix, or set `KiOptions.font_path` or `KI_XML_PDF_FONT` explicitly. See [Packaging](../features/packaging.md).
+## Size fields are contracts
 
-## 3. `KiOptions.size` must match
+Call `ki_options_init`; zeroing `KiOptions` alone leaves an invalid size.
+Call `ki_config_init` with the actual supported allocation size.
+Only full current `sizeof(KiConfig)` and `KI_CONFIG_SIZE_GEOMETRY` are accepted.
+A geometry-only config has no metadata tail.
 
-`ki_options_init` sets `size` to `sizeof(KiOptions)`, and `reject_options` in `src/convert.c` refuses any other value with "options size mismatch" (exit 2). A caller that memsets the struct by hand, or links against a header from a different release, fails here. The 0.x API is unstable until 1.0, so a 0.y bump may change the struct; always initialize with `ki_options_init`.
+0.3 preserves 0.2 options/result/event layouts, but pre-1.0 policy permits future minor ABI changes.
+CMake therefore rejects a request from a different minor, even though concrete 0.2 binaries have canary coverage against this library.
+Package version matching and proven binary continuity are not the same claim.
 
-## 4. `KiEvent` pointers are borrowed
+## Borrowed events and fragmented text
 
-The name, attribute and text pointers in a `KiEvent` point into the parser's per-iteration `XmlEvent`; they are valid only inside the current `map` callback and die on the next parser step. Retaining them is a use-after-return. If a schema needs metadata later, copy bounded metadata into mapper state, as the catalog example does; `docs/mapper-guide.md` spells this out.
+`KiEvent` strings live only during the mapper callback.
+Copy bounded metadata; never retain its text/name pointers.
+The public event has a byte offset, not line/column fields.
 
-## 5. A short read is not EOF
+The parser emits long values in chunks and does not split valid UTF-8 scalars.
+Custom mapper calls may still split a scalar across `ki_doc_text` calls; layout holds bounded continuation state.
+Do not trim each fragment: spaces between TEXT, CDATA and references can be significant.
+CDATA preserves reference spelling; ordinary text references are decoded.
 
-A `read_bytes` callback returns 0 only at end of input; 1 through `max` bytes is data, and the parser asks again. One-byte reads are exercised end to end by the catalog example. A callback that returns 0 on a short read silently truncates the input, and the resulting XML error surfaces far from the cause. `conv_read` in `src/convert.c` and the contract in `include/ki_xml_pdf.h` both treat a positive count as data.
+`xml:space` is profile-specific.
+Records rendering inherits preserve state; report fields keep their value text and validate the allowed attribute values.
+A custom mapper owns its own whitespace/schema rule.
 
-## 6. Test hooks are process globals
+## Selection is not early termination
 
-`xml2pdf_debug_fail_at_page`, `xml2pdf_debug_fail_before_publish` and `xml2pdf_debug_fail_after_bytes` are static globals in `src/convert.c`, armed for any conversion running in the process. They are not in the public header, they are not thread-safe, and they are reset only by the legacy `xml2pdf_convert_cap` wrapper after its own conversion. The header comment in `src/convert.h` ("Cleared when a conversion returns") describes that wrapper's behavior; through `ki_convert_file` the hooks persist between calls. Tests set a hook, run one conversion, then clear the hooks. Concurrent conversions with an armed hook are undefined.
+`record_offset`/`record_limit` affect built-in report rendering.
+They do not skip parsing, grammar checks, counters or invalid tails.
+A late error beyond the selected portion still fails and prevents file publication.
+With a custom mapper, selection and report counters are the mapper's responsibility.
+Do not use selected-output resource evidence as a full-output benchmark.
 
-## 7. Whitespace and characters across fragment boundaries
+## Quota zero does not mean unlimited
 
-A long text node arrives as many events of at most 1023 bytes, CDATA sections arrive as separate `from_cdata` text events, and a fragment does not necessarily end on a UTF-8 character boundary: `layout_text` holds a partial sequence of up to 4 bytes in `Layout.hold` until the character completes. Two consequences. First, a mapper must feed every fragment to `ki_doc_text` and never trim, because a space between two fragments must survive (`tests/corpus/split_whitespace.xml` covers this). Second, changing the read chunk size must not change the output, which is why the catalog example is checked with 1-byte and 4096-byte reads.
+Zero page quota adds no separate page cap.
+Zero output quota still obeys the 9,999,999,999-byte classic-xref ceiling.
+Zero spool quota selects the 64 MiB default, not unlimited disk.
+The 8,000,000-object cap always applies.
 
-## 8. `xml:space` means different things per profile
+The 4096 KiB RSS gate is synthetic ordinary-converter acceptance, not an allocator quota.
+Fonts can be as large as 8 MiB, loading uses temporary table spans, and callbacks can allocate their own memory.
+Sanitizer RSS and historical heap snapshots are not substitutes for ordinary current-process measurements.
 
-In `records-v1`, `xml:space="preserve"` is inherited state: it stops whitespace-only indentation containing a newline from being dropped on an empty line, and CDATA always counts as preserved (`map_event` in `src/convert.c`). In `report-v1`, the attribute is allowed only on `field`, accepts only `default` or `preserve`, and both values keep the value verbatim because the profile never removes indentation inside a field (`src/report.c`, `docs/report-v1.md`). The same attribute means different things depending on the profile, and a custom mapper gets the raw events and owns the rule entirely.
+## Font identity is not fallback
 
-## 9. Zero is "no extra cap", except the spool
+An explicit path or nonempty `KI_XML_PDF_FONT` that fails is an error.
+A valid larger Unicode font does not expand the fixed body repertoire.
+Zero advance is present; GID 0/missing is not.
+No shaping, bidi, composition, internal subsetting or addon font switching ships.
 
-`max_pages = 0` and `max_output_bytes = 0` disable those quotas. `max_spool_bytes = 0` does not disable anything: `pdf_begin_cfg` in `src/pdf_write.c` substitutes the 64 MiB default cap. The 8,000,000 object ceiling applies regardless of all three. Passing 0 to mean "unlimited" for the spool gives you a hard failure on a very large document.
+The open font handle survives metric loading.
+Do not mutate its file during conversion or assume changing a pathname changes the already-open font.
+The FNV check is a consistency check, not cryptographic authentication or a concurrency lock.
 
-## 10. The version comes from the header
+## Geometry and metadata are separate from options
 
-`KI_XML_PDF_VERSION` in `include/ki_xml_pdf.h` is the single version source: the Makefile extracts it with `sed`, CMake extracts it with `file(STRINGS ...)`, `xml2pdf --version` prints it, and the pkg-config and CMake package metadata are configured from it. Hardcoding the version anywhere else desynchronizes the archive name, the installed metadata and the CLI output. A related CI step touches `src/layout.h` and requires the CLI to rebuild, so edits that should trigger a rebuild cannot be silently skipped.
+Custom dimensions require both sides and portrait orientation; named sizes require zero custom sides.
+Margins must leave positive width/height after rounding.
+Font fitting can reject valid numeric geometry before input callbacks if a line or repertoire glyph cannot fit.
+Layout considers negative bearings and ink, not only advances.
 
-## 11. `make dist` archives HEAD, not the working tree
+`title` and `producer` are metadata, not rendered body text; they do not require body-font glyphs.
+Empty strings are invalid rather than a synonym for omission; use NULL.
+Dates must be supplied explicitly; the library does not add today's date or claim PDF/A.
+UTF-16BE metadata serialization does **not** mean UTF-16 XML input is supported.
 
-`DIST_VERSION` is read with `git show HEAD:include/ki_xml_pdf.h` and the archive is `git archive HEAD`, with the Makefile comment "A source archive always describes HEAD, including when the working tree is dirty". If you bump the version or edit sources without committing, `make dist` quietly ships the committed version and the committed content. Commit first, then dist. `make distcheck` then validates the archive, and CI's source job verifies the archive's embedded commit against `SOURCE_COMMIT`.
+## Prefixes, temporaries and publication
 
-## Related pages
+`PREFIX`/CMake's install prefix affects the compiled font path.
+`DESTDIR` only stages files.
+Static archive users must link zlib; pkg-config needs `--static` for private dependency flags.
 
-- [Design decisions](design-decisions.md) for why these behaviors exist.
-- [Debugging](../how-to-contribute/debugging.md) for the failure-injection hooks and how to use them safely.
-- [C API](../api/c-api.md) for the callback contracts in one place.
-- [Security](../security.md) for the bounds and file lifecycle these pitfalls orbit.
+`temp_dir` affects the spool, not the beside-destination temporary PDF.
+Rename replaces the destination entry, including a symlink; it is not writing through the symlink.
+Atomic replacement is not directory-fsync power-loss durability.
+SIGKILL cannot clean temporary files, and cancellation after rename cannot restore the previous output.
+
+## Development and release traps
+
+Internal debug hooks are process globals, not public thread-safe controls.
+Public conversions do not clear the conversion hooks; tests must reset them explicitly.
+Ordinary independent contexts are supported without armed debug hooks.
+
+`make dist` archives committed HEAD, ignoring uncommitted fixes and version bumps.
+A green `main` does not create a release.
+The tag workflow checks exact version naming and provenance, but does not rerun CI or check main-green status.
+The maintainer must verify those preconditions first.
+
+## Key source files
+
+| File | Role |
+| --- | --- |
+| `include/ki_xml_pdf.h`, `src/convert.c` | Lifetime, size, callback and publication contracts |
+| `src/font.c`, `src/layout.c`, `src/geometry.c` | Font/fragment/ink behavior |
+| `src/pdf_write.c`, `src/info.c` | Quotas and metadata |
+| `Makefile`, `.github/workflows/release.yml` | Archive and tag behavior |
+
+Related: [Debugging](../how-to-contribute/debugging.md), [C API](../api/c-api.md), [Design decisions](design-decisions.md).

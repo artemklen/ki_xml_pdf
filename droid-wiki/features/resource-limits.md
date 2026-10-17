@@ -1,112 +1,99 @@
 # Resource limits
+Active contributors: Artem
 
-Active contributors: Artem Klen
+Converter state stays bounded as XML and page counts grow: fixed parser/mapper/layout storage, a reused content buffer/compressor, an open font with fixed metrics, and disk-spooled offsets. The current synthetic-workload acceptance gate is 4096 KiB converter RSS, not a universal memory guarantee for every font, custom mapper or host.
 
-Every stage of the pipeline has a fixed memory footprint, and the run has three optional quotas plus an absolute object cap. The acceptance gate requires the converter process to stay at or below 4 MiB (4096 KiB) of resident memory on the synthetic workloads. This page lists the bounds, where each quota is enforced, and how the RSS gate is measured.
+## What stays fixed, what grows
 
-## Purpose
+| Component | Current storage strategy |
+| --- | --- |
+| Parser | 4096-byte input window, bounded event and depth stack; no tree |
+| Built-in mappers | Fixed flags/counters and bounded current metadata |
+| Layout | 1024-byte shared line/pending-word buffer, fixed 50-line page grid |
+| PDF content | One lazy 416256-byte buffer reused for the conversion, no joined-page copy |
+| Compression | One reused zlib state and 16 KiB output window |
+| Font | Temporary table spans at initialization, then fixed metrics plus retained open file; 16 KiB streamed embedding |
+| ToUnicode | Fixed stack arrays, count pass then direct write; no heap CMap |
+| Object offsets | Disk file with 8-byte slots, grows with object count |
+| PDF and elapsed work | Grow with rendered content; skipped records still require parsing |
 
-The library is built to convert very large XML with bounded memory. Nothing in the pipeline grows with the number of records: the parser pulls through a fixed window, the mappers keep fixed state, the layout holds one page, and the PDF writer stores object offsets in a temporary file instead of in RAM. Quotas let a caller stop a run that would exceed a page, output-byte or spool-byte budget.
+The eight library C implementation units have eleven `tests/test_*.c` files (11:8 file ratio, excluding helpers/fixtures), plus Python/shell oracles. Test files share one C harness; this ratio is not a coverage percentage. The memory/resource feature crosses all units rather than owning a separate source module.
 
-## Key abstractions
+Font loading can temporarily allocate large tables and an external mapper can allocate arbitrary memory. The built-in bounded-state design does not constrain caller-owned readers/writers or make all font workloads fit the synthetic RSS gate.
 
-| Abstraction | Path | Role |
+## Hard bounds
+
+| Bound | Value / source |
+| --- | --- |
+| XML nesting / attributes | 64 / 8, `src/xml_parse.h` |
+| Element and attribute names | 63 UTF-8 bytes |
+| Decoded attribute value | 255 UTF-8 bytes |
+| Parser text fragment / layout line content | At most 1023 bytes each |
+| Font file | 12 bytes through 8 MiB, `src/font.c` |
+| Body repertoire slots | U+0000–U+04FF and U+2010–U+2027, subject to XML legality/font coverage |
+| Page lines | At most 50, `src/geometry.h` |
+| PDF object IDs | Positive and strictly below 8,000,000, `src/pdf_write.c` |
+| Total emitted PDF bytes | At most 9,999,999,999, `src/pdf_write.h` |
+| Info text | At most 1024 UTF-8 bytes per Title/Producer, `include/ki_xml_pdf.h` |
+
+Text fragments/lines do not impose a field or word size limit. Long words split incrementally; an unsplittable base/zero-advance-mark cluster over a line's byte/width bound is a resource error.
+
+Each page consumes three object IDs plus the fixed eight-object block; Info adds one object. Offsets are ten-digit classic-xref fields, so the total-output ceiling applies even with the user output quota disabled.
+
+## Caller quotas
+
+| Option / `KiOptions` field | Zero means | Enforcement |
 | --- | --- | --- |
-| Quota fields | `include/ki_xml_pdf.h` | `max_pages`, `max_output_bytes`, `max_spool_bytes`, `temp_dir` |
-| `reject_options` | `src/convert.c` | Rejects negative quotas and unknown profiles |
-| `PdfConfig`, `PdfWriter` | `src/pdf_write.h` | Writer limits and failure state |
-| `note_offset` | `src/pdf_write.c` | Object cap and spool-byte quota |
-| `cap_write` | `src/pdf_write.c` | Output-byte quota |
-| `pdf_add_page` | `src/pdf_write.c` | Page quota |
-| `pdf_end` | `src/pdf_write.c` | Cancellation checks while finishing |
-| Parser bounds | `src/xml_parse.h` | Depth, attribute, name, text and window sizes |
-| Font and layout bounds | `src/font.h`, `src/layout.h` | Repertoire tables and line storage |
-| `tests/verify.sh` | | 16 MiB input: RSS ≤4096 KiB, below half the input, and within the small run plus 4 MiB |
-| `tests/large_proof.py` | | 4096 KiB (4 MiB) RSS, page, PDF and spool budgets |
+| `--max-pages` / `max_pages` | No separate page quota | `pdf_page_begin` before page emission |
+| `--max-output-bytes` / `max_output_bytes` | Only hard xref ceiling | `account_bytes` before forwarding any chunk |
+| `--max-spool-bytes` / `max_spool_bytes` | 64 MiB, not unlimited | `note_offset`, projected `(object_id + 1) * 8` |
+| `--temp-dir` / `temp_dir` | NULL/empty chooses `/tmp` | Offset spool creation |
 
-## How it works
+Output quota includes font, page streams, Info, xref and trailer. A chunk crossing the budget is rejected whole, not partially forwarded up to the cap. An exact finished-PDF-size budget succeeds; one byte less fails. File failure preserves the old destination; callback `output_bytes` reports accepted bytes, which can be less than internal buffered counts.
 
-### Fixed bounds
+Negative quotas are usage errors. Page/object/output/spool limits and layout-cluster exhaustion return status 4 / `KI_CAUSE_RESOURCE`. Cancellation also returns 4 but uses `KI_CAUSE_CANCEL`. Non-memory zlib failure is status 3 / I/O. See [Conversion pipeline](../systems/conversion-pipeline.md).
 
-| Bound | Value | Defined in |
+## Current RSS gates
+
+`tests/verify.sh` measures the ordinary converter with `/usr/bin/time`, excluding generator and PDF-reader processes. Its default-profile large input is at least 16 MiB. The gate requires:
+
+- Converter RSS ≤4096 KiB.
+- Large RSS ≤small-reference RSS +4096 KiB.
+- Large RSS below half the input size.
+- Output larger than converter RSS, alongside completeness/PDF checks.
+
+`tests/resource_baseline.py` separates full-output 1/16/64 MiB series for both profiles from fixed-1000 selection on 16/256/1024 MiB inputs. It measures converter, generator, reader and streaming oracle independently and keeps hashes/environment/commands. `tests/large_proof.py` checks a distinct 1 GiB selection recipe, with 4096 KiB converter RSS, ≤10,000 pages, ≤256 MiB PDF and ≤64 MiB spool; selected-page Poppler reads have their own 1 GiB address-space limit.
+
+ASan/UBSan RSS is not used as production RSS evidence. The reader's address-space limit, reader RSS, converter RSS and disk size are different measures.
+
+## Revision-scoped evidence
+
+`docs/evidence/osr-25-callback-1193cdc/README.md` records the final callback-fixed 0.3.0 run on **1193cdc**, not a rerun of current HEAD. Its nine resource cases recorded:
+
+| Series | Converter RSS | Output facts |
 | --- | --- | --- |
-| XML nesting depth | 64 | `src/xml_parse.h` (`XML_MAX_DEPTH`) |
-| Attributes per element | 8 | `src/xml_parse.h` (`XML_ATTR_MAX`) |
-| Element name | 63 bytes | `src/xml_parse.h` (`XML_NAME_MAX`) |
-| Attribute value | 255 bytes | `src/xml_parse.h` (`XML_ATTR_VAL_MAX`) |
-| Text fragment | 1023 bytes | `src/xml_parse.h` (`XML_TEXT_MAX`) |
-| Input window | 4096 bytes | `src/xml_parse.h` (`XML_BUF_SIZE`) |
-| Font repertoire table | U+0000 to U+04FF plus 24 punctuation slots from U+2010 | `src/font.h` (`FONT_BMP_MAX`, `FONT_PUNCT_COUNT`) |
-| Layout line | 1024 bytes, 50 lines | `src/layout.h` (`LAYOUT_LINE`, `LAYOUT_LINES`) |
-| Objects in one PDF | 8,000,000 | `src/pdf_write.c` (`MAX_OBJECTS`) |
-| Lines per page in the writer | 50 | `src/pdf_write.c` (`PAGE_MAX_LINES`) |
+| Full output | 2804–2976 KiB | 64 MiB records: 115,552 pages / 112,864,984 PDF bytes; report: 39,033 pages / 48,620,561 bytes |
+| Select 1000 from 16/256/1024 MiB | 2764–2892 KiB | 41 pages, about 461 KB PDF |
 
-`MAX_OBJECTS` is absolute: `note_offset` in `src/pdf_write.c` sets `hit_limit` and `fail_kind = 1` for any object number at or above it, whatever the quotas say. Since each page uses two object numbers plus a fixed font block, this is roughly four million pages.
+The comparison baseline is **075455c**. Fixtures/options/font were matched; 16 MiB report output was 14.44% of its baseline size after Flate, with extra compression CPU time. Full output from 1 GiB was not measured. Selection numbers must never be presented as full-output conversion.
 
-The `XML2PDF_PAGE_COLS` (90), `XML2PDF_PAGE_LINES` (48) and `XML2PDF_PAGE_CAP` constants in `src/convert.h` describe the older page sink grid and are used only by tests; the conversion path sizes pages from the font metrics in `src/layout.c`.
+Historical evidence can contain older acceptance budgets; current runner constants and CI are authoritative for today's 4096 KiB gate. The OSR-82 heap profile at **de8ba0e** also predates later font/CMap/page-buffer memory reductions; it is not a measurement of today's allocation layout.
 
-### Quotas
+## Change entry points and checks
 
-| Option | Field | Enforced in | 0 means | Failure |
-| --- | --- | --- | --- | --- |
-| `--max-pages N` | `max_pages` | `pdf_add_page` in `src/pdf_write.c` | no separate page quota | `hit_limit`, `fail_kind = 1` |
-| `--max-output-bytes N` | `max_output_bytes` | `cap_write` in `src/pdf_write.c` | no output-byte quota | `hit_limit`, `fail_kind = 4`, `errno = EFBIG` |
-| `--max-spool-bytes N` | `max_spool_bytes` | `note_offset` in `src/pdf_write.c` | 64 MiB | `hit_limit`, `fail_kind = 5` |
-| `--temp-dir DIR` | `temp_dir` | `pdf_begin_cfg` in `src/pdf_write.c` | `/tmp` | I/O failure or `ENAMETOOLONG` |
+Change quotas/accounting in `src/pdf_write.c`, validation/cause mapping in `src/convert.c`, parser bounds in `src/xml_parse.h`, and page/repertoire bounds in their shared headers. Retain the one-buffer and streaming invariants when changing output syntax.
 
-The page quota is checked before a page is written. The output-byte quota wraps the raw destination stream: `cap_write` fails when the bytes already written exceed the quota or the next chunk would cross it, so a run stops at the first byte over the limit. The spool quota is checked per object in `note_offset`, which computes the offset-file size as `(num + 1) * 8` bytes before writing. `pdf_begin_cfg` replaces a zero or unset spool limit with 64 MiB, so the spool is always bounded even when the caller sets nothing. The offset file is created as `ki-xml-pdf-off-XXXXXX` in `temp_dir`; a path that does not fit is reported as `temp path too long`.
-
-All three quota failures come back through `fail_from_pdf` in `src/convert.c` as status 4 with `KI_CAUSE_RESOURCE` and the message `resource limit`. Quota exhaustion and cancellation share status 4; the `cause` and message tell them apart. The CLI parses `--max-pages` and the other numeric options with `take_long` in `src/main.c`, which rejects negative and non-numeric values with status 2, and rejects `--max-pages` above `INT_MAX` before the conversion starts.
-
-`reject_options` in `src/convert.c` also refuses a negative `max_pages`, `max_output_bytes`, `max_spool_bytes`, `record_offset` or `record_limit`, an unknown `profile`, and a `size` that does not match `sizeof(KiOptions)`.
-
-### Cancellation
-
-Cancellation is not a quota but it stops a run the same way. The `cancelled` callback in `KiOptions` is checked:
-
-- in `conv_read` in `src/convert.c`, before and after each read;
-- at the top of every driver loop iteration in `convert_streams` in `src/convert.c`;
-- after `layout_finish`, after the empty-document check, and between the publish steps (`fflush`, `fsync`, `fclose`, before `rename`);
-- in `pdf_end` in `src/pdf_write.c`, at the start, every 64 pages while writing the page tree, and every 64 objects while writing the xref.
-
-A cancelled run returns status 4 with `KI_CAUSE_CANCEL`. After a successful `rename` the file is already the destination, so cancellation cannot roll it back.
-
-### RSS gate
-
-The memory gate measures the converter process alone. `tests/verify.sh` runs `/usr/bin/time -v` on `./xml2pdf` for a generated input of at least 16 MiB and a small fixture, and reads the `Maximum resident set size (kbytes)` line from each report. The XML generator and `pdftotext` are outside the measurement. The gate passes when the large run's RSS is at most 4096 KiB, below half the large input size, and at or below the small run's RSS plus 4 MiB, and when the output PDF is larger than the converter's RSS.
-
-`tests/large_proof.py` measures with `/usr/bin/time -f "rss_kib=%M elapsed=%e"` and applies fixed budgets: RSS at most 4096 KiB (4 MiB), at most 10000 pages, at most 256 MiB of PDF and at most 64 MiB of offset spool. It then reads selected pages with `pdftotext` under its own `ulimit -v` of 1 GiB and compares the text against a generator oracle. `--self-test` checks the gate logic without a large file. The documented historical measurement on revision `7c62fe4` is 2372 KiB of RSS for a 1 GiB `report-v1` input; see `docs/contract.md`.
-
-The library logs `xml2pdf: pages=N objects=N offset_bytes=N` on a successful publish, and `tests/large_proof.py` parses `offset_bytes=` from stderr as the spool size.
-
-## Integration points
-
-- Quota and cancellation failures are mapped in [Conversion pipeline](../systems/conversion-pipeline.md).
-- The offset spool file and its lifecycle are described with [Atomic output](../features/atomic-output.md).
-- The parser bounds belong to [XML parser](../systems/xml-parser.md); the repertoire and page grid to [Layout and fonts](../systems/layout-and-fonts.md); the object cap and spool to [PDF writer](../systems/pdf-writer.md).
-- The CLI options are listed on [CLI](../features/cli.md), and the test gates on [Testing](../how-to-contribute/testing.md).
-
-## Entry points for modification
-
-- Change a parser bound in `src/xml_parse.h`.
-- Change the object cap or a quota check in `note_offset`, `cap_write` and `pdf_add_page` in `src/pdf_write.c`.
-- Change the default spool size or the offset temp path in `pdf_begin_cfg` in `src/pdf_write.c`.
-- Change option validation in `reject_options` in `src/convert.c`.
-- Change the RSS or budget gates in `tests/verify.sh` and `tests/large_proof.py`.
+`tests/test_pdf_bounds.c` covers exact quotas and hard ceilings without generating a 10 GB file; `tests/test_flate.c` covers compression expansion/error controls. `tests/test_callback_io.c` checks accepted-byte failures. Runner unit tests and negative controls verify the measurement/oracle logic itself. Reproduce using [Testing](../how-to-contribute/testing.md), on disk-backed scratch with sufficient space.
 
 ## Key source files
 
 | File | Role |
 | --- | --- |
-| `include/ki_xml_pdf.h` | Quota and cancellation fields |
-| `src/convert.c` | Option validation, cancellation checkpoints, cause mapping |
-| `src/pdf_write.c`, `src/pdf_write.h` | Object cap, quotas, spool file, cancellation in `pdf_end` |
-| `src/xml_parse.h` | Parser bounds |
-| `src/font.h`, `src/layout.h` | Repertoire and layout bounds |
-| `tests/verify.sh`, `tests/large_proof.py` | RSS and budget gates |
+| `src/pdf_write.c`, `src/pdf_write.h` | Fixed buffers, compressor, object/output/spool limits |
+| `src/convert.c`, `include/ki_xml_pdf.h` | Public quotas, cancellation and accepted-byte results |
+| `src/xml_parse.h`, `src/layout.h`, `src/font.h`, `src/geometry.h` | Fixed storage bounds |
+| `tests/verify.sh`, `tests/large_proof.py` | Converter RSS and selection gates |
+| `tests/resource_baseline.py`, `tests/resource_controls.py` | Reproducible series and negative controls |
+| `docs/evidence/osr-25-callback-1193cdc/README.md` | Revision-scoped final comparison |
 
-## Related pages
-
-- [Conversion pipeline](../systems/conversion-pipeline.md), [XML parser](../systems/xml-parser.md), [Layout and fonts](../systems/layout-and-fonts.md), [PDF writer](../systems/pdf-writer.md).
-- [Atomic output](../features/atomic-output.md), [Streaming I/O](../features/streaming-io.md), [CLI](../features/cli.md).
-- [Testing](../how-to-contribute/testing.md), [Glossary](../overview/glossary.md), [Security](../security.md).
+Related: [PDF writer](../systems/pdf-writer.md), [Layout and fonts](../systems/layout-and-fonts.md), [Atomic output](atomic-output.md), [Design decisions](../background/design-decisions.md).
