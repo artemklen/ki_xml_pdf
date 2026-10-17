@@ -164,7 +164,7 @@ cc report.c $(pkg-config --cflags --libs ki_xml_pdf) -o report-api
 ./report-api report-v1.xml report-api.pdf
 ```
 
-The built-in report profile uses a fixed Russian record label even when field names and values are English. A custom mapper controls its own labels. [docs/report-v1.md:39@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L39) [docs/mapper-guide.md:3-6@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6)
+The built-in report profile uses a fixed Russian record label even when field names and values are English. [docs/report-v1.md:39@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L39)
 
 ## Custom XML schema
 
@@ -190,7 +190,6 @@ Project source and original examples use the **MIT license**. The bundled DejaVu
 
 - [Source repository](https://github.com/artemklen/ki_xml_pdf)
 - [English README](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md)
-- [Russian README](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.ru.md)
 - [Repository wiki](https://github.com/artemklen/ki_xml_pdf/wiki)
 - [Public C API](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h)
 - [MIT license](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/LICENSE)
@@ -200,6 +199,6 @@ Project source and original examples use the **MIT license**. The bundled DejaVu
 - [Security policy](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md)
 - [CI checks](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml)
 
-For ordinary bugs, use [GitHub Issues](https://github.com/artemklen/ki_xml_pdf/issues) with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately to **artem.klen@icloud.com**, with the affected revision, impact and reproduction steps; do not publish security details in an issue. [CONTRIBUTING.md:7-18@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18)
+For ordinary bugs, use [GitHub Issues](https://github.com/artemklen/ki_xml_pdf/issues) with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately as described in the [Security policy](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md), with the affected revision, impact and reproduction steps; do not publish security details in an issue. [CONTRIBUTING.md:7-18@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18)
 
 Version **0.3.0** is read from the public header. The security policy supports only the latest minor release before the stable API; older minor releases are unsupported. [include/ki_xml_pdf.h:43@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h#L43) [SECURITY.md:3-14@ec84339](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md#L3-L14)

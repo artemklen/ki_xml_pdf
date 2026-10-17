@@ -22,7 +22,6 @@ The memory ceiling applies to documented synthetic workloads, not arbitrary inpu
 
 ## Optional
 
-- [Russian README](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/README.ru.md): Russian onboarding.
 - [Contributing](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md): Bug reports and contribution checks.
 - [Security policy](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md): Supported releases and private reporting.
 - [License](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/LICENSE): Project source license.

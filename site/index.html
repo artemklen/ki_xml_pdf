@@ -27,11 +27,24 @@
   ]
 }
 </script>
+<style>
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+</style>
 </head>
 <body>
 <header><h1>ki_xml_pdf</h1></header>
 <main>
-<section id="hero"><h2>Hero</h2>
+<section id="hero"><h2 class="sr-only">Hero</h2>
 <p>Convert XML into PDF with a streaming C library and command-line tool. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L7">README.md:5-7@ec84339</a></p>
 <ul>
 <li><strong>C library and CLI:</strong> embed the public C API or run <code>xml2pdf</code>. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L7">README.md:5-7@ec84339</a></li>
@@ -192,7 +205,7 @@ int main(int argc, char **argv) {
 <pre><code class="language-sh">cc report.c $(pkg-config --cflags --libs ki_xml_pdf) -o report-api
 ./report-api report-v1.xml report-api.pdf
 </code></pre>
-<p>The built-in report profile uses a fixed Russian record label even when field names and values are English. A custom mapper controls its own labels. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L39">docs/report-v1.md:39@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></p>
+<p>The built-in report profile uses a fixed Russian record label even when field names and values are English. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L39">docs/report-v1.md:39@ec84339</a></p>
 </section>
 <section id="custom-xml-schema"><h2>Custom XML schema</h2>
 <p>Start with the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md">mapper guide</a>. The working catalog adapter demonstrates a project-owned schema through the public API without changing the parser, layout or PDF writer. It is an example to adapt, not automatic support for unknown schemas. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></p>
@@ -214,7 +227,6 @@ int main(int argc, char **argv) {
 <ul>
 <li><a href="https://github.com/artemklen/ki_xml_pdf">Source repository</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md">English README</a></li>
-<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.ru.md">Russian README</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/wiki">Repository wiki</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h">Public C API</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/LICENSE">MIT license</a></li>
@@ -224,7 +236,7 @@ int main(int argc, char **argv) {
 <li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml">CI checks</a></li>
 </ul>
-<p>For ordinary bugs, use <a href="https://github.com/artemklen/ki_xml_pdf/issues">GitHub Issues</a> with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately to <strong>artem.klen@icloud.com</strong>, with the affected revision, impact and reproduction steps; do not publish security details in an issue. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18">CONTRIBUTING.md:7-18@ec84339</a></p>
+<p>For ordinary bugs, use <a href="https://github.com/artemklen/ki_xml_pdf/issues">GitHub Issues</a> with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately as described in the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a>, with the affected revision, impact and reproduction steps; do not publish security details in an issue. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18">CONTRIBUTING.md:7-18@ec84339</a></p>
 <p>Version <strong>0.3.0</strong> is read from the public header. The security policy supports only the latest minor release before the stable API; older minor releases are unsupported. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h#L43">include/ki_xml_pdf.h:43@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md#L3-L14">SECURITY.md:3-14@ec84339</a></p></section>
 </main>
 </body>
