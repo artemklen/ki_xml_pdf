@@ -160,6 +160,19 @@ static int take_long(const char *text, long *out) {
 }
 
 int main(int argc, char **argv) {
+    /* Throwaway OSR-86 proof: hold 8 MiB so the resources job must go red.
+       This commit is not the OSR-86 PR and must not be merged. */
+    unsigned char *hold = malloc(8u * 1024u * 1024u);
+    if (hold == NULL) {
+        return 2;
+    }
+    memset(hold, 0xA5, 8u * 1024u * 1024u);
+    volatile unsigned char sink = 0;
+    for (size_t i = 0; i < 8u * 1024u * 1024u; i += 4096) {
+        sink = hold[i];
+    }
+    (void)sink;
+
     const char *font = NULL;
     const char *temp_dir = NULL;
     const char *profile = KI_XML_PDF_PROFILE_RECORDS;
