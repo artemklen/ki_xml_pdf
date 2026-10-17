@@ -4,7 +4,6 @@
 #include "font.h"
 #include "ki_xml_pdf.h"
 #include "layout.h"
-#include "page_sink.h"
 #include "pdf_write.h"
 #include "xml_parse.h"
 
@@ -521,90 +520,6 @@ static int test_big_stream_fixed_memory(void) {
 #if KI_RSS_GATE
     CHECK(delta_kb < 2048);
 #endif
-    return 0;
-}
-
-typedef struct {
-    char *pages[8];
-    size_t lens[8];
-    int n;
-    char *frozen;
-    size_t frozen_len;
-} PageLog;
-
-static int capture_page(const char *data, size_t len, void *user) {
-    PageLog *log = user;
-    CHECK(log->n < 8);
-    char *copy = malloc(len + 1);
-    CHECK(copy != NULL);
-    memcpy(copy, data, len);
-    copy[len] = '\0';
-    if (log->n == 0) {
-        log->frozen = malloc(len + 1);
-        CHECK(log->frozen != NULL);
-        memcpy(log->frozen, data, len);
-        log->frozen[len] = '\0';
-        log->frozen_len = len;
-    }
-    log->pages[log->n] = copy;
-    log->lens[log->n] = len;
-    log->n++;
-    return 0;
-}
-
-static void set_text(XmlEvent *ev, const char *t) {
-    memset(ev, 0, sizeof *ev);
-    ev->kind = XML_EV_TEXT;
-    ev->text_len = strlen(t);
-    memcpy(ev->text, t, ev->text_len);
-}
-
-static int test_page_sink_flushes(void) {
-    PageLog log;
-    memset(&log, 0, sizeof log);
-    PageSink sink;
-    CHECK(page_sink_init(&sink, 48, capture_page, &log) == 0);
-
-    XmlEvent ev;
-    set_text(&ev, "EARLY_MARKER");
-    CHECK(page_sink_event(&sink, &ev) == 0);
-
-    char xs[101];
-    memset(xs, 'X', 100);
-    xs[100] = '\0';
-    set_text(&ev, xs);
-    CHECK(page_sink_event(&sink, &ev) == 0);
-
-    set_text(&ev, "LATE_MARKER");
-    CHECK(page_sink_event(&sink, &ev) == 0);
-    CHECK(page_sink_finish(&sink) == 0);
-
-    CHECK(log.n >= 2);
-    CHECK(log.pages[0] != NULL);
-    CHECK(strstr(log.pages[0], "EARLY_MARKER") != NULL);
-    CHECK(strstr(log.pages[0], "LATE_MARKER") == NULL);
-    int late_page = -1;
-    for (int i = 1; i < log.n; i++) {
-        if (strstr(log.pages[i], "LATE_MARKER") != NULL) {
-            late_page = i;
-        }
-        CHECK(strstr(log.pages[i], "EARLY_MARKER") == NULL);
-    }
-    CHECK(late_page > 0);
-    CHECK(log.frozen_len == log.lens[0]);
-    CHECK(memcmp(log.frozen, log.pages[0], log.frozen_len) == 0);
-    CHECK(page_sink_pending(&sink) == 0);
-    const char *buf = page_sink_pending_data(&sink);
-    for (size_t i = 0; i < sink.cap; i++) {
-        CHECK(buf[i] == '\0');
-    }
-    CHECK(sink.pages_flushed == log.n);
-
-    for (int i = 0; i < log.n; i++) {
-        free(log.pages[i]);
-    }
-    free(log.frozen);
-    page_sink_free(&sink);
     return 0;
 }
 
@@ -3664,7 +3579,6 @@ int main(void) {
         {"skips_and_errors", test_skips_and_errors},
         {"cdata_and_numeric", test_cdata_and_numeric},
         {"cdata_stream_fixed_memory", test_cdata_stream_fixed_memory},
-        {"page_sink_flushes", test_page_sink_flushes},
         {"pdf_appends_and_releases", test_pdf_appends_and_releases},
         {"convert_pipeline", test_convert_pipeline},
         {"output_keeps_previous", test_output_keeps_previous},

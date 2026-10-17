@@ -30,7 +30,6 @@ One 3,259-line C file holds 16 test groups. Each group is a `static int test_*(v
 | `test_split_mid_tag_and_text` | Tags and text split across read boundaries |
 | `test_one_byte_entities_and_nesting` | One-byte reads, predefined entities, nesting |
 | `test_skips_and_errors` | Comments, declarations, error paths, repeatable error offsets |
-| `test_page_sink_flushes` | The legacy byte-grid page sink |
 | `test_pdf_appends_and_releases` | Writer append/release behavior, spooled offsets, object limits |
 | `test_convert_pipeline` | End-to-end conversions through the public entry points |
 | `test_cdata_and_numeric` | CDATA and numeric character references |

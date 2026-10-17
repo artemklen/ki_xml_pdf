@@ -142,7 +142,7 @@ Only UTF-8 is supported. `consume_bom` skips `EF BB BF` and rejects the UTF-16 b
 - A new parsed or skipped construct: add a branch in `parse_markup`, a helper function, and a test in `tests/test_stream.c`.
 - More entity names: `try_named` in `src/xml_parse.c`.
 - Declaration policy: `xml_decl_ok` in `src/xml_parse.c`.
-- Event shape: `XmlEvent` in `src/xml_parse.h`; consumers in `src/convert.c`, `src/report.c` and `src/page_sink.c` change together.
+- Event shape: `XmlEvent` in `src/xml_parse.h`; consumers in `src/convert.c` and `src/report.c` change together.
 
 ## Key source files
 

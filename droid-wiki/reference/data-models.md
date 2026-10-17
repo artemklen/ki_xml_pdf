@@ -99,7 +99,7 @@ The example mapper from the mapper guide: `state` (a grammar enum), `value_start
 
 ### `PageSink` (`src/page_sink.h`)
 
-The older fixed byte-grid page buffer (`buf`, `cap`, `len`, `col`, `lines`, `max_cols`, `max_lines`, `pages_flushed`, `flush`, `user`). It is compiled into the library and unit-tested (`test_page_sink_flushes`), but the conversion path no longer uses it.
+Removed. This was the older fixed byte-grid page buffer (`buf`, `cap`, `len`, `col`, `lines`, `max_cols`, `max_lines`, `pages_flushed`, `flush`, `user`). The conversion path did not use it, and the sources are gone.
 
 ## Ownership rules
 

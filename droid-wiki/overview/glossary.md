@@ -23,4 +23,4 @@ Terms used in the code, the docs and this wiki.
 | **RSS gate** | The acceptance rule that peak resident memory of `xml2pdf` stays at or below 64 MiB on the synthetic workloads. |
 | **distcheck** | `make distcheck`: build, install and test from the `git archive` of HEAD, without a Git checkout (`tests/distcheck.sh`). |
 | **OSR-n / KW-n** | Task identifiers from the owner's tracker that appear in commit messages and docs (for example `OSR-4`, `KW-1022`). |
-| **Page sink** | `src/page_sink.c`, an older fixed byte-grid page buffer. Still compiled and unit-tested but not used by the conversion path. |
+| **Page sink** | Removed older fixed byte-grid page buffer (`src/page_sink.c`). Not used by the conversion path. |

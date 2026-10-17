@@ -2,11 +2,11 @@
 
 Active contributors: Artem Klen
 
-`src/page_sink.c` is the earlier output model: a fixed byte-grid page buffer that renders `XmlEvent` records back into text and hands finished pages to a callback. It is compiled into the library, but no production code calls it; only `tests/test_stream.c` exercises it. The `XML2PDF_PAGE_*` constants in `src/convert.h` describe the page grid it was built around.
+Removed. `src/page_sink.c`, `src/page_sink.h` and `test_page_sink_flushes` are not in the tree. Dynamic `nm -D` did not list `page_sink` symbols, which matches `local: *` in `libki_xml_pdf.map`. `XML2PDF_PAGE_COLS`, `XML2PDF_PAGE_LINES` and `XML2PDF_PAGE_CAP` in `src/convert.h` stay, because `tests/test_stream.c` still uses the cap. The rest of this page describes the module as it was: a fixed byte-grid page buffer.
 
 ## Purpose
 
-The shipped pipeline renders documents through the layout engine with measured DejaVu Sans glyph widths ([Layout and fonts](layout-and-fonts.md)) and writes real PDF pages ([PDF writer](pdf-writer.md)). The page sink implements a simpler model: a page is a grid of columns and lines counted in bytes, and the job is to flush full buffers. The sizing comment in `src/convert.h` still describes that grid as "a letter page in Helvetica 10pt", while the current code embeds DejaVu Sans and measures advances instead of counting columns. The module stays in the tree because it is compiled into the library and covered by a test, and it is listed as dead code in [Cleanup opportunities](../cleanup-opportunities.md).
+The shipped pipeline renders documents through the layout engine with measured DejaVu Sans glyph widths ([Layout and fonts](layout-and-fonts.md)) and writes real PDF pages ([PDF writer](pdf-writer.md)). The page sink implemented a simpler model: a page is a grid of columns and lines counted in bytes, and the job was to flush full buffers. The sizing comment in `src/convert.h` still describes that grid as "a letter page in Helvetica 10pt", while the current code embeds DejaVu Sans and measures advances instead of counting columns.
 
 ## Key abstractions
 
@@ -44,30 +44,27 @@ graph TD
     F --> C[PageFlushFn callback, then zero the bytes]
 ```
 
-## Where it is used
+## Where it was used
 
-- Build wiring: `src/page_sink.c` is in the library source list of both `CMakeLists.txt` (`KI_CORE_SOURCES`) and `Makefile` (`LIB_SRCS`).
-- The only caller is `test_page_sink_flushes` in `tests/test_stream.c`. It runs in byte-cap mode with a 48-byte page, feeds an early marker, 100 `X` characters and a late marker, and asserts at least two pages, the early marker on the first page, the late marker not on it, zero pending bytes after `page_sink_finish`, and a fully zeroed buffer afterwards.
-- The header is internal (`src/page_sink.h`); nothing in `include/ki_xml_pdf.h` exposes it.
+- Build wiring, before removal: `src/page_sink.c` was in `CMakeLists.txt` (`KI_CORE_SOURCES`) and `Makefile` (`LIB_SRCS`).
+- The only caller was `test_page_sink_flushes` in `tests/test_stream.c`. It ran in byte-cap mode with a 48-byte page, fed an early marker, 100 `X` characters and a late marker, and asserted at least two pages, the early marker on the first page, the late marker not on it, zero pending bytes after `page_sink_finish`, and a fully zeroed buffer afterwards.
+- The header was internal (`src/page_sink.h`); nothing in `include/ki_xml_pdf.h` exposed it.
 - The `XML2PDF_PAGE_*` constants survive in two places: `tests/test_stream.c` uses `XML2PDF_PAGE_CAP` to size synthetic inputs (`test_convert_pipeline` and the mismatched end-tag case), and `xml2pdf_convert_cap` in `src/convert.h` keeps the old "page cap" wording while mapping its argument onto `KiOptions.max_output_bytes` in `src/convert.c`, so today it caps output bytes, not pages.
 
 ## Integration points
 
 - It consumes `XmlEvent` straight from the parser ([XML parser](xml-parser.md)). In the shipped pipeline that consumer role belongs to the mappers: [records-v1](../features/records-v1.md), [report-v1](../features/report-v1.md), [custom mappers](../features/custom-mappers.md).
 - Nothing in the driver or CLI reaches it; the pipeline wiring is described in [Conversion pipeline](conversion-pipeline.md).
-- Removal is tracked in [Cleanup opportunities](../cleanup-opportunities.md); the test suite it depends on is described in [Testing](../how-to-contribute/testing.md).
+- The removal is recorded in [Cleanup opportunities](../cleanup-opportunities.md).
 
 ## Entry points for modification
 
-- Removing it: delete `src/page_sink.c` and `src/page_sink.h`, drop the entry from `CMakeLists.txt` and `Makefile`, drop `test_page_sink_flushes` from `tests/test_stream.c`, and decide what to do with the `XML2PDF_PAGE_*` constants and `xml2pdf_convert_cap` in `src/convert.h`.
-- Reusing it for a plain-text preview: `page_sink_event` in `src/page_sink.c` is the rendering to change. The clearing contract in `src/page_sink.h` must stay, because the callback cannot keep the pointer.
-- Changing page shape: `page_sink_set_columns` values at the call site, or the constants in `src/convert.h` if the grid is revived.
+- The sources are already gone. `XML2PDF_PAGE_*` and `xml2pdf_convert_cap` in `src/convert.h` were left in place: tests still size inputs with `XML2PDF_PAGE_CAP`, and `xml2pdf_convert_cap` is an exported `KI_0_1` symbol.
+- Reviving a byte grid would be a new module. These notes are the contract that module used.
 
 ## Key source files
 
 | File | Role |
 | --- | --- |
-| `src/page_sink.c` | Buffer, wrapping and flush logic |
-| `src/page_sink.h` | Struct and callback contract |
 | `src/convert.h` | `XML2PDF_PAGE_*` grid constants, `xml2pdf_convert_cap` |
-| `tests/test_stream.c` | The one test that uses the sink, plus users of the constants |
+| `tests/test_stream.c` | Still uses `XML2PDF_PAGE_CAP`; the sink test is gone |
