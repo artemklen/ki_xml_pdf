@@ -1,0 +1,880 @@
+desc: --pages-as-heap=no --massif-out-file=/tmp/grok-goal-8e1fe17b08c7/implementer/measure-osr82/report-v1.massif
+cmd: ./xml2pdf --font fonts/DejaVuSans.ttf --max-pages 0 --max-output-bytes 0 --profile report-v1 /tmp/grok-goal-8e1fe17b08c7/implementer/measure-osr82/r16-report.xml /tmp/grok-goal-8e1fe17b08c7/implementer/measure-osr82/report-v1-massif.pdf
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=142787719
+mem_heap_B=1534120
+mem_heap_extra_B=240
+mem_stacks_B=0
+heap_tree=peak
+n9: 1534120 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 759720 0x11634B: font_load (font.c:342)
+  n1: 759720 0x11332C: pdf_begin_cfg (pdf_write.c:702)
+   n1: 759720 0x10BA61: convert_streams (convert.c:587)
+    n1: 759720 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 759720 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 759720 0x10AB08: main (main.c:354)
+ n1: 416256 0x1134F5: pdf_add_page (pdf_write.c:773)
+  n1: 416256 0x114335: flush_page (layout.c:76)
+   n1: 416256 0x114434: commit_line (layout.c:92)
+    n1: 416256 0x10BCDF: convert_streams (convert.c:670)
+     n1: 416256 0x10CD8D: convert_file_stream (convert.c:461)
+      n1: 416256 0x10D349: ki_convert_file_cfg (convert.c:517)
+       n0: 416256 0x10AB08: main (main.c:354)
+ n1: 65536 0x486321E: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863231: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863247: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863273: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 51250 0x1142C4: flush_page (layout.c:66)
+  n1: 51250 0x114434: commit_line (layout.c:92)
+   n1: 51250 0x10BCDF: convert_streams (convert.c:670)
+    n1: 51250 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 51250 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 51250 0x10AB08: main (main.c:354)
+ n0: 28366 in 14 places, all below massif's threshold (1.00%)
+ n1: 16384 0x112859: flate_ready (pdf_write.c:109)
+  n1: 16384 0x112859: write_flate_obj (pdf_write.c:164)
+   n1: 16384 0x112FF4: write_font_objects (pdf_write.c:338)
+    n1: 16384 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+     n1: 16384 0x10BA61: convert_streams (convert.c:587)
+      n1: 16384 0x10CD8D: convert_file_stream (convert.c:461)
+       n1: 16384 0x10D349: ki_convert_file_cfg (convert.c:517)
+        n0: 16384 0x10AB08: main (main.c:354)
+#-----------
+snapshot=2
+#-----------
+time=690467230
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=1121103733
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=1762685158
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=2242904881
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=2650191813
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=2969681132
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=3339739599
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=3702832401
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=10
+#-----------
+time=4112222521
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=4600652822
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=4874328596
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=5294333031
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=5674533370
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=6167291512
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=6653727516
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=7088027695
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=7470361447
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=7890053712
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=8392576228
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=8792491422
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=9092290352
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=detailed
+n9: 1117864 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 759720 0x11634B: font_load (font.c:342)
+  n1: 759720 0x11332C: pdf_begin_cfg (pdf_write.c:702)
+   n1: 759720 0x10BA61: convert_streams (convert.c:587)
+    n1: 759720 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 759720 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 759720 0x10AB08: main (main.c:354)
+ n1: 65536 0x486321E: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863231: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863247: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863273: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 51250 0x1142C4: flush_page (layout.c:66)
+  n1: 51250 0x114434: commit_line (layout.c:92)
+   n1: 51250 0x10BCDF: convert_streams (convert.c:670)
+    n1: 51250 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 51250 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 51250 0x10AB08: main (main.c:354)
+ n1: 16384 0x112859: flate_ready (pdf_write.c:109)
+  n1: 16384 0x112859: write_flate_obj (pdf_write.c:164)
+   n1: 16384 0x112FF4: write_font_objects (pdf_write.c:338)
+    n1: 16384 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+     n1: 16384 0x10BA61: convert_streams (convert.c:587)
+      n1: 16384 0x10CD8D: convert_file_stream (convert.c:461)
+       n1: 16384 0x10D349: ki_convert_file_cfg (convert.c:517)
+        n0: 16384 0x10AB08: main (main.c:354)
+ n0: 16078 in 14 places, all below massif's threshold (1.00%)
+ n1: 12288 0x48F7AD2: _IO_file_doallocate (filedoalloc.c:101)
+  n0: 12288 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=23
+#-----------
+time=9592254103
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=9893832554
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=10499246658
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=10902794592
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=11306821667
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=11711075301
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=12013231245
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=12518765772
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=12884710139
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=13538729896
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=14029499089
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=14357172072
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=14685298913
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=15013018627
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=detailed
+n9: 1117864 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 759720 0x11634B: font_load (font.c:342)
+  n1: 759720 0x11332C: pdf_begin_cfg (pdf_write.c:702)
+   n1: 759720 0x10BA61: convert_streams (convert.c:587)
+    n1: 759720 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 759720 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 759720 0x10AB08: main (main.c:354)
+ n1: 65536 0x486321E: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863231: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863247: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863273: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 51250 0x1142C4: flush_page (layout.c:66)
+  n1: 51250 0x114434: commit_line (layout.c:92)
+   n1: 51250 0x10BCDF: convert_streams (convert.c:670)
+    n1: 51250 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 51250 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 51250 0x10AB08: main (main.c:354)
+ n1: 16384 0x112859: flate_ready (pdf_write.c:109)
+  n1: 16384 0x112859: write_flate_obj (pdf_write.c:164)
+   n1: 16384 0x112FF4: write_font_objects (pdf_write.c:338)
+    n1: 16384 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+     n1: 16384 0x10BA61: convert_streams (convert.c:587)
+      n1: 16384 0x10CD8D: convert_file_stream (convert.c:461)
+       n1: 16384 0x10D349: ki_convert_file_cfg (convert.c:517)
+        n0: 16384 0x10AB08: main (main.c:354)
+ n0: 16078 in 14 places, all below massif's threshold (1.00%)
+ n1: 12288 0x48F7AD2: _IO_file_doallocate (filedoalloc.c:101)
+  n0: 12288 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=37
+#-----------
+time=15340360196
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=15668132469
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=16323047567
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=16650770559
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=detailed
+n9: 1117864 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 759720 0x11634B: font_load (font.c:342)
+  n1: 759720 0x11332C: pdf_begin_cfg (pdf_write.c:702)
+   n1: 759720 0x10BA61: convert_streams (convert.c:587)
+    n1: 759720 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 759720 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 759720 0x10AB08: main (main.c:354)
+ n1: 65536 0x486321E: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863231: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863247: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863273: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 51250 0x1142C4: flush_page (layout.c:66)
+  n1: 51250 0x114434: commit_line (layout.c:92)
+   n1: 51250 0x10BCDF: convert_streams (convert.c:670)
+    n1: 51250 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 51250 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 51250 0x10AB08: main (main.c:354)
+ n1: 16384 0x112859: flate_ready (pdf_write.c:109)
+  n1: 16384 0x112859: write_flate_obj (pdf_write.c:164)
+   n1: 16384 0x112FF4: write_font_objects (pdf_write.c:338)
+    n1: 16384 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+     n1: 16384 0x10BA61: convert_streams (convert.c:587)
+      n1: 16384 0x10CD8D: convert_file_stream (convert.c:461)
+       n1: 16384 0x10D349: ki_convert_file_cfg (convert.c:517)
+        n0: 16384 0x10AB08: main (main.c:354)
+ n0: 16078 in 14 places, all below massif's threshold (1.00%)
+ n1: 12288 0x48F7AD2: _IO_file_doallocate (filedoalloc.c:101)
+  n0: 12288 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=41
+#-----------
+time=17305598742
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=17633527028
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=18125040379
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=18779728623
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=19270710826
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=19598257815
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=20089459963
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=20579418788
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=20906448955
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=21180307167
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=21455667531
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=21729933329
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=22005516561
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=detailed
+n9: 1117864 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 759720 0x11634B: font_load (font.c:342)
+  n1: 759720 0x11332C: pdf_begin_cfg (pdf_write.c:702)
+   n1: 759720 0x10BA61: convert_streams (convert.c:587)
+    n1: 759720 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 759720 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 759720 0x10AB08: main (main.c:354)
+ n1: 65536 0x486321E: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863231: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863247: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863273: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 51250 0x1142C4: flush_page (layout.c:66)
+  n1: 51250 0x114434: commit_line (layout.c:92)
+   n1: 51250 0x10BCDF: convert_streams (convert.c:670)
+    n1: 51250 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 51250 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 51250 0x10AB08: main (main.c:354)
+ n1: 16384 0x112859: flate_ready (pdf_write.c:109)
+  n1: 16384 0x112859: write_flate_obj (pdf_write.c:164)
+   n1: 16384 0x112FF4: write_font_objects (pdf_write.c:338)
+    n1: 16384 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+     n1: 16384 0x10BA61: convert_streams (convert.c:587)
+      n1: 16384 0x10CD8D: convert_file_stream (convert.c:461)
+       n1: 16384 0x10D349: ki_convert_file_cfg (convert.c:517)
+        n0: 16384 0x10AB08: main (main.c:354)
+ n0: 16078 in 14 places, all below massif's threshold (1.00%)
+ n1: 12288 0x48F7AD2: _IO_file_doallocate (filedoalloc.c:101)
+  n0: 12288 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=54
+#-----------
+time=22279562311
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=22554640440
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=22828781957
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=23103976141
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=58
+#-----------
+time=23377687430
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=59
+#-----------
+time=23652760445
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=60
+#-----------
+time=23926849113
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=61
+#-----------
+time=24202122569
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=62
+#-----------
+time=24476052926
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=63
+#-----------
+time=24750115871
+mem_heap_B=1117864
+mem_heap_extra_B=232
+mem_stacks_B=0
+heap_tree=detailed
+n9: 1117864 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 759720 0x11634B: font_load (font.c:342)
+  n1: 759720 0x11332C: pdf_begin_cfg (pdf_write.c:702)
+   n1: 759720 0x10BA61: convert_streams (convert.c:587)
+    n1: 759720 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 759720 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 759720 0x10AB08: main (main.c:354)
+ n1: 65536 0x486321E: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863231: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863247: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 65536 0x4863273: deflateInit2_ (in /usr/lib/x86_64-linux-gnu/libz.so.1.3.1)
+  n1: 65536 0x11265D: flate_ready (pdf_write.c:116)
+   n1: 65536 0x11265D: write_flate_obj (pdf_write.c:164)
+    n1: 65536 0x112FF4: write_font_objects (pdf_write.c:338)
+     n1: 65536 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+      n1: 65536 0x10BA61: convert_streams (convert.c:587)
+       n1: 65536 0x10CD8D: convert_file_stream (convert.c:461)
+        n1: 65536 0x10D349: ki_convert_file_cfg (convert.c:517)
+         n0: 65536 0x10AB08: main (main.c:354)
+ n1: 51250 0x1142C4: flush_page (layout.c:66)
+  n1: 51250 0x114434: commit_line (layout.c:92)
+   n1: 51250 0x10BCDF: convert_streams (convert.c:670)
+    n1: 51250 0x10CD8D: convert_file_stream (convert.c:461)
+     n1: 51250 0x10D349: ki_convert_file_cfg (convert.c:517)
+      n0: 51250 0x10AB08: main (main.c:354)
+ n1: 16384 0x112859: flate_ready (pdf_write.c:109)
+  n1: 16384 0x112859: write_flate_obj (pdf_write.c:164)
+   n1: 16384 0x112FF4: write_font_objects (pdf_write.c:338)
+    n1: 16384 0x112FF4: pdf_begin_cfg (pdf_write.c:741)
+     n1: 16384 0x10BA61: convert_streams (convert.c:587)
+      n1: 16384 0x10CD8D: convert_file_stream (convert.c:461)
+       n1: 16384 0x10D349: ki_convert_file_cfg (convert.c:517)
+        n0: 16384 0x10AB08: main (main.c:354)
+ n0: 16078 in 14 places, all below massif's threshold (1.00%)
+ n1: 12288 0x48F7AD2: _IO_file_doallocate (filedoalloc.c:101)
+  n0: 12288 in 2 places, all below massif's threshold (1.00%)

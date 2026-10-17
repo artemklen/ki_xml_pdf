@@ -1,0 +1,2 @@
+samples_kib 2728 2640 2704 2784 2784
+median_kib 2728
