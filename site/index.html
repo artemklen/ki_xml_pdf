@@ -27,55 +27,57 @@
   ]
 }
 </script>
-<style>
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-</style>
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/svg+xml" sizes="16x16" href="assets/favicon-16-light.svg" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" sizes="16x16" href="assets/favicon-16-dark.svg" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/svg+xml" sizes="32x32" href="assets/logo-symbol-light.svg" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" sizes="32x32" href="assets/logo-symbol-dark.svg" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ki_xml_pdf — streaming XML to PDF">
+<meta property="og:description" content="Convert XML into PDF with a streaming C library and command-line tool.">
+<meta property="og:url" content="https://xml2pdf.aklen.me/">
+<meta property="og:image" content="https://xml2pdf.aklen.me/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ki_xml_pdf: a streaming C library and command-line tool for XML to PDF. MIT, version 0.3.0.">
+<meta name="twitter:card" content="summary_large_image">
 </head>
-<body>
-<header><h1>ki_xml_pdf</h1></header>
-<main>
-<section id="hero"><h2 class="sr-only">Hero</h2>
-<p>Convert XML into PDF with a streaming C library and command-line tool. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L7">README.md:5-7@ec84339</a></p>
-<ul>
-<li><strong>C library and CLI:</strong> embed the public C API or run <code>xml2pdf</code>. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L7">README.md:5-7@ec84339</a></li>
-<li><strong>Streaming processing:</strong> parser and built-in report state do not collect the whole document; PDF object offsets are spooled to disk. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L271">README.md:271@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L292">README.md:292@ec84339</a></li>
-<li><strong>Peak converter RSS ≤ 4 MiB on the documented synthetic workloads:</strong> the CI resources job enforces this ceiling. This is a workload-specific acceptance gate, not a guarantee for every input, font, custom mapper or host. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L296">README.md:296@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/.github/workflows/ci.yml#L101-L116">.github/workflows/ci.yml:101-116@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/wiki/features--resource-limits">Resource limits wiki</a></li>
+<body><a class="skip-link" data-presentation="" href="#main">Skip to content</a><div class="site-header" data-presentation=""><a aria-label="xml2pdf ki_xml_pdf home" class="brand" href="#hero"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/logo-symbol-dark.svg"/><img alt="" height="24" src="assets/logo-symbol-light.svg" width="24"/></picture><span>xml2pdf</span> <span class="brand-library">ki_xml_pdf</span></a><nav aria-label="Sections" class="desktop-nav"><a href="#when-to-use">When to use</a> <a href="#measured-numbers">Numbers</a> <a href="#install">Install</a> <a href="#usage">Usage</a> <a href="#custom-xml-schema">Schema</a> <a href="#comparison-guidance">Compare</a> <a href="#license-links-contributing-security">License</a></nav><a class="button desktop-github" href="https://github.com/artemklen/ki_xml_pdf">GitHub <span aria-hidden="true">→</span></a><details class="mobile-menu"><summary aria-label="Page menu">menu</summary><nav aria-label="Mobile sections"><a href="#when-to-use">When to use</a> <a href="#measured-numbers">Numbers</a> <a href="#install">Install</a> <a href="#usage">Usage</a> <a href="#custom-xml-schema">Schema</a> <a href="#comparison-guidance">Compare</a> <a href="#license-links-contributing-security">License</a><a href="https://github.com/artemklen/ki_xml_pdf">GitHub</a></nav></details></div>
+
+<main id="main">
+<section id="hero"><div class="hero-top"><div class="hero-copy"><p class="eyebrow" data-presentation="">C LIBRARY + CLI · XML → PDF · MIT · v0.3.0</p><header><h1>ki_xml_pdf</h1></header><h2 class="sr-only">Hero</h2><p>Convert XML into PDF with a streaming C library and command-line tool. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L7">README.md:5-7@ec84339</a></span></p><div class="hero-actions" data-presentation=""><a class="button primary" href="#install">Install <span aria-hidden="true">→</span></a><a class="button" href="https://github.com/artemklen/ki_xml_pdf">Source repository <span aria-hidden="true">→</span></a></div></div><div class="pipeline" data-presentation=""><p>STREAMING PIPELINE</p><div class="pipeline-flow"><span>XML</span><span aria-hidden="true" class="flow-arrow">→</span><span class="stage">parser</span><span aria-hidden="true" class="flow-arrow">→</span><span class="stage">layout</span><span aria-hidden="true" class="flow-arrow">→</span><span class="stage">PDF writer</span><span aria-hidden="true" class="flow-arrow">→</span><span>PDF</span></div></div></div>
+
+<ul class="facts">
+<li><span aria-hidden="true" class="card-label" data-presentation="">// 01</span><strong>C library and CLI:</strong><span class="fact-body"> embed the public C API or run <code>xml2pdf</code>. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L7">README.md:5-7@ec84339</a></span></span></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// 02</span><strong>Streaming processing:</strong><span class="fact-body"> parser and built-in report state do not collect the whole document; PDF object offsets are spooled to disk. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L271">README.md:271@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L292">README.md:292@ec84339</a></span></span></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// 03</span><strong>Peak converter RSS ≤ 4 MiB on the documented synthetic workloads:</strong><span class="fact-body"> the CI resources job enforces this ceiling. This is a workload-specific acceptance gate, not a guarantee for every input, font, custom mapper or host. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L296">README.md:296@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/.github/workflows/ci.yml#L101-L116">.github/workflows/ci.yml:101-116@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/wiki/features--resource-limits">Resource limits wiki</a></span></span></li>
 </ul>
 </section>
-<section id="when-to-use"><h2>When to use / When not to use</h2>
-<h3>When to use</h3>
+<section id="when-to-use"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">02 <span class="label-line"></span><span class="label-name">USE / NOT</span></span><h2>When to use / When not to use</h2></div>
+<div class="use-columns"><div class="content-column"><h3>When to use</h3>
 <ul>
-<li>You need a library or CLI on <strong>64-bit Linux with glibc</strong>, using GCC or Clang and a GNU-compatible linker. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L13-L25">README.md:13-25@ec84339</a></li>
-<li>You can supply the project's <code>report-v1</code> schema for sequential named fields, use <code>records-v1</code> for diagnostic element/attribute/text output, or write a mapper for your schema. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L7">README.md:7@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></li>
-<li>Your input is UTF-8 and your body text fits the documented DejaVu Sans repertoire, including Latin and Cyrillic. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L275-L277">README.md:275-277@ec84339</a></li>
-<li>You need file conversion or stdin/stdout pipelines, with atomic publication for a file destination. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L35-L54">README.md:35-54@ec84339</a></li>
+<li>You need a library or CLI on <strong>64-bit Linux with glibc</strong>, using GCC or Clang and a GNU-compatible linker. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L13-L25">README.md:13-25@ec84339</a></span></li>
+<li>You can supply the project's <code>report-v1</code> schema for sequential named fields, use <code>records-v1</code> for diagnostic element/attribute/text output, or write a mapper for your schema. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L7">README.md:7@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></span></li>
+<li>Your input is UTF-8 and your body text fits the documented DejaVu Sans repertoire, including Latin and Cyrillic. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L275-L277">README.md:275-277@ec84339</a></span></li>
+<li>You need file conversion or stdin/stdout pipelines, with atomic publication for a file destination. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L35-L54">README.md:35-54@ec84339</a></span></li>
 </ul>
-<h3>When not to use</h3>
+</div><div class="content-column"><h3>When not to use</h3>
 <ul>
-<li><strong>Other platforms:</strong> macOS, musl/Alpine, BSD and Windows are unsupported. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L13-L22">README.md:13-22@ec84339</a></li>
-<li><strong>A full XML processor:</strong> this is a documented XML subset. External DTDs/entities are never loaded and internal entity declarations are not expanded. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L273-L275">README.md:273-275@ec84339</a></li>
-<li><strong>UTF-16 input:</strong> only UTF-8 is supported. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L275">README.md:275@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></li>
-<li><strong>Namespaced report input:</strong> <code>report-v1</code> rejects namespace prefixes and declarations except the predefined <code>xml:space</code> field attribute. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L29-L31">docs/report-v1.md:29-31@ec84339</a></li>
-<li><strong>Tables, global sorting or XSL-FO:</strong> layout is sequential text blocks; these features are outside the contract. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></li>
-<li><strong>Arbitrary scripts or text shaping:</strong> body text is limited to the documented font repertoire, without shaping, composition or normalization. Characters outside it fail instead of receiving a fallback glyph. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L277">README.md:277@ec84339</a></li>
-<li><strong>Archival or accessible PDF conformance:</strong> the project makes no PDF/A or PDF/UA claim. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L90">README.md:90@ec84339</a></li>
-<li><strong>Automatic conversion of an unknown XML schema:</strong> schemas other than the built-in profiles need an adapter. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L7">README.md:7@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></li>
-<li><strong>Rollback of streamed output:</strong> stdout and callback bytes already delivered cannot be recalled after a late error. Check success before using the PDF. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L47">README.md:47@ec84339</a></li>
+<li><strong>Other platforms:</strong> macOS, musl/Alpine, BSD and Windows are unsupported. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L13-L22">README.md:13-22@ec84339</a></span></li>
+<li><strong>A full XML processor:</strong> this is a documented XML subset. External DTDs/entities are never loaded and internal entity declarations are not expanded. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L273-L275">README.md:273-275@ec84339</a></span></li>
+<li><strong>UTF-16 input:</strong> only UTF-8 is supported. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L275">README.md:275@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></span></li>
+<li><strong>Namespaced report input:</strong> <code>report-v1</code> rejects namespace prefixes and declarations except the predefined <code>xml:space</code> field attribute. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L29-L31">docs/report-v1.md:29-31@ec84339</a></span></li>
+<li><strong>Tables, global sorting or XSL-FO:</strong> layout is sequential text blocks; these features are outside the contract. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></span></li>
+<li><strong>Arbitrary scripts or text shaping:</strong> body text is limited to the documented font repertoire, without shaping, composition or normalization. Characters outside it fail instead of receiving a fallback glyph. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L277">README.md:277@ec84339</a></span></li>
+<li><strong>Archival or accessible PDF conformance:</strong> the project makes no PDF/A or PDF/UA claim. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L90">README.md:90@ec84339</a></span></li>
+<li><strong>Automatic conversion of an unknown XML schema:</strong> schemas other than the built-in profiles need an adapter. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L7">README.md:7@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></span></li>
+<li><strong>Rollback of streamed output:</strong> stdout and callback bytes already delivered cannot be recalled after a late error. Check success before using the PDF. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L47">README.md:47@ec84339</a></span></li>
 </ul>
-</section>
-<section id="measured-numbers"><h2>Measured numbers</h2>
-<p>These are the OSR-82 historical measurements of <strong><code>de8ba0eeb39c9f35cb9dff2ecb576b689efd0fd4</code></strong>, before the later memory changes, <strong>not measurements of the current source snapshot</strong>. RSS is the median of five ordinary converter runs, measured by GNU time; Massif heap measurements are separate. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L3-L11">docs/evidence/osr-82-heap-profile/README.md:3-11@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L47-L55">docs/evidence/osr-82-heap-profile/README.md:47-55@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/wiki/by-the-numbers#measurements-are-revision-scoped">Revision scope in the wiki</a></p>
-<table>
+</div></div></section>
+<section id="measured-numbers"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">03 <span class="label-line"></span><span class="label-name">NUMBERS</span></span><h2>Measured numbers</h2></div>
+<p>These are the OSR-82 historical measurements of <strong><code>de8ba0eeb39c9f35cb9dff2ecb576b689efd0fd4</code></strong>, before the later memory changes, <strong>not measurements of the current source snapshot</strong>. RSS is the median of five ordinary converter runs, measured by GNU time; Massif heap measurements are separate. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L3-L11">docs/evidence/osr-82-heap-profile/README.md:3-11@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L47-L55">docs/evidence/osr-82-heap-profile/README.md:47-55@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/wiki/by-the-numbers#measurements-are-revision-scoped">Revision scope in the wiki</a></span></p>
+<span class="scroll-hint" data-presentation="">← scroll table →</span><div aria-label="Historical measurements: scroll horizontally to see all columns" class="table-scroll" role="region" tabindex="0"><table>
 <thead>
 <tr>
 <th scope="col">Scenario</th>
@@ -93,7 +95,7 @@
 <td>2,728</td>
 <td><code>de8ba0e</code></td>
 <td>CPU/RAM not recorded</td>
-<td><code>report-full</code> below; <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L19-L22">docs/evidence/osr-82-heap-profile/README.md:19-22@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L51">docs/evidence/osr-82-heap-profile/README.md:51@ec84339</a></td>
+<td><code>report-full</code> below; <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L19-L22">docs/evidence/osr-82-heap-profile/README.md:19-22@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L51">docs/evidence/osr-82-heap-profile/README.md:51@ec84339</a></span></td>
 </tr>
 <tr>
 <td><code>records-v1</code>, full output</td>
@@ -101,7 +103,7 @@
 <td>2,688</td>
 <td><code>de8ba0e</code></td>
 <td>CPU/RAM not recorded</td>
-<td><code>records-full</code> below; <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L25-L28">docs/evidence/osr-82-heap-profile/README.md:25-28@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L52">docs/evidence/osr-82-heap-profile/README.md:52@ec84339</a></td>
+<td><code>records-full</code> below; <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L25-L28">docs/evidence/osr-82-heap-profile/README.md:25-28@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L52">docs/evidence/osr-82-heap-profile/README.md:52@ec84339</a></span></td>
 </tr>
 <tr>
 <td><code>report-v1</code>, first 1,000 records from the same input</td>
@@ -109,121 +111,121 @@
 <td>2,728</td>
 <td><code>de8ba0e</code></td>
 <td>CPU/RAM not recorded</td>
-<td><code>report-selection</code> below; <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L19-L22">docs/evidence/osr-82-heap-profile/README.md:19-22@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L53">docs/evidence/osr-82-heap-profile/README.md:53@ec84339</a></td>
+<td><code>report-selection</code> below; <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L19-L22">docs/evidence/osr-82-heap-profile/README.md:19-22@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L53">docs/evidence/osr-82-heap-profile/README.md:53@ec84339</a></span></td>
 </tr>
 </tbody>
-</table>
-<p>The recorded compiler is GCC (Debian 14.2.0-19) 14.2.0. The evidence's environment record does not identify CPU or RAM, so those details cannot be supplied for this run. The table is retained as a historical baseline with incomplete hardware provenance. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L5-L11">docs/evidence/osr-82-heap-profile/README.md:5-11@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/environment.txt#L1-L4">docs/evidence/osr-82-heap-profile/environment.txt:1-4@ec84339</a></p>
-<p>To reproduce those historical scenarios, check out the measured revision in a separate clone, build there and use its bundled font. The generation target is 16,777,216 bytes; the generator completes the last record, producing the actual sizes above. The following expands the evidence's <code>PROFILE</code>, <code>[extra]</code>, <code>INPUT</code> and <code>OUTPUT</code> placeholders for each scenario. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L3-L36">docs/evidence/osr-82-heap-profile/README.md:3-36@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L47-L53">docs/evidence/osr-82-heap-profile/README.md:47-53@ec84339</a></p>
-<pre><code class="language-sh">git checkout de8ba0eeb39c9f35cb9dff2ecb576b689efd0fd4
+</table></div>
+<div class="measurement-notes"><p>The recorded compiler is GCC (Debian 14.2.0-19) 14.2.0. The evidence's environment record does not identify CPU or RAM, so those details cannot be supplied for this run. The table is retained as a historical baseline with incomplete hardware provenance. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L5-L11">docs/evidence/osr-82-heap-profile/README.md:5-11@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/environment.txt#L1-L4">docs/evidence/osr-82-heap-profile/environment.txt:1-4@ec84339</a></span></p><p>To reproduce those historical scenarios, check out the measured revision in a separate clone, build there and use its bundled font. The generation target is 16,777,216 bytes; the generator completes the last record, producing the actual sizes above. The following expands the evidence's <code>PROFILE</code>, <code>[extra]</code>, <code>INPUT</code> and <code>OUTPUT</code> placeholders for each scenario. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L3-L36">docs/evidence/osr-82-heap-profile/README.md:3-36@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md#L47-L53">docs/evidence/osr-82-heap-profile/README.md:47-53@ec84339</a></span></p></div>
+
+<div class="code-block"><div class="code-bar" data-presentation="">shell</div><pre aria-label="Shell commands" tabindex="0"><code class="language-sh">git checkout de8ba0eeb39c9f35cb9dff2ecb576b689efd0fd4
 make xml2pdf libki_xml_pdf.so
-python3 tests/resource_recipe.py --profile report-v1 --target-bytes 16777216 --out r16-report.xml
-python3 tests/resource_recipe.py --profile records-v1 --target-bytes 16777216 --out r16-records.xml
-# report-full
-/usr/bin/time -f %M ./xml2pdf --font fonts/DejaVuSans.ttf --profile report-v1 --max-pages 0 --max-output-bytes 0 r16-report.xml report-full.pdf
-# records-full
-/usr/bin/time -f %M ./xml2pdf --font fonts/DejaVuSans.ttf --profile records-v1 --max-pages 0 --max-output-bytes 0 r16-records.xml records-full.pdf
-# report-selection
-/usr/bin/time -f %M ./xml2pdf --font fonts/DejaVuSans.ttf --profile report-v1 --max-pages 0 --max-output-bytes 0 --record-limit 1000 r16-report.xml report-selection.pdf
-</code></pre>
-<p>The current acceptance gate is separate from that historical table: <strong>4,096 KiB converter RSS</strong> on the documented synthetic workload. Output size, disk spool and elapsed work grow with rendered content; selection still reads and validates the entire input. No comparison with other converters has been measured. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L296">README.md:296@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L305">README.md:305@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L57">README.md:57@ec84339</a></p>
+python3 tests/resource_recipe.py --profile report-v1 --target-bytes <span class="code-number">16777216</span> --out r16-report.xml
+python3 tests/resource_recipe.py --profile records-v1 --target-bytes <span class="code-number">16777216</span> --out r16-records.xml
+<span class="code-comment"># report-full
+</span>/usr/bin/time -f %M ./xml2pdf --font fonts/DejaVuSans.ttf --profile report-v1 --max-pages <span class="code-number">0</span> --max-output-bytes <span class="code-number">0</span> r16-report.xml report-full.pdf
+<span class="code-comment"># records-full
+</span>/usr/bin/time -f %M ./xml2pdf --font fonts/DejaVuSans.ttf --profile records-v1 --max-pages <span class="code-number">0</span> --max-output-bytes <span class="code-number">0</span> r16-records.xml records-full.pdf
+<span class="code-comment"># report-selection
+</span>/usr/bin/time -f %M ./xml2pdf --font fonts/DejaVuSans.ttf --profile report-v1 --max-pages <span class="code-number">0</span> --max-output-bytes <span class="code-number">0</span> --record-limit <span class="code-number">1000</span> r16-report.xml report-selection.pdf
+</code></pre></div>
+<p class="current-gate"><span class="card-label" data-presentation="">CURRENT ACCEPTANCE GATE</span>The current acceptance gate is separate from that historical table: <strong>4,096 KiB converter RSS</strong> on the documented synthetic workload. Output size, disk spool and elapsed work grow with rendered content; selection still reads and validates the entire input. No comparison with other converters has been measured. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L296">README.md:296@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L305">README.md:305@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L57">README.md:57@ec84339</a></span></p>
 </section>
-<section id="install"><h2>Install</h2>
-<p>Use 64-bit Linux/glibc with GCC or Clang, GNU Make, a GNU-compatible linker and zlib development files (<code>zlib1g-dev</code> on Debian/Ubuntu). CMake and pkg-config are required for the respective integrations below. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L23">README.md:23@ec84339</a></p>
-<h3>Make</h3>
-<p>Start in a new working directory. The checkout is pinned to the source snapshot used for this page, <code>ec84339db401685f60dae56a610bc4d77e831f2a</code>. The Make workflow installs the CLI, public header, static/shared libraries, package metadata, font and license notices. Use the same prefix for build and install so the installed font can be found. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L102-L109">README.md:102-109@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/Makefile#L78-L95">Makefile:78-95@ec84339</a></p>
-<pre><code class="language-sh">git clone --branch main https://github.com/artemklen/ki_xml_pdf.git
-cd ki_xml_pdf
+<section id="install"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">04 <span class="label-line"></span><span class="label-name">INSTALL</span></span><h2>Install</h2></div>
+<p>Use 64-bit Linux/glibc with GCC or Clang, GNU Make, a GNU-compatible linker and zlib development files (<code>zlib1g-dev</code> on Debian/Ubuntu). CMake and pkg-config are required for the respective integrations below. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L23">README.md:23@ec84339</a></span></p>
+<div class="install-columns"><div class="content-column"><h3>Make</h3>
+<p>Start in a new working directory. The checkout is pinned to the source snapshot used for this page, <code>ec84339db401685f60dae56a610bc4d77e831f2a</code>. The Make workflow installs the CLI, public header, static/shared libraries, package metadata, font and license notices. Use the same prefix for build and install so the installed font can be found. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L102-L109">README.md:102-109@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/Makefile#L78-L95">Makefile:78-95@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">shell</div><pre aria-label="Shell commands" tabindex="0"><code class="language-sh">git clone --branch main https://github.com/artemklen/ki_xml_pdf.git
+<span class="code-func">cd</span> ki_xml_pdf
 git checkout ec84339db401685f60dae56a610bc4d77e831f2a
-prefix="$HOME/.local"
-make PREFIX="$prefix"
-make install PREFIX="$prefix"
-export PATH="$prefix/bin:$PATH"
-</code></pre>
-<h3>pkg-config</h3>
-<p>Continue from the source directory in the same shell. Build and run the repository's C report example against the installed shared library in an external directory. <code>LD_LIBRARY_PATH</code> supplies its runtime library search path. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L125-L142">README.md:125-142@ec84339</a></p>
-<pre><code class="language-sh">export PKG_CONFIG_PATH="$prefix/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-export LD_LIBRARY_PATH="$(pkg-config --variable=libdir ki_xml_pdf)${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-consumer_dir="$(mktemp -d)"
-cp examples/report.c examples/report-v1.xml "$consumer_dir/"
-cd "$consumer_dir"
-cc report.c $(pkg-config --cflags --libs ki_xml_pdf) -o report-shared
+prefix=<span class="code-string">"</span>$HOME<span class="code-string">/.local</span><span class="code-string">"</span>
+make PREFIX=<span class="code-string">"</span>$prefix<span class="code-string">"</span>
+make install PREFIX=<span class="code-string">"</span>$prefix<span class="code-string">"</span>
+<span class="code-func">export</span> PATH=<span class="code-string">"</span>$prefix<span class="code-string">/bin:</span>$PATH<span class="code-string">"</span>
+</code></pre></div>
+</div><div class="content-column"><h3>pkg-config</h3>
+<p>Continue from the source directory in the same shell. Build and run the repository's C report example against the installed shared library in an external directory. <code>LD_LIBRARY_PATH</code> supplies its runtime library search path. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L125-L142">README.md:125-142@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">shell</div><pre aria-label="Shell commands" tabindex="0"><code class="language-sh"><span class="code-func">export</span> PKG_CONFIG_PATH=<span class="code-string">"</span>$prefix<span class="code-string">/lib/pkgconfig</span><span class="code-string">${</span>PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH<span class="code-string">}</span><span class="code-string">"</span>
+<span class="code-func">export</span> LD_LIBRARY_PATH=<span class="code-string">"</span><span class="code-keyword">$(</span>pkg-config --variable=libdir ki_xml_pdf<span class="code-keyword">)</span><span class="code-string">${</span>LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH<span class="code-string">}</span><span class="code-string">"</span>
+consumer_dir=<span class="code-string">"</span><span class="code-keyword">$(</span>mktemp -d<span class="code-keyword">)</span><span class="code-string">"</span>
+cp examples/report.c examples/report-v1.xml <span class="code-string">"</span>$consumer_dir<span class="code-string">/</span><span class="code-string">"</span>
+<span class="code-func">cd</span> <span class="code-string">"</span>$consumer_dir<span class="code-string">"</span>
+cc report.c <span class="code-keyword">$(</span>pkg-config --cflags --libs ki_xml_pdf<span class="code-keyword">)</span> -o report-shared
 ./report-shared report-v1.xml report-shared.pdf
-</code></pre>
-<h3>CMake find_package</h3>
-<p>Save this as <code>CMakeLists.txt</code> in that consumer directory. This is the README's installed CMake consumer reduced to its C report target. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L156-L166">README.md:156-166@ec84339</a></p>
-<pre><code class="language-cmake">cmake_minimum_required(VERSION 3.16)
-project(ki_consumer LANGUAGES C)
-find_package(ki_xml_pdf CONFIG REQUIRED)
-add_executable(report-client report.c)
-target_link_libraries(report-client PRIVATE ki_xml_pdf::ki_xml_pdf)
-</code></pre>
-<p>Build and run with the installed shared target, then select the installed static variant. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L170-L181">README.md:170-181@ec84339</a></p>
-<pre><code class="language-sh">cmake -S . -B shared -DCMAKE_PREFIX_PATH="$prefix"
+</code></pre></div>
+</div><div class="content-column"><h3>CMake find_package</h3>
+<p>Save this as <code>CMakeLists.txt</code> in that consumer directory. This is the README's installed CMake consumer reduced to its C report target. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L156-L166">README.md:156-166@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">CMake</div><pre aria-label="CMake configuration" tabindex="0"><code class="language-cmake"><span class="code-func">cmake_minimum_required</span>(<span class="code-string">VERSION</span> <span class="code-string">3.16</span>)
+<span class="code-func">project</span>(<span class="code-string">ki_consumer</span> <span class="code-string">LANGUAGES</span> <span class="code-string">C</span>)
+<span class="code-func">find_package</span>(<span class="code-string">ki_xml_pdf</span> <span class="code-string">CONFIG</span> <span class="code-string">REQUIRED</span>)
+<span class="code-func">add_executable</span>(<span class="code-string">report-client</span> <span class="code-string">report.c</span>)
+<span class="code-func">target_link_libraries</span>(<span class="code-string">report-client</span> <span class="code-string">PRIVATE</span> <span class="code-string">ki_xml_pdf::ki_xml_pdf</span>)
+</code></pre></div>
+<p>Build and run with the installed shared target, then select the installed static variant. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L170-L181">README.md:170-181@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">shell</div><pre aria-label="Shell commands" tabindex="0"><code class="language-sh">cmake -S . -B shared -DCMAKE_PREFIX_PATH=<span class="code-string">"</span>$prefix<span class="code-string">"</span>
 cmake --build shared
 ./shared/report-client report-v1.xml cmake-shared.pdf
-cmake -S . -B static -DCMAKE_PREFIX_PATH="$prefix" -Dki_xml_pdf_USE_STATIC_LIBS=ON
+cmake -S . -B static -DCMAKE_PREFIX_PATH=<span class="code-string">"</span>$prefix<span class="code-string">"</span> -Dki_xml_pdf_USE_STATIC_LIBS=ON
 cmake --build static
 ./static/report-client report-v1.xml cmake-static.pdf
-</code></pre>
-</section>
-<section id="usage"><h2>Usage</h2>
-<h3>CLI: file and stdin/stdout</h3>
-<p>Continue in the consumer directory created above; it contains the repository's <code>report-v1.xml</code> fixture. <code>-</code> selects stdin or stdout. During conversion stdout contains PDF bytes and diagnostics go to stderr. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L35-L45">README.md:35-45@ec84339</a></p>
-<pre><code class="language-sh">xml2pdf --profile report-v1 report-v1.xml report.pdf
+</code></pre></div>
+</div></div></section>
+<section id="usage"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">05 <span class="label-line"></span><span class="label-name">USAGE</span></span><h2>Usage</h2></div>
+<div class="usage-columns"><div class="content-column"><h3>CLI: file and stdin/stdout</h3>
+<p>Continue in the consumer directory created above; it contains the repository's <code>report-v1.xml</code> fixture. <code>-</code> selects stdin or stdout. During conversion stdout contains PDF bytes and diagnostics go to stderr. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L35-L45">README.md:35-45@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">shell</div><pre aria-label="Shell commands" tabindex="0"><code class="language-sh">xml2pdf --profile report-v1 report-v1.xml report.pdf
 cat report-v1.xml | xml2pdf --profile report-v1 - from-stdin.pdf
 xml2pdf --profile report-v1 report-v1.xml - &gt; from-file.pdf
 cat report-v1.xml | xml2pdf --profile report-v1 - - &gt; pipeline.pdf
-</code></pre>
-<p>Check the converter exit status. A successful file conversion publishes the complete PDF atomically; a late error on stdout can leave a partial PDF. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L47">README.md:47@ec84339</a></p>
-<h3>C API</h3>
-<p>The complete <code>report.c</code> example copied during Install is shown below unchanged. It initializes options, selects the report profile and reports conversion errors. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/examples/report.c#L1-L22">examples/report.c:1-22@ec84339</a></p>
-<pre><code class="language-c">#include "ki_xml_pdf.h"
+</code></pre></div>
+<p>Check the converter exit status. A successful file conversion publishes the complete PDF atomically; a late error on stdout can leave a partial PDF. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L47">README.md:47@ec84339</a></span></p>
+</div><div class="content-column"><h3>C API</h3>
+<p>The complete <code>report.c</code> example copied during Install is shown below unchanged. It initializes options, selects the report profile and reports conversion errors. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/examples/report.c#L1-L22">examples/report.c:1-22@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">C</div><pre aria-label="C source example" tabindex="0"><code class="language-c"><span class="code-keyword">#</span><span class="code-keyword">include</span> <span class="code-string">"ki_xml_pdf.h"</span><span class="code-keyword">
+</span>
+<span class="code-keyword">#</span><span class="code-keyword">include</span> <span class="code-string">&lt;stdio.h&gt;</span><span class="code-keyword">
+</span>
+<span class="code-comment">/* xml2pdf --profile report-v1 is the CLI. This file is the same choice through the API. */</span>
 
-#include &lt;stdio.h&gt;
-
-/* xml2pdf --profile report-v1 is the CLI. This file is the same choice through the API. */
-
-int main(int argc, char **argv) {
-    const char *in = argc &gt; 1 ? argv[1] : "examples/report-v1.xml";
-    const char *out = argc &gt; 2 ? argv[2] : "report.pdf";
+<span class="code-keyword">int</span> <span class="code-func">main</span>(<span class="code-keyword">int</span> argc, <span class="code-keyword">char</span> **argv) {
+    <span class="code-keyword">const</span> <span class="code-keyword">char</span> *in = argc &gt; <span class="code-number">1</span> ? argv[<span class="code-number">1</span>] : <span class="code-string">"</span><span class="code-string">examples/report-v1.xml</span><span class="code-string">"</span>;
+    <span class="code-keyword">const</span> <span class="code-keyword">char</span> *out = argc &gt; <span class="code-number">2</span> ? argv[<span class="code-number">2</span>] : <span class="code-string">"</span><span class="code-string">report.pdf</span><span class="code-string">"</span>;
     KiOptions opt;
     ki_options_init(&amp;opt);
     opt.profile = KI_PROFILE_REPORT;
     KiResult result;
-    int rc = ki_convert_file(in, out, &amp;opt, &amp;result);
-    if (rc != 0) {
-        fprintf(stderr, "report: %s\n", result.message);
-        return rc;
+    <span class="code-keyword">int</span> rc = ki_convert_file(in, out, &amp;opt, &amp;result);
+    <span class="code-keyword">if</span> (rc != <span class="code-number">0</span>) {
+        fprintf(stderr, <span class="code-string">"</span><span class="code-string">report: %s</span><span class="code-string">\n</span><span class="code-string">"</span>, result.message);
+        <span class="code-keyword">return</span> rc;
     }
-    printf("pages=%d total=%llu selected=%llu skipped=%llu\n", result.pages, result.report_total,
+    printf(<span class="code-string">"</span><span class="code-string">pages=%d total=%llu selected=%llu skipped=%llu</span><span class="code-string">\n</span><span class="code-string">"</span>, result.pages, result.report_total,
            result.report_selected, result.report_skipped);
-    return 0;
+    <span class="code-keyword">return</span> <span class="code-number">0</span>;
 }
-</code></pre>
-<p>Compile that example and convert the fixture with the installed package. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L139-L142">README.md:139-142@ec84339</a></p>
-<pre><code class="language-sh">cc report.c $(pkg-config --cflags --libs ki_xml_pdf) -o report-api
+</code></pre></div>
+<p>Compile that example and convert the fixture with the installed package. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L139-L142">README.md:139-142@ec84339</a></span></p>
+<div class="code-block"><div class="code-bar" data-presentation="">shell</div><pre aria-label="Shell commands" tabindex="0"><code class="language-sh">cc report.c <span class="code-keyword">$(</span>pkg-config --cflags --libs ki_xml_pdf<span class="code-keyword">)</span> -o report-api
 ./report-api report-v1.xml report-api.pdf
-</code></pre>
-<p>The built-in report profile uses a fixed Russian record label even when field names and values are English. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L39">docs/report-v1.md:39@ec84339</a></p>
+</code></pre></div>
+<p>The built-in report profile uses a fixed Russian record label even when field names and values are English. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md#L39">docs/report-v1.md:39@ec84339</a></span></p>
+</div></div></section>
+<section id="custom-xml-schema"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">06 <span class="label-line"></span><span class="label-name">SCHEMA</span></span><h2>Custom XML schema</h2></div>
+<div class="schema-columns"><div class="schema-text"><p>Start with the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md">mapper guide</a>. The working catalog adapter demonstrates a project-owned schema through the public API without changing the parser, layout or PDF writer. It is an example to adapt, not automatic support for unknown schemas. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></span></p><p>Mapper events are borrowed for the duration of the callback. Keep bounded mapper state, emit text through <code>ki_doc_text</code> / <code>ki_doc_break</code>, and report schema failures with <code>ki_doc_fail</code>. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L245">README.md:245@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/wiki/features--custom-mappers">Custom mappers wiki</a></span></p></div><a class="mapper-card" data-presentation="" href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md"><span class="card-label">↗ docs</span><strong>mapper guide →</strong><span>docs/mapper-guide.md</span></a></div>
+
 </section>
-<section id="custom-xml-schema"><h2>Custom XML schema</h2>
-<p>Start with the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md">mapper guide</a>. The working catalog adapter demonstrates a project-owned schema through the public API without changing the parser, layout or PDF writer. It is an example to adapt, not automatic support for unknown schemas. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></p>
-<p>Mapper events are borrowed for the duration of the callback. Keep bounded mapper state, emit text through <code>ki_doc_text</code> / <code>ki_doc_break</code>, and report schema failures with <code>ki_doc_fail</code>. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L245">README.md:245@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/wiki/features--custom-mappers">Custom mappers wiki</a></p>
-</section>
-<section id="comparison-guidance"><h2>Comparison guidance</h2>
+<section id="comparison-guidance"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">07 <span class="label-line"></span><span class="label-name">COMPARE</span></span><h2>Comparison guidance</h2></div>
 <p>Use the documented limits to decide whether to evaluate another tool:</p>
 <ul>
-<li>For tables, global sorting or an XSL-FO workflow, look for a converter whose documented contract covers those requirements; they are outside ki_xml_pdf's scope. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></li>
-<li>For a platform other than Linux/glibc, seek a library that explicitly supports your deployment target. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L13-L22">README.md:13-22@ec84339</a></li>
-<li>For PDF/A or PDF/UA conformance, choose a workflow with an explicit conformance claim and validation; ki_xml_pdf makes neither claim. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L90">README.md:90@ec84339</a></li>
-<li>For body text beyond the documented repertoire or for shaping, evaluate a text engine that documents those needs. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L277">README.md:277@ec84339</a></li>
-<li>For an existing XML vocabulary, budget for a mapper here or evaluate a converter that explicitly documents that vocabulary. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// IF 01</span>For tables, global sorting or an XSL-FO workflow, look for a converter whose documented contract covers those requirements; they are outside ki_xml_pdf's scope. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></span></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// IF 02</span>For a platform other than Linux/glibc, seek a library that explicitly supports your deployment target. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L13-L22">README.md:13-22@ec84339</a></span></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// IF 03</span>For PDF/A or PDF/UA conformance, choose a workflow with an explicit conformance claim and validation; ki_xml_pdf makes neither claim. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L90">README.md:90@ec84339</a></span></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// IF 04</span>For body text beyond the documented repertoire or for shaping, evaluate a text engine that documents those needs. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L277">README.md:277@ec84339</a></span></li>
+<li><span aria-hidden="true" class="card-label" data-presentation="">// IF 05</span>For an existing XML vocabulary, budget for a mapper here or evaluate a converter that explicitly documents that vocabulary. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md#L3-L6">docs/mapper-guide.md:3-6@ec84339</a></span></li>
 </ul>
-<p>These are selection criteria, not claims about any named competing library. The repository reports no measured adoption or comparisons with other converters. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></p>
+<p>These are selection criteria, not claims about any named competing library. The repository reports no measured adoption or comparisons with other converters. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L316">README.md:316@ec84339</a></span></p>
 </section>
-<section id="license-links-contributing-security"><h2>License, links, contributing, security</h2>
-<p>Project source and original examples use the <strong>MIT license</strong>. The bundled DejaVu Sans font has a separate license notice. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L3">CONTRIBUTING.md:3@ec84339</a></p>
+<section id="license-links-contributing-security"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">08 <span class="label-line"></span><span class="label-name">LICENSE</span></span><h2>License, links, contributing, security</h2></div>
+<p>Project source and original examples use the <strong>MIT license</strong>. The bundled DejaVu Sans font has a separate license notice. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L3">CONTRIBUTING.md:3@ec84339</a></span></p>
 <ul>
 <li><a href="https://github.com/artemklen/ki_xml_pdf">Source repository</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md">English README</a></li>
@@ -236,8 +238,8 @@ int main(int argc, char **argv) {
 <li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a></li>
 <li><a href="https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml">CI checks</a></li>
 </ul>
-<p>For ordinary bugs, use <a href="https://github.com/artemklen/ki_xml_pdf/issues">GitHub Issues</a> with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately as described in the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a>, with the affected revision, impact and reproduction steps; do not publish security details in an issue. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18">CONTRIBUTING.md:7-18@ec84339</a></p>
-<p>Version <strong>0.3.0</strong> is read from the public header. The security policy supports only the latest minor release before the stable API; older minor releases are unsupported. <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h#L43">include/ki_xml_pdf.h:43@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md#L3-L14">SECURITY.md:3-14@ec84339</a></p></section>
+<div class="security-columns"><p>For ordinary bugs, use <a href="https://github.com/artemklen/ki_xml_pdf/issues">GitHub Issues</a> with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately as described in the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a>, with the affected revision, impact and reproduction steps; do not publish security details in an issue. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18">CONTRIBUTING.md:7-18@ec84339</a></span></p><p>Version <strong>0.3.0</strong> is read from the public header. The security policy supports only the latest minor release before the stable API; older minor releases are unsupported. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h#L43">include/ki_xml_pdf.h:43@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md#L3-L14">SECURITY.md:3-14@ec84339</a></span></p></div>
+<footer class="footer-line" data-presentation=""><picture><source media="(prefers-color-scheme: dark)" srcset="assets/favicon-16-dark.svg"/><img alt="" height="16" src="assets/favicon-16-light.svg" width="16"/></picture><span>xml2pdf.aklen.me · ki_xml_pdf 0.3.0 · MIT</span></footer></section>
 </main>
 </body>
 </html>
