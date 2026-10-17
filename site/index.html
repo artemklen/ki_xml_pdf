@@ -180,9 +180,9 @@ cat report-v1.xml | xml2pdf --profile report-v1 - - &gt; pipeline.pdf
 <p>Check the converter exit status. A successful file conversion publishes the complete PDF atomically; a late error on stdout can leave a partial PDF. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L47">README.md:47@ec84339</a></span></p>
 </div><div class="content-column"><h3>C API</h3>
 <p>The complete <code>report.c</code> example copied during Install is shown below unchanged. It initializes options, selects the report profile and reports conversion errors. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/examples/report.c#L1-L22">examples/report.c:1-22@ec84339</a></span></p>
-<div class="code-block"><div class="code-bar" data-presentation="">C</div><pre aria-label="C source example" tabindex="0"><code class="language-c"><span class="code-comment">#</span><span class="code-comment">include</span> <span class="code-comment">"ki_xml_pdf.h"</span><span class="code-comment">
+<div class="code-block"><div class="code-bar" data-presentation="">C</div><pre aria-label="C source example" tabindex="0"><code class="language-c"><span class="code-keyword">#</span><span class="code-keyword">include</span> <span class="code-string">"ki_xml_pdf.h"</span><span class="code-keyword">
 </span>
-<span class="code-comment">#</span><span class="code-comment">include</span> <span class="code-comment">&lt;stdio.h&gt;</span><span class="code-comment">
+<span class="code-keyword">#</span><span class="code-keyword">include</span> <span class="code-string">&lt;stdio.h&gt;</span><span class="code-keyword">
 </span>
 <span class="code-comment">/* xml2pdf --profile report-v1 is the CLI. This file is the same choice through the API. */</span>
 
@@ -227,16 +227,16 @@ cat report-v1.xml | xml2pdf --profile report-v1 - - &gt; pipeline.pdf
 <section id="license-links-contributing-security"><div class="section-heading"><span aria-hidden="true" class="section-label" data-presentation="">08 <span class="label-line"></span><span class="label-name">LICENSE</span></span><h2>License, links, contributing, security</h2></div>
 <p>Project source and original examples use the <strong>MIT license</strong>. The bundled DejaVu Sans font has a separate license notice. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L3">CONTRIBUTING.md:3@ec84339</a></span></p>
 <ul>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf">Source repository</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md">English README</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/wiki">Repository wiki</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h">Public C API</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/LICENSE">MIT license</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/fonts/DejaVuSans.copyright">Font license notice</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md">Contributing</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CODE_OF_CONDUCT.md">Code of conduct</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a></span></li>
-<li><span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml">CI checks</a></span></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf">Source repository</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md">English README</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/wiki">Repository wiki</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h">Public C API</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/LICENSE">MIT license</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/fonts/DejaVuSans.copyright">Font license notice</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md">Contributing</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CODE_OF_CONDUCT.md">Code of conduct</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a></li>
+<li><a href="https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml">CI checks</a></li>
 </ul>
 <div class="security-columns"><p>For ordinary bugs, use <a href="https://github.com/artemklen/ki_xml_pdf/issues">GitHub Issues</a> with the source revision, environment, command and a small shareable reproducer. Send vulnerability reports privately as described in the <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md">Security policy</a>, with the affected revision, impact and reproduction steps; do not publish security details in an issue. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md#L7-L18">CONTRIBUTING.md:7-18@ec84339</a></span></p><p>Version <strong>0.3.0</strong> is read from the public header. The security policy supports only the latest minor release before the stable API; older minor releases are unsupported. <span class="sources"><a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h#L43">include/ki_xml_pdf.h:43@ec84339</a> <a href="https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md#L3-L14">SECURITY.md:3-14@ec84339</a></span></p></div>
 <footer class="footer-line" data-presentation=""><picture><source media="(prefers-color-scheme: dark)" srcset="assets/favicon-16-dark.svg"/><img alt="" height="16" src="assets/favicon-16-light.svg" width="16"/></picture><span>xml2pdf.aklen.me · ki_xml_pdf 0.3.0 · MIT</span></footer></section>
