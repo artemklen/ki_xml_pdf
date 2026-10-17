@@ -42,7 +42,7 @@ A change is done when all of these hold:
 - `make test-san` is clean when memory handling changed; sanitizer runs are separate from RSS measurements.
 - `tests/build_integration.sh` passes when installed packaging changed; `make distcheck` passes when the source distribution changed.
 - The new regression fails on the pre-fix revision and passes now.
-- No regression in the 64 MiB converter RSS gate; `python3 tests/large_proof.py --self-test` passes when budgets changed.
+- No regression in the 4096 KiB (4 MiB) converter RSS gate; `python3 tests/large_proof.py --self-test` passes when budgets changed.
 - `CHANGELOG.md` and the affected docs are updated; versions remain derived from `include/ki_xml_pdf.h`.
 - CI is green on the PR head and again on the merged `main` commit.
 

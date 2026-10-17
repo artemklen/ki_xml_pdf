@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-RSS_MAX_KIB = 65536
+RSS_MAX_KIB = 4096
 PAGES_MAX = 10000
 PDF_MAX = 256 * 1024 * 1024
 SPOOL_MAX = 64 * 1024 * 1024
@@ -59,6 +59,7 @@ def self_test() -> int:
     good = expected_lines(1000)
     cases = [
         ("over-rss", judge(106912, 41, 1000, 720, good, 1000)),
+        ("over-budget", judge(RSS_MAX_KIB + 1, 41, 1000, 720, good, 1000)),
         ("over-pages", judge(2000, 10001, 1000, 720, good, 1000)),
         ("over-pdf", judge(2000, 41, PDF_MAX + 1, 720, good, 1000)),
         ("over-spool", judge(2000, 41, 1000, SPOOL_MAX + 1, good, 1000)),

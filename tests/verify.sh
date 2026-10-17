@@ -383,6 +383,7 @@ small_pages = page_count(Path(scratch / "small.pdf").read_bytes())
 
 half = large_in // 2
 cap = small_rss + 4 * 1024 * 1024
+budget_kib = 4096
 ok = (
     large_rc == 0
     and small_rc == 0
@@ -397,6 +398,7 @@ ok = (
     and last_on_later
     and large_rss < half
     and large_rss <= cap
+    and large_kb <= budget_kib
     and large_pdf > large_rss
 )
 lines = []
@@ -406,6 +408,7 @@ lines.append(f"large_input_bytes {large_in}")
 lines.append(f"small_input_bytes {small_in}")
 lines.append(f"large_pdf_bytes {large_pdf}")
 lines.append(f"large_rss_kbytes {large_kb}")
+lines.append(f"rss_budget_kib {budget_kib}")
 lines.append(f"small_rss_kbytes {small_kb}")
 lines.append(f"large_rss_bytes {large_rss}")
 lines.append(f"small_rss_bytes {small_rss}")
@@ -421,6 +424,7 @@ lines.append(f"later_page_has_LAST {int(last_on_later)}")
 lines.append(f"last_page_tail {int(b'LAST_MARKER_UNIQUE' in last or b'</root>' in last)}")
 lines.append(f"rss_under_half_input {int(large_rss < half)}")
 lines.append(f"rss_within_small_plus_4mib {int(large_rss <= cap)}")
+lines.append(f"rss_within_budget {int(large_kb <= budget_kib)}")
 lines.append(f"pdf_larger_than_rss {int(large_pdf > large_rss)}")
 lines.append(f"pass {int(ok)}")
 lines.append("--- time large ---")
@@ -428,7 +432,8 @@ lines.append(large_time.rstrip())
 lines.append("--- time small ---")
 lines.append(small_time.rstrip())
 (scratch / "mem.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-print("\\n".join(lines[:20]))
+pass_at = next(i for i, line in enumerate(lines) if line.startswith("pass "))
+print("\n".join(lines[: pass_at + 1]))
 if not ok:
     raise SystemExit("memory gate failed")
 PY

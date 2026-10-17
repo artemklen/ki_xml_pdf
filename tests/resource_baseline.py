@@ -31,7 +31,7 @@ import resource_oracle
 HERE = Path(__file__).resolve().parent
 BASE_SHA = "075455cc930a1f5e79a9ae4811e82b5c95af06c4"
 
-RSS_MAX_KIB = 65536
+RSS_MAX_KIB = 4096
 SEL_PAGES_MAX = 10000
 SEL_PDF_MAX = 256 * rm.MIB
 SPOOL_MAX = 64 * rm.MIB

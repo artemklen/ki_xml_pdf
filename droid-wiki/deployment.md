@@ -49,7 +49,7 @@ The workflow runs on the prepared PR head and again on the merged `main` commit,
 | Installed C/C++ consumers | `tests/build_integration.sh`: staging, discovery matrix, ELF linkage, font, foreign cwd |
 | Documented commands | `tests/docs_smoke.sh`: README and mapper-guide blocks executed and oracle-checked |
 | Memory safety and fuzz | Functional tests on both toolchains, ASan/UBSan with fatal diagnostics, seeded fuzz with reader checks |
-| Ordinary converter memory | `make check` 16 MiB gate, `tests/large_proof.py 1073741824` with RSS at or under 64 MiB, PDF and spool budgets |
+| Ordinary converter memory | `make check` 16 MiB gate, `tests/large_proof.py 1073741824` with RSS at or under 4096 KiB (4 MiB), PDF and spool budgets |
 | Clean archive | `make distcheck` on exact HEAD without a Git checkout |
 | Version and provenance | Header as the single version source, archive name from HEAD, CI retains archive, `SHA256SUMS` and `SOURCE_COMMIT` |
 | Common delivery | One PR with all children, full CI on the PR head, independent review, full post-merge CI on the merge commit |

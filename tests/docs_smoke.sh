@@ -28,7 +28,7 @@ source.mkdir()
 ignore = shutil.ignore_patterns("*.o", "*.d", "*.a", "*.so*", "*.pdf", "*.pyc",
     "__pycache__", ".font_prefix*", "xml2pdf", "test_stream", "test_stream_san",
     "consume", "consume_cpp", "report", "catalog")
-for name in ("src", "include", "fonts", "examples", "tests", "cmake", "docs"):
+for name in ("src", "include", "fonts", "examples", "tests", "cmake", "docs", ".github"):
     shutil.copytree(root / name, source / name, ignore=ignore)
 for path in [root / name for name in ("Makefile", "CMakeLists.txt", "libki_xml_pdf.map", "LICENSE")] + list(root.glob("*.md")):
     shutil.copy2(path, source / path.name)

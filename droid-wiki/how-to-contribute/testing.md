@@ -55,7 +55,7 @@ The script, in order:
 1. Checks CLI exit codes: `--help` and `--version` return 0, no arguments return 2, and the version line must equal the header version from `include/ki_xml_pdf.h`.
 2. Re-runs `./test_stream` and requires exactly 16 `ok` groups.
 3. Runs `./xml2pdf tests/fixture.xml` twice. An embedded Python reader decodes the PDF page streams through the embedded ToUnicode map (not Poppler) and compares the two runs for identical recovered text, page count, first/last-page markers, and unescaped entities (`alpha&beta` present, `alpha&amp;beta` absent).
-4. Builds a 16 MiB synthetic XML and measures both it and the small fixture with `/usr/bin/time -v`. The gate: large-run RSS must be under half the input size and within small-run RSS plus 4 MiB, the PDF must be larger than the RSS, and first/last markers must appear on the first and later pages. Results land in `mem.txt` in the scratch directory.
+4. Builds a 16 MiB synthetic XML and measures both it and the small fixture with `/usr/bin/time -v`. The gate: large-run RSS must be at most 4096 KiB, under half the input size, and within small-run RSS plus 4 MiB; the PDF must be larger than the RSS, and first/last markers must appear on the first and later pages. Results land in `mem.txt` in the scratch directory.
 5. Reads the run through Poppler: `pdfinfo` reports at least 2 pages, `pdftotext -layout` page 1 and the last page match expected markers, a 90-character line stays inside the 572 pt margin (`pdftotext -bbox`), Cyrillic appears in both `pdftotext` and `pdftohtml`, and an unsupported character (U+1F600) is rejected without publishing a PDF.
 6. Removes the large inputs, fails if any file over 8 MiB remains in scratch, and records tool versions plus the Git commit in `versions.txt`.
 
@@ -105,7 +105,7 @@ A bounded, seeded run (seed 20261007, 24 iterations, one to seven single-byte mu
 
 ## Large proof: `tests/large_proof.py`
 
-`python3 tests/large_proof.py 1073741824` builds a synthetic report of the requested size (default 134217728), converts it selecting 1000 records, and judges four budgets: converter RSS at most 65,536 KiB, at most 10,000 pages, a PDF of at most 256 MiB, and a spool of at most 64 MiB. The selected text must equal the generator's expected lines, including the Russian counters. The reader runs separately under `ulimit -v` of 1 GiB, and first, middle and last pages are spot-checked. `--self-test` runs negative controls against the judge (over-budget RSS, pages, PDF, spool, a missing metric, and a changed value) and fails if any is accepted. Extra cases prove offset/limit selection keeps only the chosen record and that a late invalid record preserves the previous PDF. Inputs are removed on success and failure.
+`python3 tests/large_proof.py 1073741824` builds a synthetic report of the requested size (default 134217728), converts it selecting 1000 records, and judges four budgets: converter RSS at most 4096 KiB (4 MiB), at most 10,000 pages, a PDF of at most 256 MiB, and a spool of at most 64 MiB. The selected text must equal the generator's expected lines, including the Russian counters. The reader runs separately under `ulimit -v` of 1 GiB, and first, middle and last pages are spot-checked. `--self-test` runs negative controls against the judge (over-budget RSS, pages, PDF, spool, a missing metric, and a changed value) and fails if any is accepted. Extra cases prove offset/limit selection keeps only the chosen record and that a late invalid record preserves the previous PDF. Inputs are removed on success and failure.
 
 ## Installed packages: `tests/build_integration.sh`
 
@@ -128,7 +128,7 @@ Run via `make distcheck`. It unpacks the `git archive` produced by `make dist`, 
 The rules `CONTRIBUTING.md` sets, enforced by the scripts:
 
 - Measure an ordinary, uninstrumented `xml2pdf` with `/usr/bin/time -v` (or `-f rss_kib=%M`). The XML generator, the PDF reader and the sanitizer builds are excluded.
-- The verify.sh gate is relative (below half the 16 MiB input, within the small run plus 4 MiB); the release ceiling is the 64 MiB converter RSS budget in `tests/large_proof.py`.
+- The verify.sh gate is absolute and relative: large-run RSS at most 4096 KiB, below half the 16 MiB input, and within the small run plus 4 MiB. The same 4096 KiB converter RSS budget is in `tests/large_proof.py`.
 - Historical numbers stay tied to the revision that produced them (2372 KiB on `7c62fe4`); new claims need new measurements.
 - Poppler runs under its own address-space limit, separate from the converter measurement.
 

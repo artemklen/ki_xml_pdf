@@ -4,7 +4,7 @@ Five small things about this repository that are easy to miss and easy to verify
 
 ## A gibibyte goes in, 2.3 MiB stays resident
 
-The historical large-proof run in `docs/contract.md` feeds the converter a synthetic report of 1,073,741,815 bytes, one GiB minus exactly 9 bytes. Peak converter RSS was 2,372 KiB. The input is roughly 442 times the memory used to process it, and the peak sits at 3.6% of the 64 MiB acceptance ceiling. The run read all 19,522,650 records to select the first 1,000, produced 41 pages and 1,009,241 PDF bytes in 7.61 seconds, and left an offset spool of just 720 bytes: about 18 bytes of on-disk bookkeeping per page. The whole point of the architecture is that none of these numbers grow with the input; the parser works through a fixed 4096-byte window (`src/xml_parse.c`).
+The historical large-proof run in `docs/contract.md` feeds the converter a synthetic report of 1,073,741,815 bytes, one GiB minus exactly 9 bytes. Peak converter RSS was 2,372 KiB. The input is roughly 442 times the memory used to process it, and the peak sits at 3.6% of the 64 MiB ceiling that applied to that revision. The current acceptance gate is 4096 KiB (4 MiB). The run read all 19,522,650 records to select the first 1,000, produced 41 pages and 1,009,241 PDF bytes in 7.61 seconds, and left an offset spool of just 720 bytes: about 18 bytes of on-disk bookkeeping per page. The whole point of the architecture is that none of these numbers grow with the input; the parser works through a fixed 4096-byte window (`src/xml_parse.c`).
 
 ## The PDF answers in Russian
 
