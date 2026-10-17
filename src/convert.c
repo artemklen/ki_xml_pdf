@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "platform.h"
 #include "convert.h"
 
 #include "geometry.h"

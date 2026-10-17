@@ -8,9 +8,19 @@
 
 Исторический замер на ревизии `7c62fe4`: на собственной синтетике около 1 ГиБ с выборкой первых 1000 записей RSS конвертера составила 2372 КиБ, PDF — 41 страницу / 1 009 241 байт. Без выборки сохраняются все записи; размер PDF и время зависят от содержимого. Ревизия, команды, бюджеты и границы этих измерений описаны в [контрактах](docs/contract.md). Текущий baseline на `075455c` — в разделе [«Ресурсный baseline 075455c»](#ресурсный-baseline-075455c).
 
+## Поддерживаемые платформы
+
+ki_xml_pdf собирается только на 64-bit Linux с glibc, GCC или Clang и GNU ld. Сборке нужны интерфейсы, которых нет в переносимом C:
+
+- `fopencookie` для учитывающего байты приёмника PDF (`src/pdf_write.c`, `src/convert.c`);
+- `/proc/self/exe`, чтобы найти шрифт из поставки (`src/font.c`);
+- version script и soname GNU ld (`Makefile`, `CMakeLists.txt`).
+
+macOS, musl (включая Alpine), BSD и Windows не поддерживаются. На них сборка останавливается на первом скомпилированном файле с текстом `ki_xml_pdf supports only Linux with glibc`. PR с портом на другую систему не принимается без предварительного решения; см. [CONTRIBUTING.md](CONTRIBUTING.md) и [английский раздел](README.md#supported-platforms).
+
 ## Сборка и запуск
 
-Поддерживаемый стенд: Linux 64-bit с glibc, GCC или Clang, GNU Make и заголовки zlib (Debian/Ubuntu: `zlib1g-dev`). Сборка использует GNU/POSIX API и GNU-compatible linker. Работа на других ОС не проверена.
+Поддерживаемый стенд: Linux 64-bit с glibc, GCC или Clang, GNU Make и заголовки zlib (Debian/Ubuntu: `zlib1g-dev`). Сборка использует GNU/POSIX API и GNU-compatible linker. Остальные системы перечислены в разделе [«Поддерживаемые платформы»](#поддерживаемые-платформы).
 
 ```sh
 make

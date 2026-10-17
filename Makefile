@@ -1,3 +1,7 @@
+ifneq ($(shell uname -s),Linux)
+$(error ki_xml_pdf supports only Linux with glibc)
+endif
+
 CC ?= cc
 CFLAGS ?= -std=c99 -Wall -Wextra -Wpedantic -O2 -g -fPIC -D_POSIX_C_SOURCE=200809L
 CPPFLAGS += -Isrc -Iinclude -DXML2PDF_FONT_PATH=\"$(PREFIX)/share/ki_xml_pdf/DejaVuSans.ttf\"

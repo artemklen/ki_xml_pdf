@@ -1,3 +1,4 @@
+#include "platform.h"
 #include "ki_xml_pdf.h"
 
 #include <errno.h>

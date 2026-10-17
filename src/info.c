@@ -1,3 +1,4 @@
+#include "platform.h"
 #include "info.h"
 
 #include <string.h>

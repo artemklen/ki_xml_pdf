@@ -8,12 +8,12 @@ string(REGEX REPLACE ".*\"([0-9]+\\.[0-9]+\\.[0-9]+)\".*" "\\1" KI_VERSION "${KI
 project(ki_xml_pdf VERSION "${KI_VERSION}" LANGUAGES C)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "ki_xml_pdf is validated on 64-bit Linux with glibc")
+    message(FATAL_ERROR "ki_xml_pdf supports only Linux with glibc")
 endif()
 include(CheckCSourceCompiles)
 check_c_source_compiles("#include <features.h>\n#ifndef __GLIBC__\n#error glibc required\n#endif\nint main(void) { return 0; }" KI_HAVE_GLIBC)
 if(NOT KI_HAVE_GLIBC)
-    message(FATAL_ERROR "ki_xml_pdf requires glibc (fopencookie)")
+    message(FATAL_ERROR "ki_xml_pdf supports only Linux with glibc")
 endif()
 
 include(GNUInstallDirs)

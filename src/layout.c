@@ -1,3 +1,4 @@
+#include "platform.h"
 #include "layout.h"
 
 #include "font.h"

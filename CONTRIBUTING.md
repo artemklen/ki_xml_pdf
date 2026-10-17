@@ -19,7 +19,7 @@ Send security reports directly to Artem Klen at **artem.klen@icloud.com**. Inclu
 
 ## Build and check a change
 
-The tested platform is 64-bit Linux with glibc, GCC or Clang, GNU Make, and a GNU-compatible linker. Checks require C and C++ compilers, `python3`, `/usr/bin/time`, and `readelf` (binutils) and Poppler's `pdfinfo`/`pdftotext`/`pdftohtml`; integration checks also require CMake and pkg-config. See [README.md](README.md) for copyable Make/CMake builds, installed consumers, and pipelines. [README.ru.md](README.ru.md) preserves the Russian onboarding.
+The tested platform is 64-bit Linux with glibc, GCC or Clang, GNU Make, and a GNU-compatible linker. A pull request that ports the library is not accepted without a prior maintainer decision; see [Supported platforms](README.md#supported-platforms). Checks require C and C++ compilers, `python3`, `/usr/bin/time`, and `readelf` (binutils) and Poppler's `pdfinfo`/`pdftotext`/`pdftohtml`; integration checks also require CMake and pkg-config. See [README.md](README.md) for copyable Make/CMake builds, installed consumers, and pipelines. [README.ru.md](README.ru.md) preserves the Russian onboarding.
 
 For a behavior change, add a meaningful regression that fails before the fix and checks an observable result. Run the checks appropriate to the change and report their commands, results, and source revision. Streaming and report behavior can be checked with `make check`; sanitizer coverage uses `make test-san`. Installed-package changes need the external C/C++ consumer checks, and source-distribution changes need `make distcheck`. PDF contents should be checked through an independent reader, not just by matching writer output bytes.
 

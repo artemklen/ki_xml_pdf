@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 
+#include "platform.h"
 #include "xml_parse.h"
 
 #include <stdint.h>
