@@ -64,6 +64,7 @@ required=(
     cmake/ki_xml_pdfConfigVersion.cmake.in cmake/ki_xml_pdfMakeTargets.cmake.in
     README.md README.ru.md CONTRIBUTING.md CHANGELOG.md LICENSE baseline-manifest.json
     SECURITY.md CODE_OF_CONDUCT.md
+    site/content.md site/index.html site/llms.txt site/robots.txt
     .github/workflows/ci.yml .github/workflows/release.yml .github/pull_request_template.md .gitignore
     .github/ISSUE_TEMPLATE/config.yml .github/ISSUE_TEMPLATE/bug_report.yml
     .github/ISSUE_TEMPLATE/memory_regression.yml
