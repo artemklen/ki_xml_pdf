@@ -1,0 +1,28 @@
+# ki_xml_pdf
+
+> A streaming C library and CLI for XML-to-PDF conversion on Linux with glibc. See the [source overview](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L5-L22).
+
+Use for sequential reports in the built-in XML profiles or with a custom mapper. Input must be UTF-8; body text must fit the documented font repertoire. Tables, XSL-FO, other operating systems and PDF/A or PDF/UA conformance are outside the stated scope. See [profiles and limits](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L269-L316) and [PDF conformance limits](https://github.com/artemklen/ki_xml_pdf/blob/ec84339db401685f60dae56a610bc4d77e831f2a/README.md#L90).
+
+The memory ceiling applies to documented synthetic workloads, not arbitrary inputs, fonts or mappers. Historical measurements must stay tied to their measured revision. See [resource limits](https://github.com/artemklen/ki_xml_pdf/wiki/features--resource-limits).
+
+## Documentation
+
+- [Landing page content](https://xml2pdf.aklen.me/content.md): Installation, usage, measured evidence and selection guidance.
+- [English README](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/README.md): Build, installed consumers, API and limitations.
+- [Report profile](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/docs/report-v1.md): Supported grammar, selection and whitespace.
+- [Mapper guide](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/docs/mapper-guide.md): Adapt a project-owned XML schema through the public API.
+- [Public header](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/include/ki_xml_pdf.h): Version and API contract.
+- [Repository wiki](https://github.com/artemklen/ki_xml_pdf/wiki): Architecture and implementation walkthroughs; maintained separately from the pinned source snapshot.
+
+## Evidence
+
+- [Historical heap profile](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/docs/evidence/osr-82-heap-profile/README.md): Measured revision and RSS samples; CPU/RAM were not recorded.
+- [Resource-limit wiki](https://github.com/artemklen/ki_xml_pdf/wiki/features--resource-limits): Scope of memory gates and caller quotas.
+
+## Optional
+
+- [Contributing](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/CONTRIBUTING.md): Bug reports and contribution checks.
+- [Security policy](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/SECURITY.md): Supported releases and private reporting.
+- [License](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/LICENSE): Project source license.
+- [Font notice](https://raw.githubusercontent.com/artemklen/ki_xml_pdf/ec84339db401685f60dae56a610bc4d77e831f2a/fonts/DejaVuSans.copyright): Separate bundled-font terms.
