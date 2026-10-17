@@ -45,11 +45,11 @@ The manifest is a snapshot of a 07.10.2026 review against revision `c73176ec...`
 
 - The ABI is unstable until 1.0, but exports are versioned (`KI_0_1`, `KI_0_2` nodes in `libki_xml_pdf.map`), so removing `xml2pdf_convert`/`xml2pdf_convert_cap` is a deliberate ABI decision for the next 0.y release, not a casual deletion.
 - The debug hooks are how tests inject page, write and read failures (`tests/test_stream.c` sets them around lines 1617 to 1628). They need a replacement, for example per-conversion injection through `KiOptions`, or those tests lose their failure coverage.
-- Removing `page_sink` touches both build lists and its unit tests; [Page sink](systems/page-sink.md) documents what would be lost.
-- `tests/test_stream.c` is the largest file in the repository (3,259 lines) and the only place that exercises the debug hooks and `page_sink`. Any cleanup that touches it should be verified with `make test-san`, since CI runs the sanitizer suite over this file in both its gcc and clang jobs, not just `make test`.
+- `page_sink` was removed in OSR-90 from both build lists and from `tests/test_stream.c`. [Page sink](systems/page-sink.md) describes the module that was deleted.
+- `tests/test_stream.c` is the largest file in the repository and the place that exercises the debug hooks. Any cleanup that touches it should be verified with `make test-san`, since CI runs the sanitizer suite over this file in both its gcc and clang jobs, not just `make test`.
 
 ## Related pages
 
-- [Page sink](systems/page-sink.md) for what the dead module does.
+- [Page sink](systems/page-sink.md) for what the removed module did.
 - [Design decisions](background/design-decisions.md) for why the current structure exists.
 - [Patterns and conventions](how-to-contribute/patterns-and-conventions.md) for the rules a cleanup must preserve.

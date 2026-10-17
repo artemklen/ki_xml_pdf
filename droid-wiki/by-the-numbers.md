@@ -81,7 +81,7 @@ Test material is the largest area of the repository: the `tests/` directory alon
 | `examples/` | 11 | 436 | 40 |
 | `cmake/` | 4 | 55 | 14 |
 
-Tests have both the largest files and the largest average. The examples stay deliberately small: the biggest, `examples/catalog_map.c`, is 213 lines, about the size of the smallest production C file in `src/` (`src/page_sink.c`, 206 lines).
+Tests have both the largest files and the largest average. The examples stay deliberately small: the biggest, `examples/catalog_map.c`, is 213 lines, about the size `src/page_sink.c` was (206 lines) before OSR-90 removed it.
 
 ## Largest files
 
