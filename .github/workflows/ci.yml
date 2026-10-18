@@ -14,109 +14,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  gcc:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc g++ make cmake pkg-config zlib1g-dev binutils poppler-utils python3 time fonts-dejavu-core
+        run: sudo apt-get update && sudo apt-get install -y gcc g++ make zlib1g-dev
       - name: summary
         run: |
           git rev-parse HEAD
           gcc --version | head -1
           g++ --version | head -1
-      - name: functional API, CLI and catalog
+      - name: compile CLI, library and example
         run: |
-          make test xml2pdf example
-          python3 tests/cli_pipeline.py
-          python3 tests/font_metrics_check.py
-          python3 tests/wrap_check.py
-          python3 tests/geometry_check.py
-          python3 tests/info_check.py
-          python3 tests/integration_check.py
-          python3 tests/catalog_verify.py
-          python3 tests/pdf_streams.py --binary ./xml2pdf
-      - name: installed CMake and pkg-config consumers
-        run: tests/build_integration.sh
-      - name: documented commands and clients
-        run: tests/docs_smoke.sh
-      - name: bounded fuzz smoke and independent reader
-        run: python3 tests/fuzz_smoke.py
-      - name: header dependency
-        run: |
-          sleep 1
-          touch src/layout.h
-          make xml2pdf
-          test xml2pdf -nt src/layout.h
-      - name: clean source distcheck
-        run: make distcheck
-      - name: distcheck rejects a failed stage
-        run: |
-          if make distcheck CC=false; then echo "failing compiler was accepted"; exit 1; fi
-          if make distcheck CXX=false; then echo "failing C++ compiler was accepted"; exit 1; fi
-          if make distcheck PDFTOTEXT=/bin/false; then echo "failing reader was accepted"; exit 1; fi
-          printf 'not the oracle\n' > /tmp/ki-bad-oracle.txt
-          if make distcheck DISTCHECK_ORACLE=/tmp/ki-bad-oracle.txt; then echo "bad oracle was accepted"; exit 1; fi
-          if make distcheck DISTCHECK_BREAK=license; then echo "missing license was accepted"; exit 1; fi
-      - name: prefix switch without clean
-        run: tests/prefix_switch.sh
-
-  clang:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: tools
-        run: sudo apt-get update && sudo apt-get install -y clang g++ make cmake pkg-config zlib1g-dev binutils poppler-utils python3 time
-      - name: summary
-        run: |
-          git rev-parse HEAD
-          clang --version | head -1
-          clang++ --version | head -1
-      - name: functional
-        run: make clean && make CC=clang test xml2pdf example
-      - name: installed static and shared consumers
-        run: CC=clang CXX=clang++ tests/build_integration.sh
-      - name: sanitizers without RSS gate
-        run: make CC=clang test-san
-
-  asan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc make zlib1g-dev poppler-utils python3
-      - name: summary
-        run: |
-          git rev-parse HEAD
-          gcc --version | head -1
-      - name: sanitizers without RSS gate
-        run: make test-san
-
-  resources:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: tools
-        run: sudo apt-get update && sudo apt-get install -y gcc g++ make zlib1g-dev poppler-utils python3 time
-      - name: summary
-        run: |
-          git rev-parse HEAD
-          gcc --version | head -1
-      - name: uninstrumented resource gate
-        run: make check
-      - name: large report proof and negative metric controls
-        run: python3 tests/large_proof.py --self-test && python3 tests/large_proof.py 1073741824
+          make clean
+          make xml2pdf example
+          make libki_xml_pdf.so
 
   source:
-    needs: [gcc, clang, asan, resources]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

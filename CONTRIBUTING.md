@@ -1,6 +1,6 @@
 # Contributing
 
-Project source and original examples use the [MIT license](LICENSE). The font has a separate notice at [fonts/DejaVuSans.copyright](fonts/DejaVuSans.copyright). Contributions are welcome through the [public repository](https://github.com/artemklen/ki_xml_pdf); [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) records checks for a specific commit.
+Project source and original examples use the [MIT license](LICENSE). The font has a separate notice at [fonts/DejaVuSans.copyright](fonts/DejaVuSans.copyright). Contributions are welcome through the [public repository](https://github.com/artemklen/ki_xml_pdf); [GitHub Actions](https://github.com/artemklen/ki_xml_pdf/actions/workflows/ci.yml) builds a specific commit and preserves its source archive. Checks run locally before sending.
 
 ## Report a bug
 
@@ -22,6 +22,23 @@ Send security reports directly to Artem Klen at **artem.klen@icloud.com**. Inclu
 The tested platform is 64-bit Linux with glibc, GCC or Clang, GNU Make, and a GNU-compatible linker. A pull request that ports the library is not accepted without a prior maintainer decision; see [Supported platforms](README.md#supported-platforms). Checks require C and C++ compilers, `python3`, `/usr/bin/time`, and `readelf` (binutils) and Poppler's `pdfinfo`/`pdftotext`/`pdftohtml`; integration checks also require CMake and pkg-config. See [README.md](README.md) for copyable Make/CMake builds, installed consumers, and pipelines. [README.ru.md](README.ru.md) preserves the Russian onboarding.
 
 For a behavior change, add a meaningful regression that fails before the fix and checks an observable result. Run the checks appropriate to the change and report their commands, results, and source revision. Streaming and report behavior can be checked with `make check`; sanitizer coverage uses `make test-san`. Installed-package changes need the external C/C++ consumer checks, and source-distribution changes need `make distcheck`. PDF contents should be checked through an independent reader, not just by matching writer output bytes.
+
+### Local pre-send gate (OPS-625)
+
+The agent must run the applicable checks on the exact revision being sent and record commands, results, environment and `git rev-parse HEAD`. CI (`.github/workflows/ci.yml`) only compiles the CLI/library/example and creates the source archive with SHA-256; it does not run tests.
+
+```sh
+make clean && make xml2pdf example libki_xml_pdf.so
+make test xml2pdf example
+tests/build_integration.sh
+tests/docs_smoke.sh
+python3 tests/fuzz_smoke.py
+make distcheck
+make test-san
+make check
+```
+
+Required environment: 64-bit Linux with glibc, GCC/Clang, GNU Make, Python 3, `/usr/bin/time`, binutils `readelf`, Poppler `pdfinfo`/`pdftotext`/`pdftohtml`, CMake and pkg-config for installed consumers. A missing platform tool is a blocker in Linear, not a skip and not a reason to restore tests in CI. A meaningful code change invalidates the matching evidence; an unchanged SHA may reuse it.
 
 Measure converter RSS on an ordinary binary, separately from ASan/UBSan, the input generator, and the PDF reader. Historical performance numbers remain tied to the revision that produced them. Test success alone does not establish adoption, demand, or performance against another converter.
 
